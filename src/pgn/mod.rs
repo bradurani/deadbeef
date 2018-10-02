@@ -1,23 +1,33 @@
 extern crate shakmaty;
-use shakmaty::{Chess, Move, MoveList, Outcome, Position, Role, Square, Color, san::San};
+use shakmaty::*;
+use shakmaty::san::SanPlus;
 
-pub struct PgnMove {
-    white_ply: Move,
-    white_position: Chess,
-    black_ply: Option<Move>,
-    black_position: Chess
+pub fn to_pgn(start_position: Chess, moves: Vec<Move>) -> String{
+    let mut pgn_string = String::new();
+    let outcome = push_game_str(start_position, &moves, &mut pgn_string);
+    format!("{}{}", to_result_str(outcome), pgn_string)
 }
 
-pub fn to_pgn(moves: Vec<Move>, outcome: Option<Outcome>) -> String{
-    let mut s = String::new();
-    let result = result_str(outcome);
-    s.push_str(result);
-    let moves = moves_str(moves);
-    s.push_str(moves.as_str());
-    s
+fn push_game_str<P: Position + Clone>(mut position: P, moves: &Vec<Move>, pgn_string: &mut String) -> Option<Outcome>{
+    let mut move_num: u32 = 0;
+    for m in moves {
+        let san = SanPlus::from_move(position.clone(), &m).to_string();
+        position.play_safe(m);
+        match position.turn(){
+            Color::Black => {
+                move_num += 1;
+                pgn_string.push_str(&format!("{}. {}", move_num, &san));
+            },
+            Color::White => {
+                pgn_string.push_str(&format!(" {}\n", &san));
+            }
+
+        }
+    }
+    position.outcome()
 }
 
-fn result_str(outcome: Option<Outcome>) -> &'static str{
+fn to_result_str(outcome: Option<Outcome>) -> &'static str{
     match outcome {
         Some(o) => match o {
             Outcome::Draw => "[Result \"1/2-1/2\"]\n",
@@ -26,40 +36,4 @@ fn result_str(outcome: Option<Outcome>) -> &'static str{
         },
         None => ""
     }
-}
-
-fn moves_str(moves: Vec<Move>) -> String{
-    let mut pgn_list: Vec<PgnMove> = Vec::new();
-    let mut iter = moves.iter();
-    let mut white_pos = Chess::default();
-    while let Some(white) = iter.next(){
-        let black_pos = white_pos.clone().play(white).unwrap();
-        let black_ply = iter.next().map(|b| {
-            white_pos = black_pos.clone().play(b).unwrap();
-            b.clone()
-        });
-        pgn_list.push(PgnMove {
-            white_ply: white.clone(),
-            black_ply: black_ply,
-            white_position: white_pos.clone(),
-            black_position: black_pos.clone()
-        });
-    }
-    let mut pgn_string: String = String::new();
-    for (i, p) in pgn_list.iter().enumerate() {
-        pgn_string.push_str(move_str(i, p).as_str());
-    }
-    pgn_string
-}
-
-fn move_str(num: usize, pgn_move: &PgnMove) -> String{
-    let white_move_string = San::from_move(&pgn_move.white_position, 
-                                               &pgn_move.white_ply).to_string();
-    match pgn_move.black_ply {
-        None => format!("{}. {}\n", num, white_move_string),
-        Some(ref bp) => {
-            let black_move_string = San::from_move(&pgn_move.black_position, &bp).to_string();
-            format!("{}. {} {}\n", num, white_move_string, black_move_string)
-        }
-    }.clone()
 }
