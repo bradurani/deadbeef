@@ -50,7 +50,7 @@ impl mcts::GameAction for Move{}
 pub fn main() {
     let starting_position = Chess::default();
     let mut game = starting_position.clone();
-    let move_history = play_game(&mut game, 4, true, 100.);
+    let move_history = play_game(&mut game, 1, true, 500.0);
     let pgn = pgn::to_pgn(starting_position, move_history);
     println!("{}", pgn);
 }
@@ -60,8 +60,9 @@ pub fn play_game(game: &mut Chess, ensemble_size: usize,
     let mut mcts: MCTS<Chess, Move> = MCTS::new(&game, ensemble_size);
 
     let mut move_history: Vec<Move> = Vec::new();
-
+    let mut move_num = 1.;
     loop {
+        println!("\nMove: {}", move_num);
         let t0 = Instant::now();
         mcts.search_time(time_per_move_ms, 1.);
 
@@ -80,9 +81,9 @@ pub fn play_game(game: &mut Chess, ensemble_size: usize,
             None => break
         }
         let time_spend = t0.elapsed().as_millis();
-        println!("move time: {}s", time_spend);
+        println!("move time: {}ms", time_spend);
+        move_num += 0.5;
     }
-    println!("{:?}", game);
     move_history
 }
 

@@ -40,7 +40,6 @@ pub trait GameAction: Debug+Clone+Copy+Eq+Hash{}
 /// Start with an initial game state and perform random actions from
 /// until a game-state is reached that does not have any `allowed_actions`.
 pub fn playout<G: Game<A>, A: GameAction>(initial: &G) -> G {
-    // println!("Starting playout");
 
     let mut game = initial.clone();
 
@@ -55,10 +54,8 @@ pub fn playout<G: Game<A>, A: GameAction>(initial: &G) -> G {
          }
 
         let action = choose_random(&potential_moves).clone();
-        // println!("  playout move");
         game.make_move(&action);
         potential_moves = game.allowed_actions();
-        // println!("potential moves: {}", potential_moves.len())
     }
     game
 }
@@ -177,6 +174,7 @@ impl<A> TreeNode<A> where A: GameAction {
     pub fn iteration<G: Game<A>>(&mut self, game: &mut G, c: f32) -> f32 {
         let delta = match self.state {
             NodeState::LeafNode => {
+                print!(" found leaf");
                 game.reward()
             },
             NodeState::FullyExpanded => {
@@ -193,7 +191,6 @@ impl<A> TreeNode<A> where A: GameAction {
                         let delta = playout(game).reward();
                         child.n += 1.;
                         child.q += delta;
-                        // println!("playout finsihed. Adding {}\n", delta);
                         delta
                     },
                     None => game.reward()      // Could not expand, current node is a leaf node!
@@ -287,7 +284,7 @@ impl<G: Game<A>, A: GameAction> MCTS<G, A> {
         MCTS {
             roots: roots,
             games: games,
-            iterations_per_ms: 10.
+            iterations_per_ms: 0.1
         }
     }
 
@@ -312,7 +309,7 @@ impl<G: Game<A>, A: GameAction> MCTS<G, A> {
             let mut game = game.clone();
             game.set_rng_seed(i as u32);
             games.push(game);
-            roots.push(TreeNode::new(None));
+            roots.push(TreeNode::new(None)); //very inefficient. Scraps previous work
         }
         self.games = games;
         self.roots = roots;
@@ -324,6 +321,7 @@ impl<G: Game<A>, A: GameAction> MCTS<G, A> {
 
         // Iterate over ensamble and perform MCTS iterations
         for e in 0..ensamble_size {
+            println!("ensemble: {}", e);
             let game = &self.games[e];
             let root = &mut self.roots[e];
 
@@ -332,6 +330,7 @@ impl<G: Game<A>, A: GameAction> MCTS<G, A> {
                 let mut this_game = game.clone();
                 root.iteration(&mut this_game, c);
             }
+            // println!("root: {}", root);
         }
     }
 
@@ -344,7 +343,6 @@ impl<G: Game<A>, A: GameAction> MCTS<G, A> {
             max(10.).
             min(100.) as usize;
 
-        print!("Samples:");
         while n_samples >= 5 {
             self.search(n_samples, c);
             samples_total += n_samples;
@@ -354,8 +352,8 @@ impl<G: Game<A>, A: GameAction> MCTS<G, A> {
 
             let time_left = time_per_move_ms - time_spend;
             n_samples = (self.iterations_per_ms*time_left).max(0.).min(100.) as usize;
-            print!("{}..", samples_total);
         }
+        println!("iterations_per_ms: {}", self.iterations_per_ms);
     }
 
     /// Return the best action found so far by averaging over the ensamble.
