@@ -1,3 +1,5 @@
+extern crate shakmaty;
+
 use std::fmt;
 use std::i32;
 use std::f32;
@@ -5,6 +7,7 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::collections::HashMap;
 use std::cmp::{min, max};
+use shakmaty::*;
 
 use std::time::{Instant};
 
@@ -16,13 +19,13 @@ const MAX_PLAYOUT_MOVES: u32=4000;
 ///
 /// It is important that the game behaves fully deterministic,
 /// e.g. it has to produce the same game sequences
-pub trait Game<A: GameAction> : Clone {
+pub trait Game : Clone {
 
     /// Return a list with all allowed actions given the current game state.
-    fn allowed_actions(&self) -> Vec<A>;
+    fn allowed_actions(&self) -> Vec<Move>;
 
     /// Change the current game state according to the given action.
-    fn make_move(&mut self, action: &A);
+    fn make_move(&mut self, action: &Move);
 
     /// Reward for the player when reaching the current game state.
     fn reward(&self) -> f32;
@@ -31,15 +34,11 @@ pub trait Game<A: GameAction> : Clone {
     fn set_rng_seed(&mut self, seed: u32);
 }
 
-/// A `GameAction` represents a move in a game.
-pub trait GameAction: Debug+Clone+Copy+Eq+Hash{}
-
-
 /// Perform a random playout.
 ///
 /// Start with an initial game state and perform random actions from
 /// until a game-state is reached that does not have any `allowed_actions`.
-pub fn playout<G: Game<A>, A: GameAction>(initial: &G) -> G {
+pub fn playout(initial: &Chess) -> Chess {
 
     let mut game = initial.clone();
 
@@ -61,7 +60,7 @@ pub fn playout<G: Game<A>, A: GameAction>(initial: &G) -> G {
 }
 
 // /// Calculate the expected reward based on random playouts.
-// pub fn expected_reward<G: Game<A>, A: GameAction>(game: &G, n_samples: usize) -> f32 {
+// pub fn expected_reward<G: Chess, A: GameAction>(game: &G, n_samples: usize) -> f32 {
 //     let mut score_sum: f32 = 0.0;
 //
 //     for _ in 0..n_samples {
@@ -79,21 +78,21 @@ enum NodeState {
 }
 
 #[derive(Debug)]
-pub struct TreeNode<A: GameAction> {
-    action: Option<A>,                  // how did we get here
-    children: Vec<TreeNode<A>>,         // next steps we investigated
+pub struct TreeNode<Move> {
+    action: Option<Move>,                  // how did we get here
+    children: Vec<TreeNode<Move>>,         // next steps we investigated
     state: NodeState,                   // is this a leaf node? fully expanded?
     n: f32, q: f32                      // statistics for this game state
 }
 
-impl<A> TreeNode<A> where A: GameAction {
+impl TreeNode<Move>{
 
     /// Create and initialize a new TreeNode
     ///
     /// Initialize q and n t to be zero; childeren list to
     /// be empty and set the node state to Expandable.
-    pub fn new(action: Option<A>) -> TreeNode<A> {
-        TreeNode::<A> {
+    pub fn new(action: Option<Move>) -> TreeNode<Move> {
+        TreeNode::<Move> {
             action: action,
             children: Vec::new(),
             state: NodeState::Expandable,
@@ -115,9 +114,9 @@ impl<A> TreeNode<A> where A: GameAction {
     */
 
     /// Find the best child accoring to UCT1
-    pub fn best_child(&mut self, c: f32) -> Option<&mut TreeNode<A>> {
+    pub fn best_child(&mut self, c: f32) -> Option<&mut TreeNode<Move>> {
         let mut best_value :f32 = f32::NEG_INFINITY;
-        let mut best_child :Option<&mut TreeNode<A>> = None;
+        let mut best_child :Option<&mut TreeNode<Move>> = None;
 
         for child in &mut self.children {
             let value = child.q / child.n + c*(2.*self.n.ln()/child.n).sqrt();
@@ -132,7 +131,7 @@ impl<A> TreeNode<A> where A: GameAction {
     /// Add a child to the current node with an previously unexplored action.
     ///
     /// XXX Use HashSet? Use iterators? XXX
-    pub fn expand<G: Game<A>>(&mut self, game: &G) -> Option<&mut TreeNode<A>> {
+    pub fn expand(&mut self, game: &Chess) -> Option<&mut TreeNode<Move>> {
 
         // What are our options given the current game state?
         let allowed_actions = game.allowed_actions();
@@ -142,7 +141,7 @@ impl<A> TreeNode<A> where A: GameAction {
         }
 
         // Get a list with all the actions we tried alreday
-        let mut child_actions : Vec<A> = Vec::new();
+        let mut child_actions : Vec<Move> = Vec::new();
         for child in &self.children {
             child_actions.push(child.action.expect("Child node without action"));
         }
@@ -171,7 +170,7 @@ impl<A> TreeNode<A> where A: GameAction {
     /// XXX A non-recursive implementation would probably be faster.
     /// XXX But how to keep &mut pointers to all our parents while
     /// XXX we fiddle with our leaf node?
-    pub fn iteration<G: Game<A>>(&mut self, game: &mut G, c: f32) -> f32 {
+    pub fn iteration(&mut self, game: &mut Chess, c: f32) -> f32 {
         let delta = match self.state {
             NodeState::LeafNode => {
                 print!(" found leaf");
@@ -204,13 +203,13 @@ impl<A> TreeNode<A> where A: GameAction {
 }
 
 
-impl<A: GameAction> fmt::Display for TreeNode<A> {
+impl fmt::Display for TreeNode<Move> {
 
     /// Output a nicely indented tree
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 
         // Nested definition for recursive formatting
-        fn fmt_subtree<M: GameAction>(f: &mut fmt::Formatter, node: &TreeNode<M>, indent_level :i32) -> fmt::Result {
+        fn fmt_subtree(f: &mut fmt::Formatter, node: &TreeNode<Move>, indent_level :i32) -> fmt::Result {
             for _ in 0..indent_level {
                 try!(f.write_str("    "));
             }
@@ -263,16 +262,16 @@ impl TreeStatistics {
 ///
 /// For many applications we need to work with ensambles because we use
 /// determinization.
-pub struct MCTS<G: Game<A>, A: GameAction> {
-    roots: Vec<TreeNode<A>>,
-    games: Vec<G>,
+pub struct MCTS {
+    roots: Vec<TreeNode<Move>>,
+    games: Vec<Chess>,
     iterations_per_ms: f32,
 }
 
-impl<G: Game<A>, A: GameAction> MCTS<G, A> {
+impl MCTS {
 
     /// Create a new MCTS solver.
-    pub fn new(game: &G, ensamble_size: usize) -> MCTS<G, A> {
+    pub fn new(game: &Chess, ensamble_size: usize) -> MCTS {
         let mut roots = Vec::new();
         let mut games = Vec::new();
         for i in 0..ensamble_size {
@@ -300,7 +299,7 @@ impl<G: Game<A>, A: GameAction> MCTS<G, A> {
         TreeStatistics::merge(child_stats)
     }
     /// Set a new game state for this solver.
-    pub fn advance_game(&mut self, game: &G) {
+    pub fn advance_game(&mut self, game: &Chess) {
         let ensamble_size = self.games.len();
 
         let mut roots = Vec::new();
@@ -357,12 +356,12 @@ impl<G: Game<A>, A: GameAction> MCTS<G, A> {
     }
 
     /// Return the best action found so far by averaging over the ensamble.
-    pub fn best_action(&self) -> Option<A> {
+    pub fn best_action(&self) -> Option<Move> {
         let ensamble_size = self.games.len();
 
         // Merge ensamble results
-        let mut n_values = HashMap::<A, f32>::new();
-        let mut q_values = HashMap::<A, f32>::new();
+        let mut n_values = HashMap::<Move, f32>::new();
+        let mut q_values = HashMap::<Move, f32>::new();
 
         for e in 0..ensamble_size {
             let root = &self.roots[e];
@@ -379,7 +378,7 @@ impl<G: Game<A>, A: GameAction> MCTS<G, A> {
         }
 
         // Find best action
-        let mut best_action: Option<A> = None;
+        let mut best_action: Option<Move> = None;
         let mut best_value: f32 = f32::NEG_INFINITY;
         for (action, n) in &n_values {
             let q = q_values.get(action).unwrap();
@@ -395,7 +394,7 @@ impl<G: Game<A>, A: GameAction> MCTS<G, A> {
 }
 
 
-impl<G: Game<A>, A: GameAction> fmt::Display for MCTS<G, A> {
+impl fmt::Display for MCTS {
 
     /// Output a nicely indented tree
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

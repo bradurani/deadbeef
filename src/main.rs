@@ -6,14 +6,14 @@ extern crate matches;
 
 use rand::{sample, thread_rng};
 use shakmaty::*;
-use mcts::{Game, GameAction, MCTS};
+use mcts::{Game, MCTS};
 use std::time::{Instant};
 
 pub mod pgn;
 pub mod mcts;
 pub mod utils;
 
-impl mcts::Game<Move> for Chess {
+impl mcts::Game for Chess {
     fn allowed_actions(&self) -> Vec<Move> {
         match &self.is_game_over() {
             true => Vec::new(),
@@ -45,8 +45,6 @@ impl mcts::Game<Move> for Chess {
     }
 }
 
-impl mcts::GameAction for Move{}
-
 pub fn main() {
     let starting_position = Chess::default();
     let mut game = starting_position.clone();
@@ -57,7 +55,7 @@ pub fn main() {
 
 pub fn play_game(game: &mut Chess, ensemble_size: usize,
                  verbose: bool, time_per_move_ms: f32) -> Vec<Move>{
-    let mut mcts: MCTS<Chess, Move> = MCTS::new(&game, ensemble_size);
+    let mut mcts: MCTS = MCTS::new(&game, ensemble_size);
 
     let mut move_history: Vec<Move> = Vec::new();
     let mut move_num = 1.;
