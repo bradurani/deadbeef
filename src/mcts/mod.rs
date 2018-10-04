@@ -3,10 +3,9 @@ extern crate shakmaty;
 use std::fmt;
 use std::i32;
 use std::f32;
-use std::fmt::Debug;
-use std::hash::Hash;
 use std::collections::HashMap;
 use std::cmp::{min, max};
+use std::ops::Not;
 use shakmaty::*;
 
 use std::time::{Instant};
@@ -50,7 +49,7 @@ pub fn playout(initial: &Chess) -> Chess {
         if num_moves >= MAX_PLAYOUT_MOVES {
             eprintln!("REACHED MAX PLAYOUT LENGTH");
             break;
-         }
+        }
 
         let action = choose_random(&potential_moves).clone();
         game.make_move(&action);
@@ -78,25 +77,39 @@ enum NodeState {
 }
 
 #[derive(Debug)]
-pub struct TreeNode<Move> {
+pub struct TreeNode {
     action: Option<Move>,                  // how did we get here
-    children: Vec<TreeNode<Move>>,         // next steps we investigated
+    children: Vec<TreeNode>,         // next steps we investigated
     state: NodeState,                   // is this a leaf node? fully expanded?
+    turn: Color,                          //which player made this move
+    move_num: f32,
     n: f32, q: f32                      // statistics for this game state
 }
 
-impl TreeNode<Move>{
+impl TreeNode{
 
     /// Create and initialize a new TreeNode
     ///
     /// Initialize q and n t to be zero; childeren list to
     /// be empty and set the node state to Expandable.
-    pub fn new(action: Option<Move>) -> TreeNode<Move> {
-        TreeNode::<Move> {
+    pub fn new(action: Option<Move>, turn: Color, move_num: f32) -> TreeNode {
+        TreeNode{
             action: action,
             children: Vec::new(),
             state: NodeState::Expandable,
+            turn: turn,
+            move_num: move_num,
             n: 0., q: 0. }
+    }
+
+    pub fn starting() -> TreeNode{
+        TreeNode{
+            action: None,
+            children: Vec::new(),
+            state: NodeState::Expandable,
+            turn: Color::Black, // So we switch to White for move 1
+            move_num: 0.5, //So we increment to 1 for move 1
+            n: 0., q:0. }
     }
 
     /// Gather some statistics about this subtree
@@ -114,24 +127,28 @@ impl TreeNode<Move>{
     */
 
     /// Find the best child accoring to UCT1
-    pub fn best_child(&mut self, c: f32) -> Option<&mut TreeNode<Move>> {
+    pub fn best_child(&mut self, c: f32, child_turn: &Color) -> &mut TreeNode {
         let mut best_value :f32 = f32::NEG_INFINITY;
-        let mut best_child :Option<&mut TreeNode<Move>> = None;
+        let mut best_child :Option<&mut TreeNode> = None;
 
         for child in &mut self.children {
-            let value = child.q / child.n + c*(2.*self.n.ln()/child.n).sqrt();
+            let color_coefficient = color_coefficient(&child_turn);
+            let value = (color_coefficient * child.q) /
+                child.n + c*(2.*self.n.ln()/child.n).sqrt();
             if value > best_value {
                 best_value = value;
                 best_child = Some(child);
             }
         }
-        best_child
+        let found_best_child = best_child.unwrap();
+        // println!("Best child for {:?}: {}", child_turn, found_best_child);
+        found_best_child
     }
 
     /// Add a child to the current node with an previously unexplored action.
     ///
     /// XXX Use HashSet? Use iterators? XXX
-    pub fn expand(&mut self, game: &Chess) -> Option<&mut TreeNode<Move>> {
+    pub fn expand(&mut self, game: &Chess) -> Option<&mut TreeNode> {
 
         // What are our options given the current game state?
         let allowed_actions = game.allowed_actions();
@@ -161,7 +178,7 @@ impl TreeNode<Move>{
         // Select random actions
         let action = *choose_random(&candidate_actions).clone();
 
-        self.children.push(TreeNode::new(Some(action)));
+        self.children.push(TreeNode::new(Some(action), self.turn.not(), self.move_num + 0.5));
         self.children.last_mut()
     }
 
@@ -173,12 +190,12 @@ impl TreeNode<Move>{
     pub fn iteration(&mut self, game: &mut Chess, c: f32) -> f32 {
         let delta = match self.state {
             NodeState::LeafNode => {
-                print!(" found leaf");
                 game.reward()
             },
             NodeState::FullyExpanded => {
                 // Choose and recurse into child...
-                let child = self.best_child(c).unwrap();
+                let child_turn = &self.turn.not();
+                let child = self.best_child(c, child_turn);
                 game.make_move(&child.action.unwrap());
                 child.iteration(game, c)
             },
@@ -203,19 +220,22 @@ impl TreeNode<Move>{
 }
 
 
-impl fmt::Display for TreeNode<Move> {
+impl fmt::Display for TreeNode {
 
     /// Output a nicely indented tree
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 
         // Nested definition for recursive formatting
-        fn fmt_subtree(f: &mut fmt::Formatter, node: &TreeNode<Move>, indent_level :i32) -> fmt::Result {
+        fn fmt_subtree(f: &mut fmt::Formatter, node: &TreeNode, indent_level :i32) -> fmt::Result {
             for _ in 0..indent_level {
                 try!(f.write_str("    "));
             }
+            let score = node.q / node.n;
             match node.action {
-                Some(a)  => try!(writeln!(f, "{:?} q={} n={}", a, node.q, node.n)),
-                None     => try!(writeln!(f, "Root q={} n={}", node.q, node.n))
+                Some(a)  => try!(writeln!(f, "{}. {} q={} n={} s={}",
+                                          node.move_num, a, node.q, node.n, score)),
+                None     => try!(writeln!(f, "{}. Root q={} n={} s={}",
+                                          node.move_num, node.q, node.n, score))
             }
             for child in &node.children {
                 try!(fmt_subtree(f, child, indent_level+1));
@@ -263,7 +283,7 @@ impl TreeStatistics {
 /// For many applications we need to work with ensambles because we use
 /// determinization.
 pub struct MCTS {
-    roots: Vec<TreeNode<Move>>,
+    roots: Vec<TreeNode>,
     games: Vec<Chess>,
     iterations_per_ms: f32,
 }
@@ -271,14 +291,15 @@ pub struct MCTS {
 impl MCTS {
 
     /// Create a new MCTS solver.
-    pub fn new(game: &Chess, ensamble_size: usize) -> MCTS {
+    pub fn new(game: &Chess, move_num: f32, ensamble_size: usize) -> MCTS {
         let mut roots = Vec::new();
         let mut games = Vec::new();
         for i in 0..ensamble_size {
             let mut game = game.clone();
+            let turn = game.turn();
             game.set_rng_seed(i as u32);
             games.push(game);
-            roots.push(TreeNode::new(None));
+            roots.push(TreeNode::new(None, turn.not(), move_num));
         }
         MCTS {
             roots: roots,
@@ -299,16 +320,17 @@ impl MCTS {
         TreeStatistics::merge(child_stats)
     }
     /// Set a new game state for this solver.
-    pub fn advance_game(&mut self, game: &Chess) {
+    pub fn advance_game(&mut self, game: &Chess, move_num: f32) {
         let ensamble_size = self.games.len();
 
         let mut roots = Vec::new();
         let mut games = Vec::new();
         for i in 0..ensamble_size {
             let mut game = game.clone();
+            let turn = game.turn();
             game.set_rng_seed(i as u32);
             games.push(game);
-            roots.push(TreeNode::new(None)); //very inefficient. Scraps previous work
+            roots.push(TreeNode::new(None, turn,  move_num)); //very inefficient. Scraps previous work
         }
         self.games = games;
         self.roots = roots;
@@ -320,7 +342,7 @@ impl MCTS {
 
         // Iterate over ensamble and perform MCTS iterations
         for e in 0..ensamble_size {
-            println!("ensemble: {}", e);
+            // println!("ensemble: {}", e);
             let game = &self.games[e];
             let root = &mut self.roots[e];
 
@@ -377,19 +399,30 @@ impl MCTS {
             }
         }
 
+        let color = self.games.first().unwrap().turn();
+        let color_coefficient = color_coefficient(&color);
+
         // Find best action
         let mut best_action: Option<Move> = None;
         let mut best_value: f32 = f32::NEG_INFINITY;
         for (action, n) in &n_values {
             let q = q_values.get(action).unwrap();
-            let value = q / n;
+            let value = (color_coefficient * q) / n;
             if value > best_value {
                 best_action = Some(*action);
                 best_value = value;
             }
         }
+        println!("Best value for {:?}: {}", color, color_coefficient * best_value);
 
         best_action
+    }
+}
+
+fn color_coefficient(color: &Color) -> f32 {
+    match color {
+        Color::Black => -1.,
+        Color::White => 1.
     }
 }
 
