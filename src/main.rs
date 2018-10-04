@@ -4,7 +4,6 @@ extern crate rand;
 extern crate shakmaty;
 extern crate matches;
 
-use rand::{sample, thread_rng};
 use shakmaty::*;
 use mcts::{Game, MCTS};
 use std::time::{Instant};
@@ -27,6 +26,7 @@ impl mcts::Game for Chess {
 
     fn make_move(&mut self, action: &Move){
         self.play_unchecked(&action);
+        // self.play_safe(&action)
         // TODO add safe option for testing
     }
 
@@ -48,7 +48,7 @@ impl mcts::Game for Chess {
 pub fn main() {
     let starting_position = Chess::default();
     let mut game = starting_position.clone();
-    let move_history = play_game(&mut game, 1, true, 5000.0);
+    let move_history = play_game(&mut game, 8, true, 2000.0);
     let pgn = pgn::to_pgn(starting_position, move_history);
     println!("{}", pgn);
 }
@@ -57,24 +57,23 @@ pub fn play_game(game: &mut Chess, ensemble_size: usize,
                  verbose: bool, time_per_move_ms: f32) -> Vec<Move>{
 
     let mut move_history: Vec<Move> = Vec::new();
-    let mut move_num = 0.5;
-    let mut mcts: MCTS = MCTS::new(&game, move_num, ensemble_size);
+    let mut move_num = 0.;
+    let mut mcts: MCTS = MCTS::new();
 
     loop {
         move_num += 0.5;
         println!("\nMove: {}", move_num);
         let t0 = Instant::now();
-        mcts.search_time(time_per_move_ms, 1.);
+        let roots = mcts.search_time(game, ensemble_size, time_per_move_ms, 1., move_num);
 
         if verbose {
-            println!("{:?}", mcts.tree_statistics());
+            println!("{:?}", mcts.tree_statistics(&roots));
         }
 
-        let action = mcts.best_action();
+        let action = mcts.best_action(&roots);
         match action {
             Some(action) => {
                 game.make_move(&action);
-                mcts.advance_game(&game, move_num + 0.5);
                 println!("Moving: {}\n{:?}", action, game.board());
                 move_history.push(action);
             },

@@ -7,12 +7,15 @@ use std::collections::HashMap;
 use std::cmp::{min, max};
 use std::ops::Not;
 use shakmaty::*;
+use std::thread;
+use std::thread::JoinHandle;
 
 use std::time::{Instant};
 
 use utils::{choose_random};
 
 const MAX_PLAYOUT_MOVES: u32=4000;
+const STARTING_ITERATIONS_PER_MS: f32=1.;
 
 /// A `Game` represets a game state.
 ///
@@ -100,15 +103,16 @@ impl TreeNode{
             turn: turn,
             move_num: move_num,
             n: 0., q: 0. }
+
     }
 
-    pub fn starting() -> TreeNode{
+    pub fn new_root(game: &Chess, move_num: f32) -> TreeNode{
         TreeNode{
             action: None,
             children: Vec::new(),
             state: NodeState::Expandable,
-            turn: Color::Black, // So we switch to White for move 1
-            move_num: 0.5, //So we increment to 1 for move 1
+            turn: game.turn(), // So we switch to White for move 1
+            move_num: move_num, //So we increment to 1 for move 1
             n: 0., q:0. }
     }
 
@@ -117,7 +121,7 @@ impl TreeNode{
         let child_stats = self.children.iter()
             .map(|c| c.tree_statistics())
             .collect::<Vec<_>>();
-        TreeStatistics::merge(child_stats)
+        TreeStatistics::merge(&child_stats)
     }
 
     /*
@@ -127,12 +131,12 @@ impl TreeNode{
     */
 
     /// Find the best child accoring to UCT1
-    pub fn best_child(&mut self, c: f32, child_turn: &Color) -> &mut TreeNode {
+    pub fn best_child(&mut self, c: f32) -> &mut TreeNode {
         let mut best_value :f32 = f32::NEG_INFINITY;
         let mut best_child :Option<&mut TreeNode> = None;
+        let color_coefficient = color_coefficient(&self.turn);
 
         for child in &mut self.children {
-            let color_coefficient = color_coefficient(&child_turn);
             let value = (color_coefficient * child.q) /
                 child.n + c*(2.*self.n.ln()/child.n).sqrt();
             if value > best_value {
@@ -151,8 +155,9 @@ impl TreeNode{
     pub fn expand(&mut self, game: &Chess) -> Option<&mut TreeNode> {
 
         // What are our options given the current game state?
+        // could save this between calls
         let allowed_actions = game.allowed_actions();
-        if allowed_actions.len() == 0 {
+        if allowed_actions.len() == 0 || game.is_insufficient_material() {
             self.state = NodeState::LeafNode;
             return None;
         }
@@ -194,8 +199,7 @@ impl TreeNode{
             },
             NodeState::FullyExpanded => {
                 // Choose and recurse into child...
-                let child_turn = &self.turn.not();
-                let child = self.best_child(c, child_turn);
+                let child = self.best_child(c);
                 game.make_move(&child.action.unwrap());
                 child.iteration(game, c)
             },
@@ -256,7 +260,7 @@ pub struct TreeStatistics {
 }
 
 impl TreeStatistics {
-    fn merge(child_stats: Vec<TreeStatistics>) -> TreeStatistics {
+    fn merge(child_stats: &Vec<TreeStatistics>) -> TreeStatistics {
         if child_stats.len() == 0 {
             TreeStatistics {
                 nodes: 1,
@@ -283,29 +287,14 @@ impl TreeStatistics {
 /// For many applications we need to work with ensambles because we use
 /// determinization.
 pub struct MCTS {
-    roots: Vec<TreeNode>,
-    games: Vec<Chess>,
-    iterations_per_ms: f32,
+    iterations_per_ms: f32
 }
 
 impl MCTS {
 
     /// Create a new MCTS solver.
-    pub fn new(game: &Chess, move_num: f32, ensamble_size: usize) -> MCTS {
-        let mut roots = Vec::new();
-        let mut games = Vec::new();
-        for i in 0..ensamble_size {
-            let mut game = game.clone();
-            let turn = game.turn();
-            game.set_rng_seed(i as u32);
-            games.push(game);
-            roots.push(TreeNode::new(None, turn.not(), move_num));
-        }
-        MCTS {
-            roots: roots,
-            games: games,
-            iterations_per_ms: 0.1
-        }
+    pub fn new() -> MCTS {
+        MCTS { iterations_per_ms: STARTING_ITERATIONS_PER_MS }
     }
 
     /// Return basic statistical data about the current MCTS tree.
@@ -313,59 +302,49 @@ impl MCTS {
     /// XXX Note: The current implementation considers the ensemble
     /// to be a tree layer. In other words tree depth and number of
     /// nodes are all one too large.
-    pub fn tree_statistics(&self) -> TreeStatistics {
-        let child_stats = self.roots.iter()
+    pub fn tree_statistics(&self, roots: &Vec<TreeNode>) -> TreeStatistics {
+        let child_stats = roots.iter()
             .map(|c| c.tree_statistics())
             .collect::<Vec<_>>();
-        TreeStatistics::merge(child_stats)
-    }
-    /// Set a new game state for this solver.
-    pub fn advance_game(&mut self, game: &Chess, move_num: f32) {
-        let ensamble_size = self.games.len();
-
-        let mut roots = Vec::new();
-        let mut games = Vec::new();
-        for i in 0..ensamble_size {
-            let mut game = game.clone();
-            let turn = game.turn();
-            game.set_rng_seed(i as u32);
-            games.push(game);
-            roots.push(TreeNode::new(None, turn,  move_num)); //very inefficient. Scraps previous work
-        }
-        self.games = games;
-        self.roots = roots;
+        TreeStatistics::merge(&child_stats)
     }
 
     /// Perform n_samples MCTS iterations.
-    pub fn search(&mut self, n_samples: usize, c: f32) {
-        let ensamble_size = self.games.len();
+    pub fn search(&mut self, game: &Chess, ensemble_size: usize,
+                  n_samples: usize, c: f32, move_num: f32) -> Vec<TreeNode> {
 
-        // Iterate over ensamble and perform MCTS iterations
-        for e in 0..ensamble_size {
-            // println!("ensemble: {}", e);
-            let game = &self.games[e];
-            let root = &mut self.roots[e];
+        // Iterate over ensemble and perform MCTS iterations
+        let handles: Vec<JoinHandle<TreeNode>> = (0..ensemble_size).map(|e|{
+            let thread_game = game.clone();
+            let mut root = TreeNode::new_root(&game, move_num);
+            thread::spawn(move ||{
 
-            // Perform MCTS iterations
-            for _ in 0..n_samples {
-                let mut this_game = game.clone();
-                root.iteration(&mut this_game, c);
-            }
-            // println!("root: {}", root);
-        }
+                // Perform MCTS iterations
+                for _ in 0..n_samples {
+                    root.iteration(&mut thread_game.clone(), c);
+                }
+                // println!("root: {}", root);
+                root
+            })
+        }).collect();
+
+        handles.into_iter().map(|th| th.join().unwrap()).collect()
     }
 
     /// Perform MCTS iterations for the given time budget (in s).
-    pub fn search_time(&mut self, time_per_move_ms: f32, c: f32) {
+    pub fn search_time(&mut self, game: &mut Chess, ensemble_size: usize, time_per_move_ms: f32, c: f32, move_num: f32) -> Vec<TreeNode> {
         let mut samples_total = 0;
         let t0 = Instant::now();
 
+        //TODO MAKE ITERATIONS / SEC saved between runs
         let mut n_samples = (self.iterations_per_ms*time_per_move_ms).
             max(10.).
             min(100.) as usize;
 
+        let mut roots = Vec::new();
         while n_samples >= 5 {
-            self.search(n_samples, c);
+            let thread_roots = self.search(game, ensemble_size, n_samples, c, move_num);
+            roots.push(thread_roots);
             samples_total += n_samples;
 
             let time_spend = t0.elapsed().as_millis() as f32;
@@ -375,19 +354,17 @@ impl MCTS {
             n_samples = (self.iterations_per_ms*time_left).max(0.).min(100.) as usize;
         }
         println!("iterations_per_ms: {}", self.iterations_per_ms);
+
+        roots.into_iter().flat_map(|r| r.into_iter()).collect()
     }
 
     /// Return the best action found so far by averaging over the ensamble.
-    pub fn best_action(&self) -> Option<Move> {
-        let ensamble_size = self.games.len();
-
+    pub fn best_action(&self, roots: &Vec<TreeNode>) -> Option<Move> {
         // Merge ensamble results
         let mut n_values = HashMap::<Move, f32>::new();
         let mut q_values = HashMap::<Move, f32>::new();
 
-        for e in 0..ensamble_size {
-            let root = &self.roots[e];
-
+        for root in roots {
             for child in &root.children {
                 let action = child.action.unwrap();
 
@@ -399,7 +376,7 @@ impl MCTS {
             }
         }
 
-        let color = self.games.first().unwrap().turn();
+        let color = roots.first().unwrap().turn;
         let color_coefficient = color_coefficient(&color);
 
         // Find best action
@@ -413,7 +390,7 @@ impl MCTS {
                 best_value = value;
             }
         }
-        println!("Best value for {:?}: {}", color, color_coefficient * best_value);
+        // println!("Best value for {:?}: {}", color, color_coefficient * best_value);
 
         best_action
     }
@@ -425,20 +402,6 @@ fn color_coefficient(color: &Color) -> f32 {
         Color::White => 1.
     }
 }
-
-
-impl fmt::Display for MCTS {
-
-    /// Output a nicely indented tree
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        try!(write!(f, "Ensable of {} trees:", self.roots.len()));
-        //for root in &self.roots {
-        //    try!(root.fmt(f));
-        //}
-        write!(f, "")
-    }
-}
-
 
 /////////////////////////////////////////////////////////////////////////////
 // Unittests
