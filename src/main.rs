@@ -11,6 +11,7 @@ use std::time::{Instant};
 pub mod pgn;
 pub mod mcts;
 pub mod utils;
+pub mod tree_merge;
 
 impl mcts::Game for Chess {
     fn allowed_actions(&self) -> Vec<Move> {
@@ -48,7 +49,7 @@ impl mcts::Game for Chess {
 pub fn main() {
     let starting_position = Chess::default();
     let mut game = starting_position.clone();
-    let move_history = play_game(&mut game, 8, true, 60000.0);
+    let move_history = play_game(&mut game, 8, true, 200.0);
     let pgn = pgn::to_pgn(starting_position, move_history);
     println!("{}", pgn);
 }

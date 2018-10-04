@@ -74,19 +74,19 @@ pub fn playout(initial: &Chess) -> Chess {
 
 //////////////////////////////////////////////////////////////////////////
 
-#[derive(Debug,Copy,Clone)]
-enum NodeState {
+#[derive(Debug,Copy,Clone, PartialEq)]
+pub enum NodeState {
     LeafNode, FullyExpanded, Expandable
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TreeNode {
-    action: Option<Move>,                  // how did we get here
-    children: Vec<TreeNode>,         // next steps we investigated
-    state: NodeState,                   // is this a leaf node? fully expanded?
-    turn: Color,                          //which player made this move
-    move_num: f32,
-    n: f32, q: f32                      // statistics for this game state
+    pub action: Option<Move>,                  // how did we get here
+    pub children: Vec<TreeNode>,         // next steps we investigated
+    pub state: NodeState,                   // is this a leaf node? fully expanded?
+    pub turn: Color,                          //which player made this move
+    pub move_num: f32,
+    pub n: f32, pub q: f32                      // statistics for this game state
 }
 
 impl TreeNode{
@@ -114,6 +114,17 @@ impl TreeNode{
             turn: game.turn(), // So we switch to White for move 1
             move_num: move_num, //So we increment to 1 for move 1
             n: 0., q:0. }
+    }
+
+    pub fn starting() -> TreeNode{
+        TreeNode{
+            action: None,
+            children: Vec::new(),
+            state: NodeState::Expandable,
+            turn: Color::White,
+            move_num: 0.5,
+            n: 0., q: 0.
+        }
     }
 
     /// Gather some statistics about this subtree
@@ -375,7 +386,7 @@ impl MCTS {
                 *q += child.q;
             }
         }
-
+        //TODO just use abs
         let color = roots.first().unwrap().turn;
         let color_coefficient = color_coefficient(&color);
 
@@ -390,7 +401,7 @@ impl MCTS {
                 best_value = value;
             }
         }
-        // println!("Best value for {:?}: {}", color, color_coefficient * best_value);
+        println!("Best action {:?}: {:?} value: {}", color, best_action, best_value);
 
         best_action
     }
