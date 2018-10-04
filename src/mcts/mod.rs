@@ -47,7 +47,7 @@ pub fn playout(initial: &Chess) -> Chess {
     let mut potential_moves = game.allowed_actions();
 
     let mut num_moves = 0;
-    while potential_moves.len() > 0 {
+    while potential_moves.len() > 0 && !game.is_insufficient_material() {
         num_moves += 1;
         if num_moves >= MAX_PLAYOUT_MOVES {
             eprintln!("REACHED MAX PLAYOUT LENGTH");
