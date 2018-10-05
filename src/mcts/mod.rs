@@ -74,19 +74,19 @@ pub fn playout(initial: &Chess) -> Chess {
 
 //////////////////////////////////////////////////////////////////////////
 
-#[derive(Debug,Copy,Clone, PartialEq)]
+#[derive(Debug,Copy,Clone, PartialEq, PartialOrd)]
 pub enum NodeState {
     LeafNode, FullyExpanded, Expandable
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub struct TreeNode {
     pub action: Option<Move>,                  // how did we get here
-    pub children: Vec<TreeNode>,         // next steps we investigated
     pub state: NodeState,                   // is this a leaf node? fully expanded?
     pub turn: Color,                          //which player made this move
     pub move_num: f32,
-    pub n: f32, pub q: f32                      // statistics for this game state
+    pub n: f32, pub q: f32,                      // statistics for this game state
+    pub children: Vec<TreeNode>         // next steps we investigated
 }
 
 impl TreeNode{

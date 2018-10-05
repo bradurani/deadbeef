@@ -3,6 +3,7 @@
 extern crate rand;
 extern crate shakmaty;
 extern crate matches;
+extern crate itertools;
 
 use shakmaty::*;
 use mcts::{Game, MCTS};
