@@ -2,13 +2,13 @@ extern crate shakmaty;
 use shakmaty::*;
 use shakmaty::san::SanPlus;
 
-pub fn to_pgn(start_position: Chess, moves: Vec<Move>) -> String{
+pub fn to_pgn(start_position: &Chess, moves: &Vec<Move>) -> String{
     let mut pgn_string = String::new();
-    let outcome = push_game_str(start_position, &moves, &mut pgn_string);
+    let outcome = push_game_str(start_position.clone(), &moves, &mut pgn_string);
     format!("{}{}", to_result_str(outcome), pgn_string)
 }
 
-fn push_game_str<P: Position + Clone>(mut position: P, moves: &Vec<Move>, pgn_string: &mut String) -> Option<Outcome>{
+fn push_game_str(mut position: Chess, moves: &Vec<Move>, pgn_string: &mut String) -> Option<Outcome>{
     let mut move_num: u32 = 0;
     for m in moves {
         let san = SanPlus::from_move(position.clone(), &m).to_string();
@@ -19,7 +19,7 @@ fn push_game_str<P: Position + Clone>(mut position: P, moves: &Vec<Move>, pgn_st
                 pgn_string.push_str(&format!("{}. {}", move_num, &san));
             },
             Color::White => {
-                pgn_string.push_str(&format!(" {}\n", &san));
+                pgn_string.push_str(&format!(" {} ", &san));
             }
 
         }
