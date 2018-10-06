@@ -4,19 +4,20 @@ use shakmaty::{Move, Square, Role};
 use mcts::TreeNode;
 use std::collections::HashMap;
 
-pub fn merge_trees(roots: Vec<TreeNode>) -> Vec<TreeNode> {
+pub fn merge_nodes(roots: Vec<TreeNode>) -> Vec<TreeNode> {
     let mut map: HashMap<Move, Vec<TreeNode>> = HashMap::new();
     for r in roots.into_iter(){
         let action_nodes = map.entry(r.action.unwrap()).or_insert(vec!());
         action_nodes.push(r);
     }
-    let mut merged_roots: Vec<TreeNode> = map.into_iter().map(|(action, nodes)| merge_nodes(nodes)).collect();
-    // merged_roots.sort_by(|n1, n2| n1.q.partial_cmp(&n2.q).unwrap());
-    merged_roots.sort_by(|r1, r2| r1.action.partial_cmp(&r2.action).unwrap());
+    let mut merged_roots: Vec<TreeNode> = map.into_iter().
+        map(|(action, nodes)| merge_trees(nodes)).collect();
+
+    merged_roots.sort_by(|r1, r2| r1.action.partial_cmp(&r2.action).unwrap()); // only necessary for the tests. Remove to optimize performance
     merged_roots
 }
 
-pub fn merge_nodes(nodes: Vec<TreeNode>) -> TreeNode {
+pub fn merge_trees(nodes: Vec<TreeNode>) -> TreeNode {
     let mut combined_node = nodes.first().unwrap().clone();
     combined_node.n = 0.;
     combined_node.q = 0.;
@@ -28,7 +29,7 @@ pub fn merge_nodes(nodes: Vec<TreeNode>) -> TreeNode {
         all_children.extend(node.children);
         combined
     });
-    merged_node.children = merge_trees(all_children);
+    merged_node.children = merge_nodes(all_children);
     merged_node
 }
 
@@ -62,7 +63,7 @@ mod tests {
             q: 24.0
         };
         let roots = vec![t1.clone()];
-        assert_eq!(roots.clone(), merge_trees(roots))
+        assert_eq!(t1, merge_trees(roots))
     }
 
     #[test]
@@ -85,15 +86,6 @@ mod tests {
             n: 6.0,
             q: 12.0
         };
-        let t3 = TreeNode{
-            action: norm('p', "d2", "d3"),
-            children: vec![],
-            state: NodeState::Expandable,
-            turn: Color::White,
-            move_num: 1.,
-            n: 5.0,
-            q: 10.0
-        };
         let merged = TreeNode{
             action: norm('p', "e2", "e3"),
             children: vec![],
@@ -104,9 +96,8 @@ mod tests {
             q: 36.0
         };
 
-        let roots = vec![t1.clone(), t2.clone(), t3.clone()];
-        let expected = vec![t3.clone(), merged.clone()];
-        assert_eq!(expected, merge_trees(roots))
+        let roots = vec![t1.clone(), t2.clone()];
+        assert_eq!(merged, merge_trees(roots))
     }
 
     #[test]
@@ -190,16 +181,6 @@ mod tests {
                 }
             ],
         };
-        let t3 = TreeNode{
-            action: norm('p', "d2", "d3"),
-            state: NodeState::Expandable,
-            turn: Color::White,
-            move_num: 1.,
-            n: 5.0,
-            q: 10.0,
-            children: vec![],
-        };
-
         let merged = TreeNode{
             action: norm('p', "e2", "e3"),
             state: NodeState::FullyExpanded,
@@ -251,8 +232,7 @@ mod tests {
                 }
             ],
         };
-        let roots = vec![t1.clone(), t2.clone(), t3.clone()];
-        let expected = vec![t3.clone(), merged.clone()];
-        assert_eq!(expected, merge_trees(roots))
+        let roots = vec![t1.clone(), t2.clone()];
+        assert_eq!(merged, merge_trees(roots))
     }
 }

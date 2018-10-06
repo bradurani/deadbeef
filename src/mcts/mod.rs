@@ -102,8 +102,8 @@ impl TreeNode{
             state: NodeState::Expandable,
             turn: turn,
             move_num: move_num,
-            n: 0., q: 0. }
-
+            n: 0., q: 0.
+        }
     }
 
     pub fn new_root(game: &Chess, move_num: f32) -> TreeNode{
@@ -113,7 +113,8 @@ impl TreeNode{
             state: NodeState::Expandable,
             turn: game.turn(), // So we switch to White for move 1
             move_num: move_num, //So we increment to 1 for move 1
-            n: 0., q:0. }
+            n: 0., q:0.
+        }
     }
 
     pub fn starting() -> TreeNode{
@@ -125,6 +126,10 @@ impl TreeNode{
             move_num: 0.5,
             n: 0., q: 0.
         }
+    }
+
+    pub fn score(&self) -> f32{
+        self.n / self.q
     }
 
     /// Gather some statistics about this subtree
@@ -163,15 +168,18 @@ impl TreeNode{
     /// Add a child to the current node with an previously unexplored action.
     ///
     /// XXX Use HashSet? Use iterators? XXX
-    pub fn expand(&mut self, game: &Chess) -> Option<&mut TreeNode> {
+    pub fn expand(&mut self, game: &Chess, candidate_actions: Vec<Move>) -> &mut TreeNode {
+        // println!("Candidate Action: {:?}", &candidate_actions);
 
+        let action = *choose_random(&candidate_actions);
+
+        self.children.push(TreeNode::new(Some(action), self.turn.not(), self.move_num + 0.5));
+        self.children.last_mut().unwrap()
+    }
+
+    fn candidate_actions(&self, game: &Chess, allowed_actions: Vec<Move>) -> Vec<Move>{
         // What are our options given the current game state?
         // could save this between calls
-        let allowed_actions = game.allowed_actions();
-        if allowed_actions.len() == 0 || game.is_insufficient_material() {
-            self.state = NodeState::LeafNode;
-            return None;
-        }
 
         // Get a list with all the actions we tried alreday
         let mut child_actions : Vec<Move> = Vec::new();
@@ -180,22 +188,13 @@ impl TreeNode{
         }
 
         // Find untried actions
-        let mut candidate_actions = Vec::new();
+        let mut candidate_actions: Vec<Move> = Vec::new();
         for action in &allowed_actions {
             if !child_actions.contains(action) {
-                candidate_actions.push(action);
+                candidate_actions.push(*action);
             }
         }
-
-        if candidate_actions.len() == 1 {
-            self.state = NodeState::FullyExpanded;
-        }
-
-        // Select random actions
-        let action = *choose_random(&candidate_actions).clone();
-
-        self.children.push(TreeNode::new(Some(action), self.turn.not(), self.move_num + 0.5));
-        self.children.last_mut()
+        candidate_actions
     }
 
     /// Recursively perform an MCTS iteration.
@@ -215,17 +214,22 @@ impl TreeNode{
                 child.iteration(game, c)
             },
             NodeState::Expandable => {
-                let child = self.expand(game);
-                match child {
-                    Some(child) => {           // We expanded our current node...
-                        game.make_move(&child.action.unwrap());
-                        let delta = playout(game).reward();
-                        child.n += 1.;
-                        child.q += delta;
-                        delta
-                    },
-                    None => game.reward()      // Could not expand, current node is a leaf node!
+                let allowed_actions = game.allowed_actions();
+                if allowed_actions.len() == 0 || game.is_insufficient_material() {
+                    self.state = NodeState::LeafNode;
+                    return self.iteration(game, c)
                 }
+                let candidate_actions = self.candidate_actions(game, allowed_actions);
+                if candidate_actions.len() == 0 {
+                    self.state = NodeState::FullyExpanded;
+                    return self.iteration(game, c)
+                }
+                let mut child = self.expand(game, candidate_actions);
+                game.make_move(&child.action.unwrap());
+                let delta = playout(game).reward();
+                child.n += 1.;
+                child.q += delta;
+                delta
             }
         };
         self.n += 1.;
@@ -321,21 +325,21 @@ impl MCTS {
     }
 
     /// Perform n_samples MCTS iterations.
-    pub fn search(&mut self, game: &Chess, ensemble_size: usize,
+    pub fn search(&mut self, root: &TreeNode, game: &Chess, ensemble_size: usize,
                   n_samples: usize, c: f32, move_num: f32) -> Vec<TreeNode> {
 
         // Iterate over ensemble and perform MCTS iterations
         let handles: Vec<JoinHandle<TreeNode>> = (0..ensemble_size).map(|e|{
             let thread_game = game.clone();
-            let mut root = TreeNode::new_root(&game, move_num);
+            let mut thread_root = root.clone();
             thread::spawn(move ||{
 
                 // Perform MCTS iterations
                 for _ in 0..n_samples {
-                    root.iteration(&mut thread_game.clone(), c);
+                    thread_root.iteration(&mut thread_game.clone(), c);
                 }
                 // println!("root: {}", root);
-                root
+                thread_root
             })
         }).collect();
 
@@ -343,7 +347,7 @@ impl MCTS {
     }
 
     /// Perform MCTS iterations for the given time budget (in s).
-    pub fn search_time(&mut self, game: &mut Chess, ensemble_size: usize, time_per_move_ms: f32, c: f32, move_num: f32) -> Vec<TreeNode> {
+    pub fn search_time(&mut self, root: TreeNode, game: &mut Chess, ensemble_size: usize, time_per_move_ms: f32, c: f32, move_num: f32) -> Vec<TreeNode> {
         let mut samples_total = 0;
         let t0 = Instant::now();
 
@@ -354,7 +358,7 @@ impl MCTS {
 
         let mut roots = Vec::new();
         while n_samples >= 5 {
-            let thread_roots = self.search(game, ensemble_size, n_samples, c, move_num);
+            let thread_roots = self.search(&root, game, ensemble_size, n_samples, c, move_num);
             roots.push(thread_roots);
             samples_total += n_samples;
 
@@ -370,40 +374,21 @@ impl MCTS {
     }
 
     /// Return the best action found so far by averaging over the ensamble.
-    pub fn best_action(&self, roots: &Vec<TreeNode>) -> Option<Move> {
-        // Merge ensamble results
-        let mut n_values = HashMap::<Move, f32>::new();
-        let mut q_values = HashMap::<Move, f32>::new();
+    pub fn best_children(&self, roots: Vec<TreeNode>) -> Option<Vec<TreeNode>> {
 
-        for root in roots {
-            for child in &root.children {
-                let action = child.action.unwrap();
-
-                let n = n_values.entry(action).or_insert(0.);
-                let q = q_values.entry(action).or_insert(0.);
-
-                *n += child.n;
-                *q += child.q;
-            }
-        }
-        //TODO just use abs
         let color = roots.first().unwrap().turn;
         let color_coefficient = color_coefficient(&color);
 
-        // Find best action
-        let mut best_action: Option<Move> = None;
-        let mut best_value: f32 = f32::NEG_INFINITY;
-        for (action, n) in &n_values {
-            let q = q_values.get(action).unwrap();
-            let value = (color_coefficient * q) / n;
-            if value > best_value {
-                best_action = Some(*action);
-                best_value = value;
-            }
-        }
-        println!("Best action {:?}: {:?} value: {}", color, best_action, best_value);
+        let mut action_map: HashMap<Move, Vec<TreeNode>> = HashMap::new();
 
-        best_action
+        for r in roots.into_iter().flat_map(|r| r.children){
+            let action_nodes = action_map.entry(r.action.unwrap()).or_insert(vec!());
+            action_nodes.push(r);
+        }
+        action_map.values().into_iter().map(|n| {
+            (n, n.into_iter().map(|n| color_coefficient * n.score()).sum::<f32>())
+        }).max_by(|n1, n2| n1.1.partial_cmp(&n2.1).unwrap()).
+        map(|(nodes, score)| nodes.to_vec())
     }
 }
 
