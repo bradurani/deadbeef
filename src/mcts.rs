@@ -189,11 +189,10 @@ impl TreeNode {
     pub fn best_child(&mut self, c: f32) -> &mut TreeNode {
         let mut best_value: f32 = f32::NEG_INFINITY;
         let mut best_child: Option<&mut TreeNode> = None;
-        let color_coefficient = color_coefficient(&self.turn);
 
         for child in &mut self.children {
             let value =
-                (color_coefficient * child.q) / child.n + c * (2. * self.n.ln() / child.n).sqrt();
+                (self.turn.coefficient() * child.q) / child.n + c * (2. * self.n.ln() / child.n).sqrt();
             if value > best_value {
                 best_value = value;
                 best_child = Some(child);
@@ -433,7 +432,6 @@ impl MCTS {
     /// Return the best action found so far by averaging over the ensamble.
     pub fn best_children(&self, roots: Vec<TreeNode>) -> Option<Vec<TreeNode>> {
         let color = roots.first().unwrap().turn;
-        let color_coefficient = color_coefficient(&color);
 
         let combined_children: Vec<TreeNode> = roots.into_iter().
             flat_map(|r| r.children).collect();
@@ -448,7 +446,7 @@ impl MCTS {
         let summed_actions: Vec<(&Move, f32)> = action_map
             .iter()
             .map(|(action, nodes)| {
-                let score_sum = sum_node_list(nodes.clone(), color_coefficient);
+                let score_sum = sum_node_list(nodes.clone(), color.coefficient());
                 (action, score_sum)
             }).collect();
 
@@ -465,11 +463,13 @@ fn sum_node_list(nodes: Vec<TreeNode>, color_coefficient: f32) -> f32{
     })
 }
 
-
-fn color_coefficient(color: &Color) -> f32 {
-    match color {
-        Color::Black => -1.,
-        Color::White => 1.,
+pub trait Coefficient { fn coefficient(&self) -> f32; }
+impl Coefficient for Color {
+    fn coefficient(&self) -> f32 {
+        match &self {
+            Color::Black => -1.,
+            Color::White => 1.,
+        }
     }
 }
 
