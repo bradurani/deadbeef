@@ -1,7 +1,6 @@
 extern crate rand;
 
-use rand::Rng;
-
+use utils::rand::Rng;
 
 /// Various small utility functions
 

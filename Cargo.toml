@@ -9,3 +9,11 @@ matches = "0.1.8"
 itertools = "0.7.8"
 [dependencies.shakmaty]
 path = "../shakmaty"
+
+[lib]
+name = "deadbeef"
+path = "src/lib.rs"
+
+[[bin]]
+name = "main"
+path = "src/main.rs"
