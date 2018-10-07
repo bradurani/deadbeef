@@ -1,10 +1,9 @@
-extern crate shakmaty;
 extern crate deadbeef;
+extern crate shakmaty;
 
-use shakmaty::*;
-use deadbeef::play;
 use deadbeef::pgn;
-
+use deadbeef::play;
+use shakmaty::*;
 
 pub fn main() {
     let starting_position = Chess::default();
@@ -13,4 +12,3 @@ pub fn main() {
     let pgn = pgn::to_pgn(&starting_position, &move_history);
     println!("{}", pgn);
 }
-

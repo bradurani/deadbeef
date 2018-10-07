@@ -6,9 +6,9 @@ use std::collections::HashMap;
 use std::f32;
 use std::fmt;
 use std::i32;
+use std::ops::Not;
 use std::thread;
 use std::thread::JoinHandle;
-use std::ops::Not;
 
 use std::time::Instant;
 
@@ -191,8 +191,8 @@ impl TreeNode {
         let mut best_child: Option<&mut TreeNode> = None;
 
         for child in &mut self.children {
-            let value =
-                (self.turn.coefficient() * child.q) / child.n + c * (2. * self.n.ln() / child.n).sqrt();
+            let value = (self.turn.coefficient() * child.q) / child.n
+                + c * (2. * self.n.ln() / child.n).sqrt();
             if value > best_value {
                 best_value = value;
                 best_child = Some(child);
@@ -210,10 +210,10 @@ impl TreeNode {
         let action = *choose_random(&candidate_actions);
 
         self.children.push(TreeNode::new(
-                Some(action),
-                self.turn.not(),
-                self.move_num + 0.5,
-                ));
+            Some(action),
+            self.turn.not(),
+            self.move_num + 0.5,
+        ));
         self.children.last_mut().unwrap()
     }
 
@@ -286,14 +286,21 @@ impl fmt::Display for TreeNode {
             }
             match node.action {
                 Some(a) => try!(writeln!(
-                        f,
-                        "{}. {} q={} n={} s={}",
-                        node.move_num, a, node.q, node.n, node.score()
+                    f,
+                    "{}. {} q={} n={} s={}",
+                    node.move_num,
+                    a,
+                    node.q,
+                    node.n,
+                    node.score()
                 )),
                 None => try!(writeln!(
-                        f,
-                        "{}. Root q={} n={} s={}",
-                        node.move_num, node.q, node.n, node.score()
+                    f,
+                    "{}. Root q={} n={} s={}",
+                    node.move_num,
+                    node.q,
+                    node.n,
+                    node.score()
                 )),
             }
             for child in &node.children {
@@ -328,9 +335,9 @@ impl TreeStatistics {
                 min_depth: 1 + child_stats
                     .iter()
                     .fold(i32::MAX, |depth, child| min(depth, child.min_depth)),
-                    max_depth: 1 + child_stats
-                        .iter()
-                        .fold(0, |depth, child| max(depth, child.max_depth)),
+                max_depth: 1 + child_stats
+                    .iter()
+                    .fold(0, |depth, child| max(depth, child.max_depth)),
             }
         }
     }
@@ -375,7 +382,7 @@ impl MCTS {
         ensemble_size: usize,
         n_samples: usize,
         c: f32,
-        ) -> Vec<TreeNode> {
+    ) -> Vec<TreeNode> {
         // Iterate over ensemble and perform MCTS iterations
         let handles: Vec<JoinHandle<TreeNode>> = (0..ensemble_size)
             .map(|_e| {
@@ -390,7 +397,7 @@ impl MCTS {
                     thread_root
                 })
             })
-        .collect();
+            .collect();
 
         handles.into_iter().map(|th| th.join().unwrap()).collect()
     }
@@ -403,7 +410,7 @@ impl MCTS {
         ensemble_size: usize,
         time_per_move_ms: f32,
         c: f32,
-        ) -> Vec<TreeNode> {
+    ) -> Vec<TreeNode> {
         let mut samples_total = 0;
         let t0 = Instant::now();
 
@@ -433,8 +440,7 @@ impl MCTS {
     pub fn best_children(&self, roots: Vec<TreeNode>) -> Option<Vec<TreeNode>> {
         let color = roots.first().unwrap().turn;
 
-        let combined_children: Vec<TreeNode> = roots.into_iter().
-            flat_map(|r| r.children).collect();
+        let combined_children: Vec<TreeNode> = roots.into_iter().flat_map(|r| r.children).collect();
 
         let mut action_map: HashMap<Move, Vec<TreeNode>> = HashMap::new();
 
@@ -448,22 +454,31 @@ impl MCTS {
             .map(|(action, nodes)| {
                 let score_sum = sum_node_list(nodes.clone(), color.coefficient());
                 (action, score_sum)
-            }).collect();
+            })
+            .collect();
 
-        summed_actions.into_iter().max_by(|n1, n2| n1.1.partial_cmp(&n2.1).unwrap())
+        summed_actions
+            .into_iter()
+            .max_by(|n1, n2| n1.1.partial_cmp(&n2.1).unwrap())
             .map(|(action, _score)| action_map[action].to_vec())
     }
 }
 
-fn sum_node_list(nodes: Vec<TreeNode>, color_coefficient: f32) -> f32{
-    nodes.iter().fold(0., |sum, node|{
-        println!("sum: {}, color_coefficient: {}, score: {}",
-                 sum, color_coefficient, node.score());
+fn sum_node_list(nodes: Vec<TreeNode>, color_coefficient: f32) -> f32 {
+    nodes.iter().fold(0., |sum, node| {
+        println!(
+            "sum: {}, color_coefficient: {}, score: {}",
+            sum,
+            color_coefficient,
+            node.score()
+        );
         sum + (color_coefficient * node.score())
     })
 }
 
-pub trait Coefficient { fn coefficient(&self) -> f32; }
+pub trait Coefficient {
+    fn coefficient(&self) -> f32;
+}
 impl Coefficient for Color {
     fn coefficient(&self) -> f32 {
         match &self {

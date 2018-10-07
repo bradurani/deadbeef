@@ -1,7 +1,7 @@
 extern crate matches;
 extern crate shakmaty;
 
-use mcts::{TreeNode, MCTS, Game};
+use mcts::{Game, TreeNode, MCTS};
 use pgn;
 use shakmaty::{Chess, Move, Setup};
 use std::time::Instant;
@@ -12,7 +12,7 @@ pub fn play_game(
     ensemble_size: usize,
     time_per_move_ms: f32,
     exploration_param: f32,
-    ) -> Vec<Move> {
+) -> Vec<Move> {
     let mut game = starting_position.clone();
     let mut move_history: Vec<Move> = Vec::new();
     let mut move_num = 0.5;
@@ -29,7 +29,7 @@ pub fn play_game(
             time_per_move_ms,
             exploration_param,
             move_num,
-            );
+        );
         match action {
             None => break,
             Some((action, new_root)) => {
@@ -52,7 +52,7 @@ pub fn make_move(
     time_per_move_ms: f32,
     exploration_param: f32,
     move_num: f32,
-    ) -> Option<(Move, TreeNode)> {
+) -> Option<(Move, TreeNode)> {
     println!("\nMove: {}", move_num);
     let t0 = Instant::now();
 
@@ -67,7 +67,7 @@ pub fn make_move(
         ensemble_size,
         time_per_move_ms,
         exploration_param,
-        );
+    );
 
     println!("Calculated {:?}", mcts.tree_statistics(&roots));
     // DEBUG
