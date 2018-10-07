@@ -1,11 +1,9 @@
 extern crate deadbeef;
 extern crate shakmaty;
 
-use deadbeef::mcts::{TreeNode, MCTS};
-use deadbeef::play;
-use shakmaty::fen::Fen;
-use shakmaty::uci::Uci;
-use shakmaty::Chess;
+use helpers::assert_move;
+
+mod helpers;
 
 #[test]
 fn queen_mate_white() {
@@ -28,25 +26,21 @@ fn knight_mate_white() {
 }
 
 #[test]
-fn discovered_checkmate_white(){
-    assert_move("3rkb2/3q1pBp/4Np2/p7/Pp6/1P5P/2P2PP1/2QrRK2 w - - 0 1", "e6c7");
+fn discovered_checkmate_white() {
+    assert_move(
+        "3rkb2/3q1pBp/4Np2/p7/Pp6/1P5P/2P2PP1/2QrRK2 w - - 0 1",
+        "e6c7",
+    );
 }
 
-fn assert_move(fen: &'static str, move_uci: &'static str){
-    let setup: Fen = fen.parse().unwrap();
-    let position: Chess = setup.position().unwrap();
-    let uci: Uci = move_uci.parse().unwrap();
-    let m = uci.to_move(&position).unwrap();
+// positions with more than 1 mate solution
 
-    let (action, _new_root) = play::make_move(
-        &mut MCTS::new(),
-        TreeNode::new_root(&position, 50.),
-        &position,
-        1,
-        1000.0,
-        0.5,
-        100.0,
-        )
-        .unwrap();
-    assert_eq!(m, action)
+#[test]
+fn promotion_mate_white() {
+    assert_move("8/p7/P7/6p1/4p2p/2pk4/5p2/2K5 b - - 1 44", "f2f1q");
+}
+
+#[test]
+fn queen_multi_mate_white() {
+    assert_move("", "f2f1q");
 }

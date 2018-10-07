@@ -207,7 +207,7 @@ impl TreeNode {
     pub fn expand(&mut self, candidate_actions: Vec<Move>) -> &mut TreeNode {
         // println!("Candidate Action: {:?}", &candidate_actions);
 
-        let action = *choose_random(&candidate_actions);
+        let action = *choose_random(&candidate_actions, );
 
         self.children.push(TreeNode::new(
             Some(action),
@@ -351,6 +351,7 @@ impl TreeStatistics {
 /// determinization.
 pub struct MCTS {
     iterations_per_ms: f32,
+
 }
 
 impl MCTS {
@@ -465,15 +466,12 @@ impl MCTS {
 }
 
 fn sum_node_list(nodes: Vec<TreeNode>, color_coefficient: f32) -> f32 {
-    nodes.iter().fold(0., |sum, node| {
-        println!(
-            "sum: {}, color_coefficient: {}, score: {}",
-            sum,
-            color_coefficient,
-            node.score()
-        );
-        sum + (color_coefficient * node.score())
-    })
+    let (qs, ns) = nodes.iter().fold((0., 0.), |mut sums, node| {
+        sums.0 += node.q;
+        sums.1 += node.n;
+        sums
+    });
+    (color_coefficient * qs) / ns
 }
 
 pub trait Coefficient {
