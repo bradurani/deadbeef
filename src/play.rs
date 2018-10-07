@@ -70,9 +70,12 @@ pub fn make_move(
         );
 
     println!("Calculated {:?}", mcts.tree_statistics(&roots));
-    for r in &roots {
-        println!("{}", r);
+    // DEBUG
+    {
+        let debug_combined_node = merge_trees(roots.clone());
+        println!("{}", debug_combined_node);
     }
+    // DEBUG
 
     let best_children = mcts.best_children(roots);
     let action_and_new_root = best_children.map(|children| {

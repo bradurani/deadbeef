@@ -4,7 +4,7 @@ use mcts::TreeNode;
 use shakmaty::Move;
 use std::collections::HashMap;
 
-pub fn merge_nodes(roots: Vec<TreeNode>) -> Vec<TreeNode> {
+fn merge_nodes(roots: Vec<TreeNode>) -> Vec<TreeNode> {
     let mut map: HashMap<Move, Vec<TreeNode>> = HashMap::new();
     for r in roots.into_iter() {
         let action_nodes = map.entry(r.action.unwrap()).or_insert(vec![]);

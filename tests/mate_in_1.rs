@@ -15,6 +15,6 @@ fn queen_mate() {
     let uci: Uci = "a7d7".parse().unwrap();
     let m = uci.to_move(&position).unwrap();
 
-    let o = play::make_move(&mut MCTS::new(), TreeNode::new_root(&position, 50.), &position, 1, 1000.0, 0.5, 100.0);
-    assert_eq!(m, o.unwrap().0);
+    let (action, _new_root) = play::make_move(&mut MCTS::new(), TreeNode::new_root(&position, 50.), &position, 1, 1000.0, 0.5, 100.0).unwrap();
+    assert_eq!(m, action);
 }

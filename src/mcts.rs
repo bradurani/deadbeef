@@ -166,7 +166,7 @@ impl TreeNode {
     }
 
     pub fn score(&self) -> f32 {
-        self.n / self.q
+        self.q as f32 / self.n as f32
     }
 
     /// Gather some statistics about this subtree
@@ -285,17 +285,16 @@ impl fmt::Display for TreeNode {
             for _ in 0..indent_level {
                 try!(f.write_str("    "));
             }
-            let score = node.q / node.n;
             match node.action {
                 Some(a) => try!(writeln!(
                         f,
                         "{}. {} q={} n={} s={}",
-                        node.move_num, a, node.q, node.n, score
+                        node.move_num, a, node.q, node.n, node.score()
                 )),
                 None => try!(writeln!(
                         f,
                         "{}. Root q={} n={} s={}",
-                        node.move_num, node.q, node.n, score
+                        node.move_num, node.q, node.n, node.score()
                 )),
             }
             for child in &node.children {
@@ -436,27 +435,36 @@ impl MCTS {
         let color = roots.first().unwrap().turn;
         let color_coefficient = color_coefficient(&color);
 
+        let combined_children: Vec<TreeNode> = roots.into_iter().
+            flat_map(|r| r.children).collect();
+
         let mut action_map: HashMap<Move, Vec<TreeNode>> = HashMap::new();
 
-        for r in roots.into_iter().flat_map(|r| r.children) {
+        for r in combined_children {
             let action_nodes = action_map.entry(r.action.unwrap()).or_insert(vec![]);
             action_nodes.push(r);
         }
-        action_map
-            .values()
-            .into_iter()
-            .map(|n| {
-                (
-                    n,
-                    n.into_iter()
-                    .map(|n| color_coefficient * n.score())
-                    .sum::<f32>(),
-                    )
-            })
-        .max_by(|n1, n2| n1.1.partial_cmp(&n2.1).unwrap())
-            .map(|(nodes, _score)| nodes.to_vec())
+
+        let summed_actions: Vec<(&Move, f32)> = action_map
+            .iter()
+            .map(|(action, nodes)| {
+                let score_sum = sum_node_list(nodes.clone(), color_coefficient);
+                (action, score_sum)
+            }).collect();
+
+        summed_actions.into_iter().max_by(|n1, n2| n1.1.partial_cmp(&n2.1).unwrap())
+            .map(|(action, _score)| action_map[action].to_vec())
     }
 }
+
+fn sum_node_list(nodes: Vec<TreeNode>, color_coefficient: f32) -> f32{
+    nodes.iter().fold(0., |sum, node|{
+        println!("sum: {}, color_coefficient: {}, score: {}",
+                 sum, color_coefficient, node.score());
+        sum + (color_coefficient * node.score())
+    })
+}
+
 
 fn color_coefficient(color: &Color) -> f32 {
     match color {
