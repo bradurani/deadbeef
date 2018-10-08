@@ -33,12 +33,35 @@ fn discovered_checkmate_white() {
     );
 }
 
-// positions with more than 1 mate solution
+#[test]
+fn en_passent_mate() {
+    assert_move(
+        "r3k2r/pbppqpb1/1pn3p1/7p/1N2pPn1/1PP4N/PB1P2PP/2QRKR2 b kq f3 0 1",
+        "e4f3",
+    )
+}
 
-// #[test]
-// fn promotion_mate_white() {
-//     assert_move("8/p7/P7/6p1/4p2p/2pk4/5p2/2K5 b - - 1 44", "f2f1q");
-// }
+#[test]
+fn castle_mate_white() {
+    assert_move("", "e4f3")
+}
+
+// positions with more than 1 mate solution
+#[test]
+fn castle_white_mate() {
+    // white castle or kd2
+    //  Edward Lasker–Sir George Thomas (London 1912)
+    assert_move(
+        "rn3r2/pbppq1p1/1p2pN2/8/3P2NP/6P1/PPP1BP1R/R3K1k1 w Q - 5 18",
+        "e1c1",
+    );
+}
+
+#[test]
+fn promotion_mate_white() {
+    // can mate promoting to queen or rook
+    assert_move("8/p7/P7/6p1/4p2p/2pk4/5p2/2K5 b - - 1 44", "f2f1q");
+}
 
 #[test]
 fn queen_multi_mate_white() {
