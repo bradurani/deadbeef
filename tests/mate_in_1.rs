@@ -41,19 +41,14 @@ fn en_passent_mate() {
     )
 }
 
-#[test]
-fn castle_mate_white() {
-    assert_move("", "e4f3")
-}
-
 // positions with more than 1 mate solution
 #[test]
-fn castle_white_mate() {
+fn castle_mate_in_1_white() {
     // white castle or kd2
     //  Edward Lasker–Sir George Thomas (London 1912)
     assert_move(
         "rn3r2/pbppq1p1/1p2pN2/8/3P2NP/6P1/PPP1BP1R/R3K1k1 w Q - 5 18",
-        "e1c1",
+        "e1d2",
     );
 }
 

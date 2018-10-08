@@ -19,7 +19,7 @@ fn queen_sacrifice_knight_mate_in_2() {
     assert_move_in_n(
         "2r2r1k/p1q3pp/8/3Q1p2/2N5/PP3N2/4n1P1/R1B2n1K b - - 0 1",
         "c7h2",
-        1000,
+        4000,
     );
 }
 
@@ -34,7 +34,8 @@ fn bishop_mate_in_2() {
 // with multiple solutions
 #[test]
 fn queen_mate_in_2() {
-    assert_move("4q3/8/8/8/8/3k4/8/3K4 b - - 0 1", "e8e2"); //also e8e5
+    //e8e2, e8e5 d3c3
+    assert_move("4q3/8/8/8/8/3k4/8/3K4 b - - 0 1", "d3c3");
 }
 
 #[test]

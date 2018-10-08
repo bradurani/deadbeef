@@ -6,6 +6,7 @@ use helpers::assert_move;
 mod helpers;
 
 #[test]
+#[ignore]
 fn queen_sacrifice_mate_white() {
     assert_move(
         //  Edward Lasker–Sir George Thomas (London 1912)
