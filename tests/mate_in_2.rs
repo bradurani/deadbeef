@@ -39,10 +39,20 @@ fn queen_mate_in_2() {
 }
 
 #[test]
-fn back_row_mate_white() {
+fn back_row_mate_in_2_white() {
     assert_move(
         //  Edward Lasker–Sir George Thomas (London 1912)
         "rn3r2/pbppq1p1/1p2pN2/8/3P2NP/6P1/PPP1BPk1/R3K2R w KQ - 3 17",
         "h1h2", //or 0-0-0 e1c1
+    );
+}
+
+#[test]
+fn king_back_row_mate_in_2() {
+    //  Edward Lasker–Sir George Thomas (London 1912)
+    assert_move(
+        //  Edward Lasker–Sir George Thomas (London 1912)
+        "rn3r2/pbppq1p1/1p2pN2/8/3P2NP/3B1kP1/PPP2P2/R3K2R w KQ - 1 16",
+        "e1f1", //e1g1
     );
 }
