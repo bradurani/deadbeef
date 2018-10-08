@@ -42,5 +42,5 @@ fn promotion_mate_white() {
 
 #[test]
 fn queen_multi_mate_white() {
-    assert_move("", "f2f1q");
+    assert_move("4k3/1Q6/4K3/8/8/8/8/8 w - - 0 1", "b7b8");
 }

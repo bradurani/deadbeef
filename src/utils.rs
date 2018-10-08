@@ -1,20 +1,17 @@
-extern crate rand;
+use rand::rngs::SmallRng;
+use rand::{Rng, RngCore, SeedableRng};
 
-use utils::rand::rngs::SmallRng;
-use utils::rand::{Rng, SeedableRng};
-
-pub fn choose_random<T>(vec: &Vec<T>) -> &T {
-    seeded_rng().choose(vec).unwrap()
+pub fn choose_random<'a, T, R: Rng>(rng: &mut R, vec: &'a Vec<T>) -> &'a T {
+    rng.next_u32();
+    rng.choose(&vec).unwrap()
 }
 
-pub fn random() -> u8 {
-    seeded_rng().gen()
-}
-
-fn seeded_rng() -> SmallRng {
-    let seed = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
-    let mut rng = SmallRng::from_seed(seed);
-    rng
+pub fn seeded_rng(rng_seed: u8) -> SmallRng {
+    let seeds = [
+        rng_seed, 2, rng_seed, 3, rng_seed, 4, rng_seed, 5, rng_seed, 6, rng_seed, 7, rng_seed, 8,
+        rng_seed, 9,
+    ];
+    SmallRng::from_seed(seeds)
 }
 
 #[cfg(test)]
@@ -23,16 +20,27 @@ mod tests {
     use utils::*;
 
     #[test]
-    fn test_choose_random() {
+    fn test_choose_random_1_element() {
+        let mut rng = seeded_rng(1);
         let vec = vec![23];
-        assert_eq!(*choose_random(&vec), 23);
+        assert_eq!(*choose_random(&mut rng, &vec), 23);
+    }
+
+    #[test]
+    fn test_choose_random() {
+        let mut rng = seeded_rng(37);
+        let vec = vec![1, 2, 3, 4, 5, 6, 7, 8, 9];
+        assert_eq!(2, *choose_random(&mut rng, &vec));
+        assert_eq!(4, *choose_random(&mut rng, &vec));
     }
 
     #[test]
     fn repeated_random() {
-        let n = random();
-        let m = random();
-        assert_eq!(n, m);
+        let mut rng = seeded_rng(1);
+        let a: u32 = rng.next_u32();
+        let b: u32 = rng.next_u32();
+        assert_eq!(35328554, a);
+        assert_eq!(255278948, b);
     }
 
     //     #[bench]

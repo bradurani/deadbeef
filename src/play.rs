@@ -12,11 +12,12 @@ pub fn play_game(
     ensemble_size: usize,
     time_per_move_ms: f32,
     exploration_param: f32,
+    starting_seed: u8,
 ) -> Vec<Move> {
     let mut game = starting_position.clone();
     let mut move_history: Vec<Move> = Vec::new();
     let mut move_num = 0.5;
-    let mut mcts: MCTS = MCTS::new();
+    let mut mcts: MCTS = MCTS::new(starting_seed);
     let mut merged_root = TreeNode::new_root(&game, move_num);
 
     loop {
@@ -73,7 +74,7 @@ pub fn make_move(
     // DEBUG
     {
         let debug_combined_node = merge_trees(roots.clone());
-        println!("{}", debug_combined_node);
+        // println!("{}", debug_combined_node);
     }
     // DEBUG
 

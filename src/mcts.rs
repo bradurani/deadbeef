@@ -1,4 +1,4 @@
-extern crate shakmaty;
+extern crate shakmaty; //?
 
 use shakmaty::*;
 use std::cmp::{max, min};
@@ -12,9 +12,10 @@ use std::thread::JoinHandle;
 
 use std::time::Instant;
 
-use utils::choose_random;
+use playout::playout;
+use rand::rngs::SmallRng;
+use utils::*;
 
-const MAX_PLAYOUT_MOVES: u32 = 4000;
 const STARTING_ITERATIONS_PER_MS: f32 = 1.;
 
 /// A `Game` represets a game state.
@@ -30,44 +31,7 @@ pub trait Game: Clone {
 
     /// Reward for the player when reaching the current game state.
     fn reward(&self) -> f32;
-
-    /// Derterminize the game
-    fn set_rng_seed(&mut self, seed: u32);
 }
-
-/// Perform a random playout.
-///
-/// Start with an initial game state and perform random actions from
-/// until a game-state is reached that does not have any `allowed_actions`.
-pub fn playout(initial: &Chess) -> Chess {
-    let mut game = initial.clone();
-
-    let mut potential_moves = game.allowed_actions();
-
-    let mut num_moves = 0;
-    while potential_moves.len() > 0 && !game.is_insufficient_material() {
-        num_moves += 1;
-        if num_moves >= MAX_PLAYOUT_MOVES {
-            eprintln!("REACHED MAX PLAYOUT LENGTH");
-            break;
-        }
-
-        let action = choose_random(&potential_moves).clone();
-        game.make_move(&action);
-        potential_moves = game.allowed_actions();
-    }
-    game
-}
-
-// /// Calculate the expected reward based on random playouts.
-// pub fn expected_reward<G: Chess, A: GameAction>(game: &G, n_samples: usize) -> f32 {
-//     let mut score_sum: f32 = 0.0;
-//
-//     for _ in 0..n_samples {
-//         score_sum += playout(game).reward();
-//     }
-//     (score_sum as f32) / (n_samples as f32)
-// }
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -120,8 +84,6 @@ impl Game for Chess {
             None => 0.0,
         }
     }
-
-    fn set_rng_seed(&mut self, _seed: u32) {}
 }
 
 impl TreeNode {
@@ -204,10 +166,10 @@ impl TreeNode {
     }
 
     /// Add a child to the current node with an previously unexplored action.
-    pub fn expand(&mut self, candidate_actions: Vec<Move>) -> &mut TreeNode {
+    pub fn expand(&mut self, candidate_actions: Vec<Move>, rng: &mut SmallRng) -> &mut TreeNode {
         // println!("Candidate Action: {:?}", &candidate_actions);
 
-        let action = *choose_random(&candidate_actions, );
+        let action = *choose_random(rng, &candidate_actions);
 
         self.children.push(TreeNode::new(
             Some(action),
@@ -242,29 +204,29 @@ impl TreeNode {
     /// XXX A non-recursive implementation would probably be faster.
     /// XXX But how to keep &mut pointers to all our parents while
     /// XXX we fiddle with our leaf node?
-    pub fn iteration(&mut self, game: &mut Chess, c: f32) -> f32 {
+    pub fn iteration(&mut self, game: &mut Chess, c: f32, rng: &mut SmallRng) -> f32 {
         let delta = match self.state {
             NodeState::LeafNode => game.reward(),
             NodeState::FullyExpanded => {
                 // Choose and recurse into child...
                 let child = self.best_child(c);
                 game.make_move(&child.action.unwrap());
-                child.iteration(game, c)
+                child.iteration(game, c, rng)
             }
             NodeState::Expandable => {
                 let allowed_actions = game.allowed_actions();
                 if allowed_actions.len() == 0 || game.is_insufficient_material() {
                     self.state = NodeState::LeafNode;
-                    return self.iteration(game, c);
+                    return self.iteration(game, c, rng);
                 }
                 let candidate_actions = self.candidate_actions(allowed_actions);
                 if candidate_actions.len() == 0 {
                     self.state = NodeState::FullyExpanded;
-                    return self.iteration(game, c);
+                    return self.iteration(game, c, rng);
                 }
-                let mut child = self.expand(candidate_actions);
+                let mut child = self.expand(candidate_actions, rng);
                 game.make_move(&child.action.unwrap());
-                let delta = playout(game).reward();
+                let delta = playout(rng, game).reward();
                 child.n += 1.;
                 child.q += delta;
                 delta
@@ -351,14 +313,15 @@ impl TreeStatistics {
 /// determinization.
 pub struct MCTS {
     iterations_per_ms: f32,
-
+    starting_seed: u8,
 }
 
 impl MCTS {
     /// Create a new MCTS solver.
-    pub fn new() -> MCTS {
+    pub fn new(starting_seed: u8) -> MCTS {
         MCTS {
             iterations_per_ms: STARTING_ITERATIONS_PER_MS,
+            starting_seed: starting_seed,
         }
     }
 
@@ -386,13 +349,14 @@ impl MCTS {
     ) -> Vec<TreeNode> {
         // Iterate over ensemble and perform MCTS iterations
         let handles: Vec<JoinHandle<TreeNode>> = (0..ensemble_size)
-            .map(|_e| {
+            .map(|thread_num| {
                 let thread_game = game.clone();
                 let mut thread_root = root.clone();
+                let mut rng = seeded_rng(self.starting_seed + thread_num as u8);
                 thread::spawn(move || {
-                    // Perform MCTS iterations
+                    //Run iterations with playouts for this time slice
                     for _ in 0..n_samples {
-                        thread_root.iteration(&mut thread_game.clone(), c);
+                        thread_root.iteration(&mut thread_game.clone(), c, &mut rng);
                     }
                     // println!("root: {}", root);
                     thread_root
@@ -510,61 +474,6 @@ impl Coefficient for Color {
 //     }
 //     |)}>#
 //
-//     #[test]
-//     fn test_playout() {
-//         let game = MiniGame::new();
-//         let game = playout(&game);
-//         println!("Final: {:?}", game);
-//     }
-//
-//     #[test]
-//     fn test_expand() {
-//         let game = MiniGame::new();
-//         let mut node = TreeNode::new(None);
-//
-//         node.expand(&game);
-//         node.expand(&game);
-//         {
-//             let v = node.expand(&game).unwrap();
-//             v.expand(&game);
-//         }
-//
-//         println!("After some expands:\n{}", node);
-//     }
-//
-//     #[test]
-//     fn test_tree_statistics() {
-//         let game = MiniGame::new();
-//         let mut mcts = MCTS::new(&game, 2);
-//
-//         mcts.search(50, 1.);
-//
-//         let stats = mcts.tree_statistics();
-//
-//         println!("{:?}", stats);
-//     }
-//
-//     #<{(|
-//     #[test]
-//     fn test_mcts() {
-//         let game = MiniGame::new();
-//         let mut mcts = MCTS::new(&game, 1);
-//         //println!("MCTS on new game: {:?}", mcts);
-//         for i in 0..5 {
-//             mcts.root.iteration(&mut game.clone(), 1.0);
-//             println!("After {} iteration(s):\n{}", i, mcts);
-//         }
-//     }|)}>#
-//
-//     #[test]
-//     fn test_search() {
-//         let game = MiniGame::new();
-//         let mut mcts = MCTS::new(&game, 2);
-//
-//         mcts.search(50, 1.);
-//
-//         println!("Search result: {:?}", mcts.best_action());
-//     }
 //
 //     #[test]
 //     fn test_search_time() {
@@ -586,11 +495,6 @@ impl Coefficient for Color {
 //         assert!(time_spent < 700);
 //     }
 //
-//     #[bench]
-//     fn bench_playout(b: &mut Bencher) {
-//         let game = MiniGame::new();
-//         b.iter(|| playout(&game))
-//     }
 //
 //     #[bench]
 //     fn bench_expected(b: &mut Bencher) {
