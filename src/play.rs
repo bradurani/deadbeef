@@ -11,8 +11,9 @@ pub fn play_game(
     starting_position: &Chess,
     ensemble_size: usize,
     time_per_move_ms: f32,
-    exploration_param: f32,
+    c: f32,
     starting_seed: u8,
+    n_samples: isize,
 ) -> Vec<Move> {
     let mut game = starting_position.clone();
     let mut move_history: Vec<Move> = Vec::new();
@@ -28,8 +29,9 @@ pub fn play_game(
             &game,
             ensemble_size,
             time_per_move_ms,
-            exploration_param,
+            c,
             move_num,
+            n_samples,
         );
         match action {
             None => break,
@@ -51,8 +53,9 @@ pub fn make_move(
     game: &Chess,
     ensemble_size: usize,
     time_per_move_ms: f32,
-    exploration_param: f32,
+    c: f32,
     move_num: f32,
+    n_samples: isize,
 ) -> Option<(Move, TreeNode)> {
     println!("\nMove: {}", move_num);
     let t0 = Instant::now();
@@ -62,19 +65,17 @@ pub fn make_move(
         mcts.tree_statistics(&vec![root.clone()])
     );
 
-    let roots = mcts.search_time(
-        root,
-        &game,
-        ensemble_size,
-        time_per_move_ms,
-        exploration_param,
-    );
+    let roots = if n_samples == -1 {
+        mcts.search_time(&root, &game, ensemble_size, time_per_move_ms, c)
+    } else {
+        mcts.search(&root, &game, ensemble_size, n_samples as usize, c)
+    };
 
     println!("Calculated {:?}", mcts.tree_statistics(&roots));
     // DEBUG
     {
         let debug_combined_node = merge_trees(roots.clone());
-        // println!("{}", debug_combined_node);
+        println!("{}", debug_combined_node);
     }
     // DEBUG
 

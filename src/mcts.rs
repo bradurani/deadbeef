@@ -370,7 +370,7 @@ impl MCTS {
     /// Perform MCTS iterations for the given time budget (in s).
     pub fn search_time(
         &mut self,
-        root: TreeNode,
+        root: &TreeNode,
         game: &Chess,
         ensemble_size: usize,
         time_per_move_ms: f32,
@@ -386,7 +386,7 @@ impl MCTS {
 
         let mut roots = Vec::new();
         while n_samples >= 5 {
-            let thread_roots = self.search(&root, game, ensemble_size, n_samples, c);
+            let thread_roots = self.search(root, game, ensemble_size, n_samples, c);
             roots.push(thread_roots);
             samples_total += n_samples;
 
@@ -450,64 +450,44 @@ impl Coefficient for Color {
     }
 }
 
-/////////////////////////////////////////////////////////////////////////////
-// Unittests
+#[cfg(test)]
+mod tests {
+    //     //use std::num::traits::*;
+    //     use test::Bencher;
+    //
+    use mcts::*;
 
-// #[cfg(test)]
-// mod tests {
-//     //use std::num::traits::*;
-//     use test::Bencher;
-//
-//     use mcts::*;
-//     use minigame::MiniGame;
-//
-//     #<{(|
-//     // Are the given
-//     fn allmost_equal<T: Float>(a: T, b: T) -> bool {
-//         let rtol = 1e-6;
-//         // Shortcut for inf and neg_inf
-//         if (a == b) { return true };
-//         let a_abs = a.abs();
-//         let b_abd = b.abs();
-//         let diff = (a-b).abs();
-//         diff <= tol * a_abs.max(b_abs)
-//     }
-//     |)}>#
-//
-//
-//     #[test]
-//     fn test_search_time() {
-//         let game = MiniGame::new();
-//         let mut mcts = MCTS::new(&game, 2);
-//
-//         // Search for ~0.5 seconds
-//         let budget_seconds = 0.5;
-//
-//         let t0 = time::now();
-//         mcts.search_time(budget_seconds, 1.);
-//
-//         let time_spent = (time::now() - t0).num_milliseconds();
-//
-//         println!("Time spent in search_time: {}", time_spent);
-//
-//         // Check we really spent ~500 ms searching...
-//         assert!(time_spent > 200);
-//         assert!(time_spent < 700);
-//     }
-//
-//
-//     #[bench]
-//     fn bench_expected(b: &mut Bencher) {
-//         let game = MiniGame::new();
-//         b.iter(|| expected_reward(&game, 100))
-//     }
-//
-//     #[bench]
-//     fn bench_search(b: &mut Bencher) {
-//         let game = MiniGame::new();
-//         let mut mcts = MCTS::new(&game, 1);
-//
-//         b.iter(|| mcts.search(10, 1.0))
-//     }
-//
-// }
+    #[test]
+    fn search_deterministic() {
+        fn run_search() -> Vec<TreeNode> {
+            let mut mcts = MCTS::new(1);
+            let game = &Chess::default();
+            let tree_node = &TreeNode::new_root(game, 0.5);
+            mcts.search(tree_node, game, 4, 1000, 0.50)
+        }
+        let a = run_search();
+        let b = run_search();
+        let c = run_search();
+        // println!("{}\n{}", a.tree_statistics(), b.tree_statistics());
+        assert_eq!(a, b);
+        assert_eq!(b, c);
+        assert_eq!(a, c);
+    }
+
+    //
+    //
+    //     #[bench]
+    //     fn bench_expected(b: &mut Bencher) {
+    //         let game = MiniGame::new();
+    //         b.iter(|| expected_reward(&game, 100))
+    //     }
+    //
+    //     #[bench]
+    //     fn bench_search(b: &mut Bencher) {
+    //         let game = MiniGame::new();
+    //         let mut mcts = MCTS::new(&game, 1);
+    //
+    //         b.iter(|| mcts.search(10, 1.0))
+    //     }
+    //
+}

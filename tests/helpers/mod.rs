@@ -17,10 +17,11 @@ pub fn assert_move(fen: &'static str, move_uci: &'static str) {
         &mut MCTS::new(1),
         TreeNode::new_root(&position, 50.),
         &position,
-        4,
-        1000.0,
+        1,
+        0.,
         0.5,
-        100.0,
+        0.0,
+        5000,
     )
     .unwrap();
     assert_eq!(m, action)
