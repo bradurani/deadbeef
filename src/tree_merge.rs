@@ -33,7 +33,6 @@ pub fn merge_trees<'a>(mut root: TreeNode, new_roots: Vec<TreeNode>) -> TreeNode
             Some(found_child) => found_child,
             None => new_root_children.first().unwrap().clone_empty(),
         };
-        println!("recursing");
         merged_children.push(merge_trees(root_child, new_root_children));
     }
     combined_root.children = merged_children;
