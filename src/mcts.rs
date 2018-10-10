@@ -1,6 +1,5 @@
 use game::*;
 use shakmaty::*;
-use std::cmp::{max, min};
 use std::f32;
 use std::fmt;
 use std::i32;
@@ -124,16 +123,6 @@ impl TreeNode {
 
     pub fn score(&self) -> f32 {
         self.total_q() as f32 / self.total_n() as f32
-    }
-
-    /// Gather some statistics about this subtree
-    pub fn tree_statistics(&self) -> TreeStatistics {
-        let child_stats = self
-            .children
-            .iter()
-            .map(|c| c.tree_statistics())
-            .collect::<Vec<_>>();
-        TreeStatistics::merge(&child_stats)
     }
 
     /// Find the best child accoring to UCT1
@@ -267,36 +256,6 @@ impl fmt::Display for TreeNode {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
-/// Store and process some simple statistical information about NodeTrees.
-pub struct TreeStatistics {
-    nodes: i32,
-    min_depth: i32,
-    max_depth: i32,
-}
-
-impl TreeStatistics {
-    fn merge(child_stats: &Vec<TreeStatistics>) -> TreeStatistics {
-        if child_stats.len() == 0 {
-            TreeStatistics {
-                nodes: 1,
-                min_depth: 0,
-                max_depth: 0,
-            }
-        } else {
-            TreeStatistics {
-                nodes: child_stats.iter().fold(0, |sum, child| sum + child.nodes),
-                min_depth: 1 + child_stats
-                    .iter()
-                    .fold(i32::MAX, |depth, child| min(depth, child.min_depth)),
-                max_depth: 1 + child_stats
-                    .iter()
-                    .fold(0, |depth, child| max(depth, child.max_depth)),
-            }
-        }
-    }
-}
-
 #[derive(Debug)]
 pub struct MCTS {
     iterations_per_ms: f32,
@@ -379,11 +338,9 @@ impl MCTS {
 
 #[cfg(test)]
 mod tests {
-    //     //use std::num::traits::*;
-    //     use test::Bencher;
-    //
     use mcts::*;
     use shakmaty::fen::Fen;
+    use stats::TreeStats;
 
     #[test]
     fn search_deterministic() {
@@ -396,7 +353,12 @@ mod tests {
         let a = run_search();
         let b = run_search();
         let c = run_search();
-        // println!("{}\n{}", a.tree_statistics(), b.tree_statistics());
+        println!(
+            "{:?}\n{:?}\n{:?}",
+            TreeStats::tree_stats(&a),
+            TreeStats::tree_stats(&b),
+            TreeStats::tree_stats(&c)
+        );
         assert_eq!(a, b);
         assert_eq!(b, c);
         assert_eq!(a, c);
@@ -416,7 +378,12 @@ mod tests {
         let a = run_search();
         let b = run_search();
         let c = run_search();
-        // println!("{}\n{}", a.tree_statistics(), b.tree_statistics());
+        println!(
+            "{:?}\n{:?}\n{:?}",
+            TreeStats::tree_stats(&a),
+            TreeStats::tree_stats(&b),
+            TreeStats::tree_stats(&c)
+        );
         assert_eq!(a, b);
         assert_eq!(b, c);
         assert_eq!(a, c);

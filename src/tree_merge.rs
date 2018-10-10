@@ -8,8 +8,6 @@ pub fn merge_trees<'a>(mut root: TreeNode, new_roots: Vec<TreeNode>) -> TreeNode
     let mut action_map = deterministic_hash_map();
 
     for new_root in new_roots.into_iter() {
-        assert_eq!(new_root.sn, 0.);
-        assert_eq!(new_root.sq, 0.);
         assert_eq!(new_root.action, root.action);
         root.sn += new_root.nn;
         root.sq += new_root.nq;
@@ -35,6 +33,7 @@ pub fn merge_trees<'a>(mut root: TreeNode, new_roots: Vec<TreeNode>) -> TreeNode
             Some(found_child) => found_child,
             None => new_root_children.first().unwrap().clone_empty(),
         };
+        println!("recursing");
         merged_children.push(merge_trees(root_child, new_root_children));
     }
     combined_root.children = merged_children;
@@ -112,8 +111,8 @@ mod tests {
             move_num: 1.,
             nn: 12.0,
             nq: 24.0,
-            sn: 0.,
-            sq: 0.,
+            sn: 1000.,
+            sq: 2000.,
         };
         let t2 = TreeNode {
             action: norm('p', "e2", "e3"),

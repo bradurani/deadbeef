@@ -2,6 +2,7 @@ use game::*;
 use mcts::{TreeNode, MCTS};
 use pgn;
 use shakmaty::{Chess, Move};
+use stats::*;
 use std::time::Instant;
 
 pub fn play_game(
@@ -58,7 +59,7 @@ pub fn find_best_move(
     println!("\nMove: {}", move_num);
     let t0 = Instant::now();
 
-    // println!("Starting with {:?}", mcts.tree_statistics(&vec![root]));
+    println!("Starting with {:?}", TreeStats::tree_stats(&root));
 
     let new_root = if n_samples == -1 {
         mcts.search_time(root, &game, ensemble_size, time_per_move_ms, c)
@@ -67,7 +68,7 @@ pub fn find_best_move(
     };
 
     // println!("{}", new_root);
-    // println!("Calculated {:?}", mcts.tree_statistics(root));
+    println!("Calculated {:?}", TreeStats::tree_stats(&new_root));
 
     let best_child = best_child_node(new_root);
 
