@@ -1,3 +1,4 @@
+use game::*;
 use shakmaty::*;
 use std::cmp::{max, min};
 use std::f32;
@@ -15,23 +16,6 @@ use tree_merge::merge_trees;
 use utils::*;
 
 const STARTING_ITERATIONS_PER_MS: f32 = 1.;
-
-/// A `Game` represets a game state.
-///
-/// It is important that the game behaves fully deterministic,
-/// e.g. it has to produce the same game sequences
-pub trait Game: Clone {
-    /// Return a list with all allowed actions given the current game state.
-    fn allowed_actions(&self) -> Vec<Move>;
-
-    /// Change the current game state according to the given action.
-    fn make_move(&mut self, action: &Move);
-
-    /// Reward for the player when reaching the current game state.
-    fn reward(&self) -> f32;
-}
-
-//////////////////////////////////////////////////////////////////////////
 
 #[derive(Debug, Copy, Clone, PartialEq, PartialOrd)]
 pub enum NodeState {
@@ -51,39 +35,6 @@ pub struct TreeNode {
     pub sn: f32,                 // saved n from previous searches
     pub sq: f32,                 // saved q from previous searchs. Used in UCT1, but not merged
     pub children: Vec<TreeNode>, // next steps we investigated
-}
-
-impl Game for Chess {
-    fn allowed_actions(&self) -> Vec<Move> {
-        match &self.is_game_over() {
-            true => Vec::new(),
-            false => {
-                let mut moves = MoveList::new();
-                self.legal_moves(&mut moves);
-                moves.to_vec()
-            }
-        }
-    }
-
-    fn make_move(&mut self, action: &Move) {
-        self.play_unchecked(&action);
-        // self.play_safe(&action)
-        // TODO add safe option for testing
-    }
-
-    fn reward(&self) -> f32 {
-        let outcome = self.outcome();
-        match outcome {
-            Some(Outcome::Decisive {
-                winner: Color::Black,
-            }) => -1.0,
-            Some(Outcome::Decisive {
-                winner: Color::White,
-            }) => 1.0,
-            Some(Outcome::Draw) => 0.0,
-            None => 0.0,
-        }
-    }
 }
 
 impl TreeNode {
@@ -173,15 +124,6 @@ impl TreeNode {
 
     pub fn score(&self) -> f32 {
         self.total_q() as f32 / self.total_n() as f32
-    }
-
-    pub fn child_by_move(&self, action: &Move) -> &TreeNode {
-        let next_root = self
-            .children
-            .iter()
-            .find(|c| &c.action.unwrap() == action)
-            .unwrap();
-        next_root
     }
 
     /// Gather some statistics about this subtree
@@ -451,18 +393,6 @@ impl MCTS {
         println!("iterations_per_ms: {}", self.iterations_per_ms);
 
         new_root
-    }
-}
-
-pub trait Coefficient {
-    fn coefficient(&self) -> f32;
-}
-impl Coefficient for Color {
-    fn coefficient(&self) -> f32 {
-        match &self {
-            Color::Black => -1.,
-            Color::White => 1.,
-        }
     }
 }
 

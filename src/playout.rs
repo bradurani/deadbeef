@@ -1,4 +1,4 @@
-use mcts::Game;
+use game::*;
 use rand::Rng;
 use shakmaty::{Chess, Position};
 use utils::choose_random;

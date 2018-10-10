@@ -1,4 +1,5 @@
-use mcts::{Game, TreeNode, MCTS};
+use game::*;
+use mcts::{TreeNode, MCTS};
 use pgn;
 use shakmaty::{Chess, Move};
 use std::time::Instant;
