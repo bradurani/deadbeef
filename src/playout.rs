@@ -29,18 +29,3 @@ pub fn playout<R: Rng>(rng: &mut R, initial: &Chess) -> Chess {
     }
     game
 }
-
-// /// Calculate the expected reward based on random playouts.
-// pub fn expected_reward<G: Chess, A: GameAction>(game: &G, n_samples: usize) -> f32 {
-//     let mut score_sum: f32 = 0.0;
-//
-//     for _ in 0..n_samples {
-//         score_sum += playout(game).reward();
-//     }
-//     (score_sum as f32) / (n_samples as f32)
-// }
-//     #[bench]
-//     fn bench_playout(b: &mut Bencher) {
-//         let game = MiniGame::new();
-//         b.iter(|| playout(&game))
-//     }

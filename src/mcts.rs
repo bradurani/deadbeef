@@ -2,7 +2,6 @@ extern crate shakmaty; //?
 
 use shakmaty::*;
 use std::cmp::{max, min};
-use std::collections::HashMap;
 use std::f32;
 use std::fmt;
 use std::i32;
@@ -14,6 +13,7 @@ use std::time::Instant;
 
 use playout::playout;
 use rand::rngs::SmallRng;
+use tree_merge::merge_trees;
 use utils::*;
 
 const STARTING_ITERATIONS_PER_MS: f32 = 1.;
@@ -48,8 +48,10 @@ pub struct TreeNode {
     pub state: NodeState,     // is this a leaf node? fully expanded?
     pub turn: Color,          //which player made this move
     pub move_num: f32,
-    pub n: f32,
-    pub q: f32,                  // statistics for this game state
+    pub nn: f32,                 //new qs computed during this search
+    pub nq: f32,                 //new qs computed during this search
+    pub sn: f32,                 // saved n from previous searches
+    pub sq: f32,                 // saved q from previous searchs. Used in UCT1, but not merged
     pub children: Vec<TreeNode>, // next steps we investigated
 }
 
@@ -98,8 +100,10 @@ impl TreeNode {
             state: NodeState::Expandable,
             turn: turn,
             move_num: move_num,
-            n: 0.,
-            q: 0.,
+            nn: 0.,
+            nq: 0.,
+            sn: 0.,
+            sq: 0.,
         }
     }
 
@@ -110,8 +114,10 @@ impl TreeNode {
             state: NodeState::Expandable,
             turn: game.turn(),  // So we switch to White for move 1
             move_num: move_num, //So we increment to 1 for move 1
-            n: 0.,
-            q: 0.,
+            nn: 0.,
+            nq: 0.,
+            sn: 0.,
+            sq: 0.,
         }
     }
 
@@ -122,13 +128,62 @@ impl TreeNode {
             state: NodeState::Expandable,
             turn: Color::White,
             move_num: 0.5,
-            n: 0.,
-            q: 0.,
+            nn: 0.,
+            nq: 0.,
+            sn: 0.,
+            sq: 0.,
         }
     }
 
+    pub fn clone_empty(&self) -> TreeNode {
+        TreeNode {
+            action: self.action,
+            children: Vec::new(),
+            state: self.state,
+            turn: self.turn,
+            move_num: self.move_num,
+            nn: 0.,
+            nq: 0.,
+            sn: 0.,
+            sq: 0.,
+        }
+    }
+
+    pub fn clone_childless(&self) -> TreeNode {
+        TreeNode {
+            action: self.action,
+            children: Vec::new(),
+            state: self.state,
+            turn: self.turn,
+            move_num: self.move_num,
+            nn: 0.,
+            nq: 0.,
+            sn: self.sn,
+            sq: self.sq,
+        }
+    }
+
+    // saved ns from previous searches plus ns found in this search
+    // used for UCT1 to guide search efforts
+    pub fn total_n(&self) -> f32 {
+        self.sn + self.nn
+    }
+
+    pub fn total_q(&self) -> f32 {
+        self.sq + self.nq
+    }
+
     pub fn score(&self) -> f32 {
-        self.q as f32 / self.n as f32
+        self.total_q() as f32 / self.total_n() as f32
+    }
+
+    pub fn child_by_move(&self, action: &Move) -> &TreeNode {
+        let next_root = self
+            .children
+            .iter()
+            .find(|c| &c.action.unwrap() == action)
+            .unwrap();
+        next_root
     }
 
     /// Gather some statistics about this subtree
@@ -141,20 +196,17 @@ impl TreeNode {
         TreeStatistics::merge(&child_stats)
     }
 
-    /*
-    /// XXX
-    pub fn merge_nodes(nodes: Vec<TreeNode<A>>, depth: usize) -> TreeNode<A> {
-    }
-    */
-
     /// Find the best child accoring to UCT1
     pub fn best_child(&mut self, c: f32) -> &mut TreeNode {
         let mut best_value: f32 = f32::NEG_INFINITY;
         let mut best_child: Option<&mut TreeNode> = None;
+        let self_total_n = self.total_n();
 
         for child in &mut self.children {
-            let value = (self.turn.coefficient() * child.q) / child.n
-                + c * (2. * self.n.ln() / child.n).sqrt();
+            let value = (self.turn.coefficient() * child.total_q()) / child.total_n()
+                + c * (2. * self_total_n.ln() / child.total_n()).sqrt();
+            // println!("child: {:?} total: {}", child, child.total_n());
+            // println!("value: {}", value);
             if value > best_value {
                 best_value = value;
                 best_child = Some(child);
@@ -227,13 +279,13 @@ impl TreeNode {
                 let mut child = self.expand(candidate_actions, rng);
                 game.make_move(&child.action.unwrap());
                 let delta = playout(rng, game).reward();
-                child.n += 1.;
-                child.q += delta;
+                child.nn += 1.;
+                child.nq += delta;
                 delta
             }
         };
-        self.n += 1.;
-        self.q += delta;
+        self.nn += 1.;
+        self.nq += delta;
         delta
     }
 }
@@ -252,16 +304,16 @@ impl fmt::Display for TreeNode {
                     "{}. {} q={} n={} s={}",
                     node.move_num,
                     a,
-                    node.q,
-                    node.n,
+                    node.total_q(),
+                    node.total_n(),
                     node.score()
                 )),
                 None => try!(writeln!(
                     f,
                     "{}. Root q={} n={} s={}",
                     node.move_num,
-                    node.q,
-                    node.n,
+                    node.total_q(),
+                    node.total_n(),
                     node.score()
                 )),
             }
@@ -341,12 +393,12 @@ impl MCTS {
     /// Perform n_samples MCTS iterations.
     pub fn search(
         &mut self,
-        root: &TreeNode,
+        root: TreeNode,
         game: &Chess,
         ensemble_size: usize,
         n_samples: usize,
         c: f32,
-    ) -> Vec<TreeNode> {
+    ) -> TreeNode {
         // Iterate over ensemble and perform MCTS iterations
         let handles: Vec<JoinHandle<TreeNode>> = (0..ensemble_size)
             .map(|thread_num| {
@@ -364,18 +416,21 @@ impl MCTS {
             })
             .collect();
 
-        handles.into_iter().map(|th| th.join().unwrap()).collect()
-    }
+        let thread_roots = handles
+            .into_iter()
+            .map(|th| th.join().expect("panicked joining threads"))
+            .collect();
 
-    /// Perform MCTS iterations for the given time budget (in s).
+        merge_trees(root, thread_roots)
+    }
     pub fn search_time(
         &mut self,
-        root: &TreeNode,
+        root: TreeNode,
         game: &Chess,
         ensemble_size: usize,
         time_per_move_ms: f32,
         c: f32,
-    ) -> Vec<TreeNode> {
+    ) -> TreeNode {
         let mut samples_total = 0;
         let t0 = Instant::now();
 
@@ -384,10 +439,9 @@ impl MCTS {
             .max(10.)
             .min(100.) as usize;
 
-        let mut roots = Vec::new();
+        let mut new_root = root;
         while n_samples >= 5 {
-            let thread_roots = self.search(root, game, ensemble_size, n_samples, c);
-            roots.push(thread_roots);
+            new_root = self.search(new_root, game, ensemble_size, n_samples, c);
             samples_total += n_samples;
 
             let time_spend = t0.elapsed().as_millis() as f32;
@@ -396,46 +450,11 @@ impl MCTS {
             let time_left = time_per_move_ms - time_spend;
             n_samples = (self.iterations_per_ms * time_left).max(0.).min(100.) as usize;
         }
+
         println!("iterations_per_ms: {}", self.iterations_per_ms);
 
-        roots.into_iter().flat_map(|r| r.into_iter()).collect()
+        new_root
     }
-
-    /// Return the best action found so far by averaging over the ensamble.
-    pub fn best_children(&self, roots: Vec<TreeNode>) -> Option<Vec<TreeNode>> {
-        let color = roots.first().unwrap().turn;
-
-        let combined_children: Vec<TreeNode> = roots.into_iter().flat_map(|r| r.children).collect();
-
-        let mut action_map: HashMap<Move, Vec<TreeNode>> = HashMap::new();
-
-        for r in combined_children {
-            let action_nodes = action_map.entry(r.action.unwrap()).or_insert(vec![]);
-            action_nodes.push(r);
-        }
-
-        let summed_actions: Vec<(&Move, f32)> = action_map
-            .iter()
-            .map(|(action, nodes)| {
-                let score_sum = sum_node_list(nodes.clone(), color.coefficient());
-                (action, score_sum)
-            })
-            .collect();
-
-        summed_actions
-            .into_iter()
-            .max_by(|n1, n2| n1.1.partial_cmp(&n2.1).unwrap())
-            .map(|(action, _score)| action_map[action].to_vec())
-    }
-}
-
-fn sum_node_list(nodes: Vec<TreeNode>, color_coefficient: f32) -> f32 {
-    let (qs, ns) = nodes.iter().fold((0., 0.), |mut sums, node| {
-        sums.0 += node.q;
-        sums.1 += node.n;
-        sums
-    });
-    (color_coefficient * qs) / ns
 }
 
 pub trait Coefficient {
@@ -456,14 +475,35 @@ mod tests {
     //     use test::Bencher;
     //
     use mcts::*;
+    use shakmaty::fen::Fen;
 
     #[test]
     fn search_deterministic() {
-        fn run_search() -> Vec<TreeNode> {
+        fn run_search() -> TreeNode {
             let mut mcts = MCTS::new(1);
             let game = &Chess::default();
-            let tree_node = &TreeNode::new_root(game, 0.5);
-            mcts.search(tree_node, game, 4, 1000, 0.50)
+            let root = TreeNode::new_root(game, 0.5);
+            mcts.search(root, game, 4, 10000, 0.50)
+        }
+        let a = run_search();
+        let b = run_search();
+        let c = run_search();
+        // println!("{}\n{}", a.tree_statistics(), b.tree_statistics());
+        assert_eq!(a, b);
+        assert_eq!(b, c);
+        assert_eq!(a, c);
+    }
+
+    #[test]
+    fn run_search_mate_in_7_deterministic() {
+        fn run_search() -> TreeNode {
+            let setup: Fen = "rn3rk1/pbppq1pp/1p2pb2/4N2Q/3PN3/3B4/PPP2PPP/R3K2R w KQ - 6 11"
+                .parse()
+                .unwrap();
+            let game: Chess = setup.position().unwrap();
+            let mut mcts = MCTS::new(1);
+            let root = TreeNode::new_root(&game, 0.5);
+            mcts.search(root, &game, 4, 10000, 0.50)
         }
         let a = run_search();
         let b = run_search();

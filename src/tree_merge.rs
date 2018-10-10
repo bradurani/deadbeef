@@ -1,38 +1,44 @@
-extern crate shakmaty;
-
 use mcts::TreeNode;
-use shakmaty::Move;
-use std::collections::HashMap;
+use utils::deterministic_hash_map;
 
-fn merge_nodes(roots: Vec<TreeNode>) -> Vec<TreeNode> {
-    let mut map: HashMap<Move, Vec<TreeNode>> = HashMap::new();
-    for r in roots.into_iter() {
-        let action_nodes = map.entry(r.action.unwrap()).or_insert(vec![]);
-        action_nodes.push(r);
+pub fn merge_trees<'a>(mut root: TreeNode, new_roots: Vec<TreeNode>) -> TreeNode {
+    assert_eq!(root.nn, 0.);
+    assert_eq!(root.nq, 0.);
+
+    let mut action_map = deterministic_hash_map();
+
+    for new_root in new_roots.into_iter() {
+        assert_eq!(new_root.sn, 0.);
+        assert_eq!(new_root.sq, 0.);
+        assert_eq!(new_root.action, root.action);
+        root.sn += new_root.nn;
+        root.sq += new_root.nq;
+        for new_child_root in new_root.children {
+            let grouped_new_child_roots = action_map
+                .entry(new_child_root.action.unwrap())
+                .or_insert(vec![]);
+            grouped_new_child_roots.push(new_child_root);
+        }
     }
-    let mut merged_roots: Vec<TreeNode> = map
-        .into_iter()
-        .map(|(_action, nodes)| merge_trees(nodes))
-        .collect();
+    // println!("action_map\n{:#?}", action_map);
 
-    merged_roots.sort_by(|r1, r2| r1.action.partial_cmp(&r2.action).unwrap()); // only necessary for the tests. Remove to optimize performance
-    merged_roots
-}
+    let mut combined_root = root.clone_childless();
 
-pub fn merge_trees(nodes: Vec<TreeNode>) -> TreeNode {
-    let mut combined_node = nodes.first().unwrap().clone();
-    combined_node.n = 0.;
-    combined_node.q = 0.;
-    let mut all_children = vec![];
-    let mut merged_node = nodes.into_iter().fold(combined_node, |mut combined, node| {
-        assert_eq!(combined.action, node.action);
-        combined.n += node.n;
-        combined.q += node.q;
-        all_children.extend(node.children);
-        combined
-    });
-    merged_node.children = merge_nodes(all_children);
-    merged_node
+    let mut root_action_map = deterministic_hash_map();
+    for root_child in root.children {
+        root_action_map.insert(root_child.action.unwrap(), root_child);
+    }
+
+    let mut merged_children = vec![];
+    for (action, new_root_children) in action_map.into_iter() {
+        let root_child = match root_action_map.remove(&action) {
+            Some(found_child) => found_child,
+            None => new_root_children.first().unwrap().clone_empty(),
+        };
+        merged_children.push(merge_trees(root_child, new_root_children));
+    }
+    combined_root.children = merged_children;
+    combined_root
 }
 
 #[cfg(test)]
@@ -55,29 +61,59 @@ mod tests {
 
     #[test]
     fn merge_single_root() {
+        let root = TreeNode::new(norm('p', "e2", "e3"), Color::White, 1.);
+
         let t1 = TreeNode {
             action: norm('p', "e2", "e3"),
             children: vec![],
             state: NodeState::Expandable,
             turn: Color::White,
             move_num: 1.,
-            n: 12.0,
-            q: 24.0,
+            nn: 12.0,
+            nq: 24.0,
+            sn: 0.,
+            sq: 0.,
         };
-        let roots = vec![t1.clone()];
-        assert_eq!(t1, merge_trees(roots))
+
+        let expected = TreeNode {
+            action: norm('p', "e2", "e3"),
+            children: vec![],
+            state: NodeState::Expandable,
+            turn: Color::White,
+            move_num: 1.,
+            nn: 0.0,
+            nq: 0.0,
+            sn: 12.,
+            sq: 24.,
+        };
+
+        let new_root = merge_trees(root, vec![t1]);
+        assert_eq!(expected, new_root);
     }
 
     #[test]
     fn merge_3_roots() {
+        let root = TreeNode {
+            action: norm('p', "e2", "e3"),
+            children: vec![],
+            state: NodeState::Expandable,
+            turn: Color::White,
+            move_num: 1.,
+            nn: 0.,
+            nq: 0.,
+            sn: 500.0,
+            sq: 100.0,
+        };
         let t1 = TreeNode {
             action: norm('p', "e2", "e3"),
             children: vec![],
             state: NodeState::Expandable,
             turn: Color::White,
             move_num: 1.,
-            n: 12.0,
-            q: 24.0,
+            nn: 12.0,
+            nq: 24.0,
+            sn: 0.,
+            sq: 0.,
         };
         let t2 = TreeNode {
             action: norm('p', "e2", "e3"),
@@ -85,48 +121,70 @@ mod tests {
             state: NodeState::Expandable,
             turn: Color::White,
             move_num: 1.,
-            n: 6.0,
-            q: 12.0,
+            nn: 6.0,
+            nq: 12.0,
+            sn: 0.,
+            sq: 0.,
         };
-        let merged = TreeNode {
+        let expected = TreeNode {
             action: norm('p', "e2", "e3"),
             children: vec![],
             state: NodeState::Expandable,
             turn: Color::White,
             move_num: 1.,
-            n: 18.0,
-            q: 36.0,
+            nn: 0.,
+            nq: 0.,
+            sn: 518.,
+            sq: 136.,
         };
 
-        let roots = vec![t1.clone(), t2.clone()];
-        assert_eq!(merged, merge_trees(roots))
+        let roots = vec![t1, t2];
+        let new_root = merge_trees(root, roots);
+        assert_eq!(expected, new_root);
     }
 
     #[test]
     fn merge_3_roots_with_3_levels_of_children() {
+        let root = TreeNode {
+            action: norm('p', "e2", "e3"),
+            state: NodeState::FullyExpanded,
+            turn: Color::White,
+            move_num: 1.,
+            children: vec![],
+            nn: 0.,
+            nq: 0.,
+            sn: 500.,
+            sq: 100.,
+        };
         let t1 = TreeNode {
             action: norm('p', "e2", "e3"),
             state: NodeState::FullyExpanded,
             turn: Color::White,
             move_num: 1.,
-            n: 8.0,
-            q: 10.0,
+            nn: 8.0,
+            nq: 10.0,
+            sn: 0.,
+            sq: 0.,
             children: vec![
                 TreeNode {
                     action: norm('p', "f7", "f5"),
                     state: NodeState::Expandable,
                     turn: Color::Black,
                     move_num: 1.5,
-                    n: 7.0,
-                    q: 9.0,
+                    nn: 7.0,
+                    nq: 9.0,
+                    sn: 0.,
+                    sq: 0.,
                     children: vec![TreeNode {
                         action: norm('p', "d2", "d3"),
                         children: vec![],
                         state: NodeState::Expandable,
                         turn: Color::White,
                         move_num: 2.0,
-                        n: 1.0,
-                        q: 2.0,
+                        nn: 1.0,
+                        nq: 2.0,
+                        sn: 0.,
+                        sq: 0.,
                     }],
                 },
                 TreeNode {
@@ -134,16 +192,20 @@ mod tests {
                     state: NodeState::Expandable,
                     turn: Color::Black,
                     move_num: 1.5,
-                    n: 1.0,
-                    q: 1.0,
+                    nn: 1.0,
+                    nq: 1.0,
+                    sn: 0.,
+                    sq: 0.,
                     children: vec![TreeNode {
                         action: norm('p', "f2", "f3"),
                         children: vec![],
                         state: NodeState::Expandable,
                         turn: Color::White,
                         move_num: 2.0,
-                        n: 0.0,
-                        q: 1.0,
+                        nn: 0.0,
+                        nq: 1.0,
+                        sn: 0.,
+                        sq: 0.,
                     }],
                 },
             ],
@@ -153,23 +215,29 @@ mod tests {
             state: NodeState::FullyExpanded,
             turn: Color::White,
             move_num: 1.,
-            n: 6.0,
-            q: 6.0,
+            nn: 6.0,
+            nq: 6.0,
+            sn: 0.,
+            sq: 0.,
             children: vec![
                 TreeNode {
                     action: norm('p', "g7", "g5"),
                     state: NodeState::Expandable,
                     turn: Color::Black,
                     move_num: 1.5,
-                    n: 3.0,
-                    q: 3.0,
+                    nn: 3.0,
+                    nq: 3.0,
+                    sn: 0.,
+                    sq: 0.,
                     children: vec![TreeNode {
                         action: norm('p', "f2", "f3"),
                         state: NodeState::Expandable,
                         turn: Color::White,
                         move_num: 2.0,
-                        n: 0.0,
-                        q: 2.0,
+                        nn: 0.0,
+                        nq: 2.0,
+                        sn: 0.,
+                        sq: 0.,
                         children: vec![],
                     }],
                 },
@@ -178,66 +246,81 @@ mod tests {
                     state: NodeState::Expandable,
                     turn: Color::Black,
                     move_num: 1.5,
-                    n: 3.0,
-                    q: 3.0,
+                    nn: 3.0,
+                    nq: 3.0,
+                    sn: 0.,
+                    sq: 0.,
                     children: vec![],
                 },
             ],
         };
-        let merged = TreeNode {
+        let expected = TreeNode {
             action: norm('p', "e2", "e3"),
             state: NodeState::FullyExpanded,
             turn: Color::White,
             move_num: 1.,
-            n: 14.0,
-            q: 16.0,
+            nn: 0.,
+            nq: 0.,
+            sn: 514.0,
+            sq: 116.0,
             children: vec![
+                TreeNode {
+                    action: norm('p', "g7", "g5"),
+                    state: NodeState::Expandable,
+                    turn: Color::Black,
+                    move_num: 1.5,
+                    nn: 0.,
+                    nq: 0.,
+                    sn: 4.0,
+                    sq: 4.0,
+                    children: vec![TreeNode {
+                        action: norm('p', "f2", "f3"),
+                        children: vec![],
+                        state: NodeState::Expandable,
+                        turn: Color::White,
+                        move_num: 2.0,
+                        nn: 0.,
+                        nq: 0.,
+                        sn: 0.0,
+                        sq: 3.0,
+                    }],
+                },
+                TreeNode {
+                    action: norm('p', "h7", "h5"),
+                    state: NodeState::Expandable,
+                    turn: Color::Black,
+                    move_num: 1.5,
+                    nn: 0.,
+                    nq: 0.,
+                    sn: 3.0,
+                    sq: 3.0,
+                    children: vec![],
+                },
                 TreeNode {
                     action: norm('p', "f7", "f5"),
                     state: NodeState::Expandable,
                     turn: Color::Black,
                     move_num: 1.5,
-                    n: 7.0,
-                    q: 9.0,
+                    nn: 0.,
+                    nq: 0.,
+                    sn: 7.0,
+                    sq: 9.0,
                     children: vec![TreeNode {
                         action: norm('p', "d2", "d3"),
                         children: vec![],
                         state: NodeState::Expandable,
                         turn: Color::White,
                         move_num: 2.0,
-                        n: 1.0,
-                        q: 2.0,
+                        nn: 0.,
+                        nq: 0.,
+                        sn: 1.0,
+                        sq: 2.0,
                     }],
-                },
-                TreeNode {
-                    action: norm('p', "g7", "g5"),
-                    state: NodeState::Expandable,
-                    turn: Color::Black,
-                    move_num: 1.5,
-                    n: 4.0,
-                    q: 4.0,
-                    children: vec![TreeNode {
-                        action: norm('p', "f2", "f3"),
-                        children: vec![],
-                        state: NodeState::Expandable,
-                        turn: Color::White,
-                        move_num: 2.0,
-                        n: 0.0,
-                        q: 3.0,
-                    }],
-                },
-                TreeNode {
-                    action: norm('p', "h7", "h5"),
-                    state: NodeState::Expandable,
-                    turn: Color::Black,
-                    move_num: 1.5,
-                    n: 3.0,
-                    q: 3.0,
-                    children: vec![],
                 },
             ],
         };
-        let roots = vec![t1.clone(), t2.clone()];
-        assert_eq!(merged, merge_trees(roots))
+        let roots = vec![t1, t2];
+        let new_root = merge_trees(root, roots);
+        assert_eq!(expected, new_root);
     }
 }

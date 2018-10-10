@@ -1,5 +1,8 @@
 use rand::rngs::SmallRng;
 use rand::{Rng, RngCore, SeedableRng};
+use std::collections::HashMap;
+use std::hash::{BuildHasherDefault, Hash};
+use twox_hash::XxHash;
 
 pub fn choose_random<'a, T, R: Rng>(rng: &mut R, vec: &'a Vec<T>) -> &'a T {
     rng.next_u32();
@@ -12,6 +15,13 @@ pub fn seeded_rng(rng_seed: u8) -> SmallRng {
         rng_seed, 9,
     ];
     SmallRng::from_seed(seeds)
+}
+
+// Creates a HashMap that will be iterated in the same order for every program run (NOT the insert
+// order however) if given the same elements. Allows deterministic execution and tests
+pub fn deterministic_hash_map<K: Hash + Eq, V>() -> HashMap<K, V, BuildHasherDefault<XxHash>> {
+    let hash: HashMap<K, V, BuildHasherDefault<XxHash>> = Default::default();
+    hash
 }
 
 #[cfg(test)]

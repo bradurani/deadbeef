@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 extern crate deadbeef;
 extern crate shakmaty;
 
@@ -37,9 +39,9 @@ fn assert_move_with_params(
     let uci: Uci = move_uci.parse().unwrap();
     let m = uci.to_move(&position).unwrap();
 
-    let (action, _new_root) = play::make_move(
+    let best_child = play::find_best_move(
         &mut MCTS::new(1),
-        TreeNode::new_root(&position, 50.),
+        TreeNode::new_root(&position, 0.5),
         &position,
         ensemble_size,
         0.,
@@ -49,5 +51,5 @@ fn assert_move_with_params(
     )
     .unwrap();
 
-    assert_eq!(m, action)
+    assert_eq!(m, best_child.action.unwrap())
 }

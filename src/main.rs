@@ -5,6 +5,7 @@ use deadbeef::pgn;
 use deadbeef::play;
 use shakmaty::*;
 
+//TODO remove Copy from Move in Shakmaty
 pub fn main() {
     let starting_position = Chess::default();
     let move_history = play::play_game(&starting_position, 12, 200.0, 0.01, 1, -1);

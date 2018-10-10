@@ -3,9 +3,8 @@ extern crate shakmaty;
 
 use mcts::{Game, TreeNode, MCTS};
 use pgn;
-use shakmaty::{Chess, Move, Setup};
+use shakmaty::{Chess, Move};
 use std::time::Instant;
-use tree_merge::merge_trees;
 
 pub fn play_game(
     starting_position: &Chess,
@@ -19,13 +18,13 @@ pub fn play_game(
     let mut move_history: Vec<Move> = Vec::new();
     let mut move_num = 0.5;
     let mut mcts: MCTS = MCTS::new(starting_seed);
-    let mut merged_root = TreeNode::new_root(&game, move_num);
+    let mut root = TreeNode::new_root(&game, move_num);
 
     loop {
         move_num += 0.5;
-        let action = make_move(
+        let new_root = find_best_move(
             &mut mcts,
-            merged_root,
+            root,
             &game,
             ensemble_size,
             time_per_move_ms,
@@ -33,12 +32,13 @@ pub fn play_game(
             move_num,
             n_samples,
         );
-        match action {
+        match new_root {
             None => break,
-            Some((action, new_root)) => {
-                move_history.push(action);
-                game.make_move(&action);
-                merged_root = new_root;
+            Some(found_new_root) => {
+                let best_move = found_new_root.action.unwrap();
+                move_history.push(best_move);
+                game.make_move(&best_move);
+                root = found_new_root.clone();
             }
         }
         let pgn = pgn::to_pgn(&starting_position, &move_history); //TODO build incrementally
@@ -47,7 +47,7 @@ pub fn play_game(
     move_history
 }
 
-pub fn make_move(
+pub fn find_best_move<'a>(
     mcts: &mut MCTS,
     root: TreeNode,
     game: &Chess,
@@ -56,37 +56,32 @@ pub fn make_move(
     c: f32,
     move_num: f32,
     n_samples: isize,
-) -> Option<(Move, TreeNode)> {
+) -> Option<TreeNode> {
     println!("\nMove: {}", move_num);
     let t0 = Instant::now();
 
-    println!(
-        "Starting with {:?}",
-        mcts.tree_statistics(&vec![root.clone()])
-    );
+    // println!("Starting with {:?}", mcts.tree_statistics(&vec![root]));
 
-    let roots = if n_samples == -1 {
-        mcts.search_time(&root, &game, ensemble_size, time_per_move_ms, c)
+    let new_root = if n_samples == -1 {
+        mcts.search_time(root, &game, ensemble_size, time_per_move_ms, c)
     } else {
-        mcts.search(&root, &game, ensemble_size, n_samples as usize, c)
+        mcts.search(root, &game, ensemble_size, n_samples as usize, c)
     };
 
-    println!("Calculated {:?}", mcts.tree_statistics(&roots));
-    // DEBUG
-    {
-        let debug_combined_node = merge_trees(roots.clone());
-        println!("{}", debug_combined_node);
-    }
-    // DEBUG
+    // println!("{}", new_root);
+    // println!("Calculated {:?}", mcts.tree_statistics(root));
 
-    let best_children = mcts.best_children(roots);
-    let action_and_new_root = best_children.map(|children| {
-        let new_root = merge_trees(children);
-        let action = new_root.action.unwrap();
-        println!("Moving: {}\n{:?}", &action, game.board());
-        (action, new_root)
-    });
+    let best_child = best_child_node(new_root);
+
     let time_spend = t0.elapsed().as_millis();
     println!("move time: {}ms", time_spend);
-    action_and_new_root
+    best_child
+}
+
+fn best_child_node(root: TreeNode) -> Option<TreeNode> {
+    assert_eq!(0., root.nn); // shoud have a merged node with no new calculations
+    assert_eq!(0., root.nq);
+    root.children
+        .into_iter()
+        .max_by(|n1, n2| n1.sn.partial_cmp(&n2.sn).unwrap())
 }
