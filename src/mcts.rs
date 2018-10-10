@@ -296,38 +296,19 @@ impl TreeStatistics {
         }
     }
 }
-//////////////////////////////////////////////////////////////////////////
 
 #[derive(Debug)]
-/// Represents an ensamble of MCTS trees.
-///
-/// For many applications we need to work with ensambles because we use
-/// determinization.
 pub struct MCTS {
     iterations_per_ms: f32,
     starting_seed: u8,
 }
 
 impl MCTS {
-    /// Create a new MCTS solver.
     pub fn new(starting_seed: u8) -> MCTS {
         MCTS {
             iterations_per_ms: STARTING_ITERATIONS_PER_MS,
             starting_seed: starting_seed,
         }
-    }
-
-    /// Return basic statistical data about the current MCTS tree.
-    ///
-    /// XXX Note: The current implementation considers the ensemble
-    /// to be a tree layer. In other words tree depth and number of
-    /// nodes are all one too large.
-    pub fn tree_statistics(&self, roots: &Vec<TreeNode>) -> TreeStatistics {
-        let child_stats = roots
-            .iter()
-            .map(|c| c.tree_statistics())
-            .collect::<Vec<_>>();
-        TreeStatistics::merge(&child_stats)
     }
 
     /// Perform n_samples MCTS iterations.
@@ -440,21 +421,4 @@ mod tests {
         assert_eq!(b, c);
         assert_eq!(a, c);
     }
-
-    //
-    //
-    //     #[bench]
-    //     fn bench_expected(b: &mut Bencher) {
-    //         let game = MiniGame::new();
-    //         b.iter(|| expected_reward(&game, 100))
-    //     }
-    //
-    //     #[bench]
-    //     fn bench_search(b: &mut Bencher) {
-    //         let game = MiniGame::new();
-    //         let mut mcts = MCTS::new(&game, 1);
-    //
-    //         b.iter(|| mcts.search(10, 1.0))
-    //     }
-    //
 }
