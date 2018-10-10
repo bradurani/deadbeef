@@ -1,5 +1,3 @@
-extern crate shakmaty; //?
-
 use shakmaty::*;
 use std::cmp::{max, min};
 use std::f32;
@@ -434,7 +432,6 @@ impl MCTS {
         let mut samples_total = 0;
         let t0 = Instant::now();
 
-        //TODO MAKE ITERATIONS / SEC saved between runs
         let mut n_samples = (self.iterations_per_ms * time_per_move_ms)
             .max(10.)
             .min(100.) as usize;

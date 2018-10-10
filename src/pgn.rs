@@ -1,5 +1,3 @@
-extern crate shakmaty;
-
 use shakmaty::san::SanPlus;
 use shakmaty::*;
 

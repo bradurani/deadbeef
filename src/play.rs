@@ -1,6 +1,3 @@
-extern crate matches;
-extern crate shakmaty;
-
 use mcts::{Game, TreeNode, MCTS};
 use pgn;
 use shakmaty::{Chess, Move};
@@ -47,7 +44,7 @@ pub fn play_game(
     move_history
 }
 
-pub fn find_best_move<'a>(
+pub fn find_best_move(
     mcts: &mut MCTS,
     root: TreeNode,
     game: &Chess,
