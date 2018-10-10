@@ -52,9 +52,13 @@ pub struct RunStats {
     pub iterations: u64,
     pub playouts: u64,
     pub playout_moves: u64,
+    pub tree_merges: u64,
     pub maxouts: u64,
     pub samples: u64,
     pub sample_batches: u64,
+    pub playout_time: u64,
+    pub tree_merge_time: u64,
+    pub total_time: u64,
 }
 
 impl RunStats {
@@ -64,9 +68,13 @@ impl RunStats {
             iterations: 0,
             playouts: 0,
             playout_moves: 0,
+            tree_merges: 0,
             maxouts: 0,
             samples: 0,
             sample_batches: 0,
+            playout_time: 0,
+            tree_merge_time: 0,
+            total_time: 0,
         }
     }
 
@@ -75,9 +83,30 @@ impl RunStats {
         self.iterations += run_stats.iterations;
         self.playouts += run_stats.playouts;
         self.playout_moves += run_stats.playout_moves;
+        self.tree_merges += run_stats.tree_merges;
         self.maxouts += run_stats.maxouts;
         self.samples += run_stats.samples;
         self.sample_batches += run_stats.sample_batches;
+        self.playout_time += run_stats.playout_time;
+        self.tree_merge_time += run_stats.tree_merge_time;
+        // don't add total time since we use a separate timer at each
+        // stat level
+    }
+
+    pub fn tree_merge_time_pct(&self) -> f64 {
+        self.tree_merge_time as f64 / self.total_time as f64 * 100.
+    }
+
+    pub fn playout_time_pct(&self) -> f64 {
+        self.playout_time as f64 / self.total_time as f64 * 100.
+    }
+
+    pub fn other_time(&self) -> u64 {
+        self.total_time - self.tree_merge_time - self.playout_time
+    }
+
+    pub fn other_time_pct(&self) -> f64 {
+        self.other_time() as f64 / self.total_time as f64 * 100.
     }
 }
 
@@ -85,8 +114,10 @@ impl fmt::Display for RunStats {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{} moves / {} playouts (avg: {}) with {} maxouts. \
-             {} nodes / {} iterations. {} samples / {} batches",
+            "\n{} moves / {} playouts (avg: {}) with {} maxouts\n\
+             {} nodes / {} iterations. {} samples / {} batches\n\
+             {} tree_merges\n\
+             time in playouts: {} ({:.*}%), tree_merge: {} ({:.*}%), other: {}({:.*}%), total: {}\n",
             self.playout_moves.separated_string(),
             self.playouts.separated_string(),
             if self.playouts == 0 {
@@ -99,6 +130,14 @@ impl fmt::Display for RunStats {
             self.iterations.separated_string(),
             self.samples.separated_string(),
             self.sample_batches.separated_string(),
+            self.tree_merges.separated_string(),
+            self.playout_time.separated_string(),
+            1, self.playout_time_pct(),
+            self.tree_merge_time.separated_string(),
+            1, self.tree_merge_time_pct(),
+            self.other_time().separated_string(),
+            1, self.other_time_pct(),
+            self.total_time
         )
     }
 }

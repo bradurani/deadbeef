@@ -1,7 +1,24 @@
 use mcts::TreeNode;
+use stats::*;
+use std::time::Instant;
 use utils::deterministic_hash_map;
 
-pub fn merge_trees<'a>(mut root: TreeNode, new_roots: Vec<TreeNode>) -> TreeNode {
+pub fn timed_merge_trees(
+    root: TreeNode,
+    new_roots: Vec<TreeNode>,
+    run_stats: &mut RunStats,
+) -> TreeNode {
+    let t0 = Instant::now();
+
+    let combined_root = merge_trees(root, new_roots);
+
+    let time_spent = t0.elapsed().as_millis();
+    run_stats.tree_merges += 1;
+    run_stats.tree_merge_time += time_spent as u64;
+    combined_root
+}
+
+fn merge_trees<'a>(mut root: TreeNode, new_roots: Vec<TreeNode>) -> TreeNode {
     assert_eq!(root.nn, 0.);
     assert_eq!(root.nq, 0.);
 
@@ -36,6 +53,7 @@ pub fn merge_trees<'a>(mut root: TreeNode, new_roots: Vec<TreeNode>) -> TreeNode
         merged_children.push(merge_trees(root_child, new_root_children));
     }
     combined_root.children = merged_children;
+
     combined_root
 }
 

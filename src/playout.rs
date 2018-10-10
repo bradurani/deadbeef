@@ -1,7 +1,8 @@
 use game::*;
-use stats::RunStats;
 use rand::Rng;
 use shakmaty::{Chess, Position};
+use stats::RunStats;
+use std::time::Instant;
 use utils::choose_random;
 
 const MAX_PLAYOUT_MOVES: u32 = 4000;
@@ -13,6 +14,7 @@ const MAX_PLAYOUT_MOVES: u32 = 4000;
 pub fn playout<R: Rng>(rng: &mut R, initial: &Chess, thread_run_stats: &mut RunStats) -> Chess {
     let mut game = initial.clone();
 
+    let t0 = Instant::now();
     let mut potential_moves = game.allowed_actions();
 
     let mut num_moves = 0;
@@ -30,6 +32,8 @@ pub fn playout<R: Rng>(rng: &mut R, initial: &Chess, thread_run_stats: &mut RunS
         }
         potential_moves = game.allowed_actions();
     }
+    let time_spent = t0.elapsed().as_millis();
     thread_run_stats.playouts += 1;
+    thread_run_stats.playout_time += time_spent as u64;
     game
 }

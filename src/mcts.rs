@@ -11,7 +11,7 @@ use std::time::Instant;
 use playout::playout;
 use rand::rngs::SmallRng;
 use stats::*;
-use tree_merge::merge_trees;
+use tree_merge::timed_merge_trees;
 use utils::*;
 
 const STARTING_ITERATIONS_PER_MS: f32 = 1.;
@@ -37,10 +37,6 @@ pub struct TreeNode {
 }
 
 impl TreeNode {
-    /// Create and initialize a new TreeNode
-    ///
-    /// Initialize q and n t to be zero; childeren list to
-    /// be empty and set the node state to Expandable.
     pub fn new(action: Option<Move>, turn: Color, move_num: f32) -> TreeNode {
         TreeNode {
             action: action,
@@ -147,7 +143,12 @@ impl TreeNode {
     }
 
     /// Add a child to the current node with an previously unexplored action.
-    pub fn expand(&mut self, candidate_actions: Vec<Move>, rng: &mut SmallRng) -> &mut TreeNode {
+    pub fn expand(
+        &mut self,
+        candidate_actions: Vec<Move>,
+        rng: &mut SmallRng,
+        thread_run_stats: &mut RunStats,
+    ) -> &mut TreeNode {
         // println!("Candidate Action: {:?}", &candidate_actions);
 
         let action = *choose_random(rng, &candidate_actions);
@@ -157,6 +158,7 @@ impl TreeNode {
             self.turn.not(),
             self.move_num + 0.5,
         ));
+        thread_run_stats.nodes_created += 1;
         self.children.last_mut().unwrap()
     }
 
@@ -212,7 +214,7 @@ impl TreeNode {
                     self.state = NodeState::FullyExpanded;
                     return self.iteration(game, c, rng, thread_run_stats);
                 }
-                let mut child = self.expand(candidate_actions, rng);
+                let mut child = self.expand(candidate_actions, rng, thread_run_stats);
                 game.make_move(&child.action.unwrap());
                 let delta = playout(rng, game, thread_run_stats).reward();
                 child.nn += 1.;
@@ -297,6 +299,8 @@ impl MCTS {
 
                 thread::spawn(move || {
                     //Run iterations with playouts for this time slice
+                    let t0 = Instant::now();
+
                     for _ in 0..n_samples {
                         thread_run_stats.samples += 1;
                         thread_root.iteration(
@@ -306,6 +310,8 @@ impl MCTS {
                             &mut thread_run_stats,
                         );
                     }
+                    let time_spent = t0.elapsed().as_millis();
+                    thread_run_stats.total_time = time_spent as u64;
                     // println!("thread: {}", thread_run_stats);
                     // println!("root: {}", root);
                     (thread_root, thread_run_stats)
@@ -329,7 +335,7 @@ impl MCTS {
             batch_run_stats.add(&stats);
         }
 
-        merge_trees(root, thread_roots.to_vec())
+        timed_merge_trees(root, thread_roots.to_vec(), batch_run_stats)
     }
 
     pub fn search_time(
@@ -350,6 +356,7 @@ impl MCTS {
 
         let mut new_root = root;
         while n_samples >= 5 {
+            let batch_t0 = Instant::now();
             let mut batch_run_stats = RunStats::new();
             batch_run_stats.sample_batches = 1;
 
@@ -363,11 +370,14 @@ impl MCTS {
             );
             samples_total += n_samples;
 
-            let time_spend = t0.elapsed().as_millis() as f32;
-            self.iterations_per_ms = (samples_total as f32) / time_spend;
+            let time_spent = t0.elapsed().as_millis() as f32;
+            self.iterations_per_ms = (samples_total as f32) / time_spent;
 
-            let time_left = time_per_move_ms - time_spend;
+            let time_left = time_per_move_ms - time_spent;
             n_samples = (self.iterations_per_ms * time_left).max(0.).min(100.) as usize;
+
+            let batch_time_spent = batch_t0.elapsed().as_millis();
+            batch_run_stats.total_time = batch_time_spent as u64;
             // println!("Batch: {}", batch_run_stats);
             move_run_stats.add(&batch_run_stats);
         }

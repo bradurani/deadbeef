@@ -19,6 +19,7 @@ pub fn play_game(
     let mut game_run_stats = RunStats::new();
     let mut mcts: MCTS = MCTS::new(starting_seed);
     let mut root = TreeNode::new_root(&game, move_num);
+    let t0 = Instant::now();
 
     loop {
         let mut move_run_stats = RunStats::new();
@@ -51,6 +52,8 @@ pub fn play_game(
         let pgn = pgn::to_pgn(&starting_position, &move_history); //TODO build incrementally
         println!("{}", pgn);
     }
+    let time_spent = t0.elapsed().as_millis();
+    game_run_stats.total_time = time_spent as u64;
     println!("\nGame: {}", game_run_stats);
     move_history
 }
@@ -106,10 +109,9 @@ pub fn find_best_move(
 
     let best_child = best_child_node(new_root);
 
-    let time_spend = t0.elapsed().as_millis();
-
+    let time_spent = t0.elapsed().as_millis();
+    move_run_stats.total_time = time_spent as u64;
     println!("{}", move_run_stats);
-    println!("move time: {}ms", time_spend);
 
     best_child
 }
