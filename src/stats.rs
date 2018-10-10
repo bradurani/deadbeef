@@ -48,13 +48,13 @@ impl TreeStats {
 
 #[derive(Debug, Copy, Clone)]
 pub struct RunStats {
-    pub nodes_created: i32,
-    pub iterations: i32,
-    pub playouts: i32,
-    pub playout_moves: i32,
-    pub maxouts: i32,
-    pub samples: i32,
-    pub sample_batches: i32,
+    pub nodes_created: u64,
+    pub iterations: u64,
+    pub playouts: u64,
+    pub playout_moves: u64,
+    pub maxouts: u64,
+    pub samples: u64,
+    pub sample_batches: u64,
 }
 
 impl RunStats {
@@ -85,7 +85,7 @@ impl fmt::Display for RunStats {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{} moves / {} playouts (avg: {}) with {} maxouts \
+            "{} moves / {} playouts (avg: {}) with {} maxouts. \
              {} nodes / {} iterations. {} samples / {} batches",
             self.playout_moves.separated_string(),
             self.playouts.separated_string(),

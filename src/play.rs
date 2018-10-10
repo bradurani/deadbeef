@@ -47,8 +47,9 @@ pub fn play_game(
             }
         }
         game_run_stats.add(&move_run_stats);
-        // let pgn = pgn::to_pgn(&starting_position, &move_history); //TODO build incrementally
-        // println!("{}", pgn);
+
+        let pgn = pgn::to_pgn(&starting_position, &move_history); //TODO build incrementally
+        println!("{}", pgn);
     }
     println!("\nGame: {}", game_run_stats);
     move_history
@@ -67,7 +68,7 @@ pub fn find_best_move(
 ) -> Option<TreeNode> {
     let t0 = Instant::now();
     println!(
-        "\n#{} Score: {} / {} = {}",
+        "\n{} Score: {} / {} = {}",
         move_num,
         root.sq,
         root.sn,
