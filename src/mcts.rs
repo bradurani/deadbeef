@@ -6,11 +6,11 @@ use std::i32;
 use std::ops::Not;
 use std::thread;
 use std::thread::JoinHandle;
-
 use std::time::Instant;
 
 use playout::playout;
 use rand::rngs::SmallRng;
+use stats::*;
 use tree_merge::merge_trees;
 use utils::*;
 
@@ -185,29 +185,36 @@ impl TreeNode {
     /// XXX A non-recursive implementation would probably be faster.
     /// XXX But how to keep &mut pointers to all our parents while
     /// XXX we fiddle with our leaf node?
-    pub fn iteration(&mut self, game: &mut Chess, c: f32, rng: &mut SmallRng) -> f32 {
+    pub fn iteration(
+        &mut self,
+        game: &mut Chess,
+        c: f32,
+        rng: &mut SmallRng,
+        thread_run_stats: &mut RunStats,
+    ) -> f32 {
+        thread_run_stats.iterations += 1;
         let delta = match self.state {
             NodeState::LeafNode => game.reward(),
             NodeState::FullyExpanded => {
                 // Choose and recurse into child...
                 let child = self.best_child(c);
                 game.make_move(&child.action.unwrap());
-                child.iteration(game, c, rng)
+                child.iteration(game, c, rng, thread_run_stats)
             }
             NodeState::Expandable => {
                 let allowed_actions = game.allowed_actions();
                 if allowed_actions.len() == 0 || game.is_insufficient_material() {
                     self.state = NodeState::LeafNode;
-                    return self.iteration(game, c, rng);
+                    return self.iteration(game, c, rng, thread_run_stats);
                 }
                 let candidate_actions = self.candidate_actions(allowed_actions);
                 if candidate_actions.len() == 0 {
                     self.state = NodeState::FullyExpanded;
-                    return self.iteration(game, c, rng);
+                    return self.iteration(game, c, rng, thread_run_stats);
                 }
                 let mut child = self.expand(candidate_actions, rng);
                 game.make_move(&child.action.unwrap());
-                let delta = playout(rng, game).reward();
+                let delta = playout(rng, game, thread_run_stats).reward();
                 child.nn += 1.;
                 child.nq += delta;
                 delta
@@ -278,31 +285,53 @@ impl MCTS {
         ensemble_size: usize,
         n_samples: usize,
         c: f32,
+        batch_run_stats: &mut RunStats,
     ) -> TreeNode {
         // Iterate over ensemble and perform MCTS iterations
-        let handles: Vec<JoinHandle<TreeNode>> = (0..ensemble_size)
+        let thread_result_handles: Vec<JoinHandle<(TreeNode, RunStats)>> = (0..ensemble_size)
             .map(|thread_num| {
                 let thread_game = game.clone();
                 let mut thread_root = root.clone();
                 let mut rng = seeded_rng(self.starting_seed + thread_num as u8);
+                let mut thread_run_stats = RunStats::new();
+
                 thread::spawn(move || {
                     //Run iterations with playouts for this time slice
                     for _ in 0..n_samples {
-                        thread_root.iteration(&mut thread_game.clone(), c, &mut rng);
+                        thread_run_stats.samples += 1;
+                        thread_root.iteration(
+                            &mut thread_game.clone(),
+                            c,
+                            &mut rng,
+                            &mut thread_run_stats,
+                        );
                     }
+                    // println!("thread: {}", thread_run_stats);
                     // println!("root: {}", root);
-                    thread_root
+                    (thread_root, thread_run_stats)
                 })
             })
             .collect();
 
-        let thread_roots = handles
+        let (thread_roots, thread_run_stats) = thread_result_handles
             .into_iter()
             .map(|th| th.join().expect("panicked joining threads"))
-            .collect();
+            .fold(
+                (vec![], vec![]),
+                |(mut roots, mut stats), (thread_root, thread_run_stats)| {
+                    roots.push(thread_root);
+                    stats.push(thread_run_stats);
+                    (roots, stats)
+                },
+            );
 
-        merge_trees(root, thread_roots)
+        for stats in thread_run_stats {
+            batch_run_stats.add(&stats);
+        }
+
+        merge_trees(root, thread_roots.to_vec())
     }
+
     pub fn search_time(
         &mut self,
         root: TreeNode,
@@ -310,6 +339,7 @@ impl MCTS {
         ensemble_size: usize,
         time_per_move_ms: f32,
         c: f32,
+        move_run_stats: &mut RunStats,
     ) -> TreeNode {
         let mut samples_total = 0;
         let t0 = Instant::now();
@@ -320,7 +350,17 @@ impl MCTS {
 
         let mut new_root = root;
         while n_samples >= 5 {
-            new_root = self.search(new_root, game, ensemble_size, n_samples, c);
+            let mut batch_run_stats = RunStats::new();
+            batch_run_stats.sample_batches = 1;
+
+            new_root = self.search(
+                new_root,
+                game,
+                ensemble_size,
+                n_samples,
+                c,
+                &mut batch_run_stats,
+            );
             samples_total += n_samples;
 
             let time_spend = t0.elapsed().as_millis() as f32;
@@ -328,6 +368,8 @@ impl MCTS {
 
             let time_left = time_per_move_ms - time_spend;
             n_samples = (self.iterations_per_ms * time_left).max(0.).min(100.) as usize;
+            // println!("Batch: {}", batch_run_stats);
+            move_run_stats.add(&batch_run_stats);
         }
 
         println!("iterations_per_ms: {}", self.iterations_per_ms);

@@ -1,7 +1,7 @@
 use game::*;
 use mcts::{TreeNode, MCTS};
 use pgn;
-use shakmaty::{Chess, Move};
+use shakmaty::*;
 use stats::*;
 use std::time::Instant;
 
@@ -16,10 +16,12 @@ pub fn play_game(
     let mut game = starting_position.clone();
     let mut move_history: Vec<Move> = Vec::new();
     let mut move_num = 0.5;
+    let mut game_run_stats = RunStats::new();
     let mut mcts: MCTS = MCTS::new(starting_seed);
     let mut root = TreeNode::new_root(&game, move_num);
 
     loop {
+        let mut move_run_stats = RunStats::new();
         move_num += 0.5;
         let new_root = find_best_move(
             &mut mcts,
@@ -30,6 +32,7 @@ pub fn play_game(
             c,
             move_num,
             n_samples,
+            &mut move_run_stats,
         );
         match new_root {
             None => break,
@@ -37,12 +40,17 @@ pub fn play_game(
                 let best_move = found_new_root.action.unwrap();
                 move_history.push(best_move);
                 game.make_move(&best_move);
-                root = found_new_root.clone();
+                root = found_new_root;
+
+                println!("{:?}", game.board());
+                println!("Move: {}", best_move);
             }
         }
-        let pgn = pgn::to_pgn(&starting_position, &move_history); //TODO build incrementally
-        println!("{}", pgn);
+        game_run_stats.add(&move_run_stats);
+        // let pgn = pgn::to_pgn(&starting_position, &move_history); //TODO build incrementally
+        // println!("{}", pgn);
     }
+    println!("\nGame: {}", game_run_stats);
     move_history
 }
 
@@ -55,25 +63,53 @@ pub fn find_best_move(
     c: f32,
     move_num: f32,
     n_samples: isize,
+    move_run_stats: &mut RunStats,
 ) -> Option<TreeNode> {
-    println!("\nMove: {}", move_num);
     let t0 = Instant::now();
+    println!(
+        "\n#{} Score: {} / {} = {}",
+        move_num,
+        root.sq,
+        root.sn,
+        root.score()
+    );
 
-    println!("Starting with {:?}", TreeStats::tree_stats(&root));
+    if game.is_insufficient_material() {
+        return None;
+    }
+
+    println!("Start {:?}", TreeStats::tree_stats(&root));
 
     let new_root = if n_samples == -1 {
-        mcts.search_time(root, &game, ensemble_size, time_per_move_ms, c)
+        mcts.search_time(
+            root,
+            &game,
+            ensemble_size,
+            time_per_move_ms,
+            c,
+            move_run_stats,
+        )
     } else {
-        mcts.search(root, &game, ensemble_size, n_samples as usize, c)
+        mcts.search(
+            root,
+            &game,
+            ensemble_size,
+            n_samples as usize,
+            c,
+            move_run_stats,
+        )
     };
 
     // println!("{}", new_root);
-    println!("Calculated {:?}", TreeStats::tree_stats(&new_root));
+    println!("End: {:?}", TreeStats::tree_stats(&new_root));
 
     let best_child = best_child_node(new_root);
 
     let time_spend = t0.elapsed().as_millis();
+
+    println!("{}", move_run_stats);
     println!("move time: {}ms", time_spend);
+
     best_child
 }
 
