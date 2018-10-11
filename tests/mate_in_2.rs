@@ -7,19 +7,17 @@ mod helpers;
 
 #[test]
 fn queen_sacrifice_mate_in_2() {
-    assert_move_in_n(
+    assert_move(
         "r2q1r2/pp2np2/1bp4p/3p2pk/1P1N2b1/2PB2B1/P5PP/R2QK2R w KQ - 0 1",
         "d1g4", //-> Kh5xg4 -> bd3e2#
-        100000,
     )
 }
 
 #[test]
 fn queen_sacrifice_knight_mate_in_2() {
-    assert_move_in_n(
+    assert_move(
         "2r2r1k/p1q3pp/8/3Q1p2/2N5/PP3N2/4n1P1/R1B2n1K b - - 0 1",
         "c7h2",
-        1000,
     );
 }
 

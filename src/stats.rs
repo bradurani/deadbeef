@@ -86,7 +86,7 @@ impl RunStats {
         self.maxouts += run_stats.maxouts;
         self.samples += run_stats.samples;
         self.sample_batches += run_stats.sample_batches;
-        self.playout_time += run_stats.playout_time / thread_count as u64;
+        self.playout_time += run_stats.playout_time; // thread_count as u64;
         self.tree_merge_time += run_stats.tree_merge_time / thread_count as u64;
         // don't add total time since we use a separate timer at each
         // stat level

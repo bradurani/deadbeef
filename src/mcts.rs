@@ -15,8 +15,6 @@ use stats::*;
 use tree_merge::timed_merge_trees;
 use utils::*;
 
-const STARTING_ITERATIONS_PER_MS: f32 = 1.;
-
 #[derive(Debug, Copy, Clone, PartialEq, PartialOrd)]
 pub enum NodeState {
     LeafNode,
@@ -274,10 +272,10 @@ pub struct MCTS {
 }
 
 impl MCTS {
-    pub fn new(starting_seed: u8) -> MCTS {
+    pub fn new(settings: &Settings) -> MCTS {
         MCTS {
-            iterations_per_ms: STARTING_ITERATIONS_PER_MS,
-            starting_seed: starting_seed,
+            iterations_per_ms: settings.starting_iterations_per_ms,
+            starting_seed: settings.starting_seed,
         }
     }
 
@@ -390,10 +388,12 @@ mod tests {
     #[test]
     fn search_deterministic() {
         fn run_search() -> TreeNode {
-            let mut mcts = MCTS::new(1);
+            let settings = Settings::test_default();
+            let mut test_run_stats: RunStats = Default::default();
+            let mut mcts = MCTS::new(&settings);
             let game = &Chess::default();
             let root = TreeNode::new_root(game, 0.5);
-            mcts.search(root, game, 4, 10000, 0.50)
+            mcts.search(root, game, &mut test_run_stats, &settings)
         }
         let a = run_search();
         let b = run_search();
@@ -416,9 +416,11 @@ mod tests {
                 .parse()
                 .unwrap();
             let game: Chess = setup.position().unwrap();
-            let mut mcts = MCTS::new(1);
-            let root = TreeNode::new_root(&game, 0.5);
-            mcts.search(root, &game, 4, 10000, 0.50)
+            let settings = Settings::test_default();
+            let mut mcts = MCTS::new(&settings);
+            let root = TreeNode::new_root(&game, 1.);
+            let mut test_run_stats: RunStats = Default::default();
+            mcts.search(root, &game, &mut test_run_stats, &settings)
         }
         let a = run_search();
         let b = run_search();

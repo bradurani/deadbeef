@@ -28,12 +28,14 @@ pub fn playout<R: Rng>(rng: &mut R, initial: &Chess, thread_run_stats: &mut RunS
         {
             let action = choose_random(rng, &potential_moves);
             game.make_move(&action);
-            thread_run_stats.playout_moves += 1;
         }
         potential_moves = game.allowed_actions();
     }
     let time_spent = t0.elapsed().as_millis();
+    // println!("time spent{}", time_spent);
+    thread_run_stats.playout_moves += num_moves as u64;
     thread_run_stats.playouts += 1;
     thread_run_stats.playout_time += time_spent as u64;
+    // println!("{}", thread_run_stats);
     game
 }

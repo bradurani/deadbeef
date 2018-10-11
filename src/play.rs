@@ -11,7 +11,7 @@ pub fn play_game(settings: &Settings) -> Vec<Move> {
     let mut game = settings.starting_position.clone();
     let mut game_run_stats: RunStats = Default::default();
     let mut move_num = settings.starting_move_num;
-    let mut mcts: MCTS = MCTS::new(settings.starting_seed);
+    let mut mcts: MCTS = MCTS::new(&settings);
     let mut root = TreeNode::new_root(&game, move_num);
 
     let t0 = Instant::now();
@@ -91,4 +91,21 @@ fn best_child_node(root: TreeNode) -> Option<TreeNode> {
     root.children
         .into_iter()
         .max_by(|n1, n2| n1.sn.partial_cmp(&n2.sn).unwrap())
+}
+
+#[cfg(test)]
+mod tests {
+    use play::play_game;
+    use settings::*;
+
+    #[test]
+    fn deterministic_game() {
+        let settings = Settings::test_default();
+        let move_history_a = play_game(&settings);
+        let move_history_b = play_game(&settings);
+        let move_history_c = play_game(&settings);
+        assert_eq!(move_history_a, move_history_b);
+        assert_eq!(move_history_b, move_history_c);
+        assert_eq!(move_history_a, move_history_c);
+    }
 }
