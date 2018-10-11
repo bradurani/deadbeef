@@ -1,40 +1,25 @@
 use game::*;
 use mcts::{TreeNode, MCTS};
 use pgn;
+use settings::*;
 use shakmaty::*;
 use stats::*;
 use std::time::Instant;
 
-pub fn play_game(
-    starting_position: &Chess,
-    ensemble_size: usize,
-    time_per_move_ms: f32,
-    c: f32,
-    starting_seed: u8,
-    n_samples: isize,
-) -> Vec<Move> {
-    let mut game = starting_position.clone();
+pub fn play_game(settings: &Settings) -> Vec<Move> {
     let mut move_history: Vec<Move> = Vec::new();
-    let mut move_num = 0.5;
-    let mut game_run_stats = RunStats::new();
-    let mut mcts: MCTS = MCTS::new(starting_seed);
+    let mut game = settings.starting_position.clone();
+    let mut game_run_stats: RunStats = Default::default();
+    let mut move_num = settings.starting_move_num;
+    let mut mcts: MCTS = MCTS::new(settings.starting_seed);
     let mut root = TreeNode::new_root(&game, move_num);
+
     let t0 = Instant::now();
 
     loop {
-        let mut move_run_stats = RunStats::new();
-        move_num += 0.5;
-        let new_root = find_best_move(
-            &mut mcts,
-            root,
-            &game,
-            ensemble_size,
-            time_per_move_ms,
-            c,
-            move_num,
-            n_samples,
-            &mut move_run_stats,
-        );
+        let mut move_run_stats: RunStats = Default::default();
+        let new_root = find_best_move(&mut mcts, root, &game, &mut move_run_stats, settings);
+
         match new_root {
             None => break,
             Some(found_new_root) => {
@@ -49,8 +34,10 @@ pub fn play_game(
         }
         game_run_stats.add(&move_run_stats);
 
-        let pgn = pgn::to_pgn(&starting_position, &move_history); //TODO build incrementally
+        let pgn = pgn::to_pgn(&settings.starting_position, &move_history); //TODO build incrementally
         println!("{}", pgn);
+
+        move_num += 0.5;
     }
     let time_spent = t0.elapsed().as_millis();
     game_run_stats.total_time = time_spent as u64;
@@ -62,17 +49,13 @@ pub fn find_best_move(
     mcts: &mut MCTS,
     root: TreeNode,
     game: &Chess,
-    ensemble_size: usize,
-    time_per_move_ms: f32,
-    c: f32,
-    move_num: f32,
-    n_samples: isize,
     move_run_stats: &mut RunStats,
+    settings: &Settings,
 ) -> Option<TreeNode> {
     let t0 = Instant::now();
     println!(
-        "\n{} Score: {} / {} = {}",
-        move_num,
+        "\n{}  -  {} / {} = {}",
+        root.move_num,
         root.sq,
         root.sn,
         root.score()
@@ -84,24 +67,10 @@ pub fn find_best_move(
 
     println!("Start {:?}", TreeStats::tree_stats(&root));
 
-    let new_root = if n_samples == -1 {
-        mcts.search_time(
-            root,
-            &game,
-            ensemble_size,
-            time_per_move_ms,
-            c,
-            move_run_stats,
-        )
+    let new_root = if settings.use_steps() {
+        mcts.search_time(root, &game, move_run_stats, settings)
     } else {
-        mcts.search(
-            root,
-            &game,
-            ensemble_size,
-            n_samples as usize,
-            c,
-            move_run_stats,
-        )
+        mcts.search(root, &game, move_run_stats, settings)
     };
 
     // println!("{}", new_root);

@@ -46,7 +46,7 @@ impl TreeStats {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Default)]
 pub struct RunStats {
     pub nodes_created: u64,
     pub iterations: u64,
@@ -62,22 +62,6 @@ pub struct RunStats {
 }
 
 impl RunStats {
-    pub fn new() -> RunStats {
-        RunStats {
-            nodes_created: 0,
-            iterations: 0,
-            playouts: 0,
-            playout_moves: 0,
-            tree_merges: 0,
-            maxouts: 0,
-            samples: 0,
-            sample_batches: 0,
-            playout_time: 0,
-            tree_merge_time: 0,
-            total_time: 0,
-        }
-    }
-
     pub fn add(&mut self, run_stats: &RunStats) {
         self.nodes_created += run_stats.nodes_created;
         self.iterations += run_stats.iterations;
@@ -89,6 +73,21 @@ impl RunStats {
         self.sample_batches += run_stats.sample_batches;
         self.playout_time += run_stats.playout_time;
         self.tree_merge_time += run_stats.tree_merge_time;
+        // don't add total time since we use a separate timer at each
+        // stat level
+    }
+
+    pub fn add_thread_stats(&mut self, run_stats: &RunStats, thread_count: usize) {
+        self.nodes_created += run_stats.nodes_created;
+        self.iterations += run_stats.iterations;
+        self.playouts += run_stats.playouts;
+        self.playout_moves += run_stats.playout_moves;
+        self.tree_merges += run_stats.tree_merges;
+        self.maxouts += run_stats.maxouts;
+        self.samples += run_stats.samples;
+        self.sample_batches += run_stats.sample_batches;
+        self.playout_time += run_stats.playout_time / thread_count as u64;
+        self.tree_merge_time += run_stats.tree_merge_time / thread_count as u64;
         // don't add total time since we use a separate timer at each
         // stat level
     }

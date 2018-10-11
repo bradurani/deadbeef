@@ -14,6 +14,7 @@ pub mod mcts;
 pub mod pgn;
 pub mod play;
 pub mod playout;
+pub mod settings;
 pub mod stats;
 pub mod tree_merge;
 pub mod utils;

@@ -10,6 +10,7 @@ use std::time::Instant;
 
 use playout::playout;
 use rand::rngs::SmallRng;
+use settings::*;
 use stats::*;
 use tree_merge::timed_merge_trees;
 use utils::*;
@@ -122,14 +123,15 @@ impl TreeNode {
     }
 
     /// Find the best child accoring to UCT1
-    pub fn best_child(&mut self, c: f32) -> &mut TreeNode {
+    pub fn best_child(&mut self, settings: &Settings) -> &mut TreeNode {
         let mut best_value: f32 = f32::NEG_INFINITY;
         let mut best_child: Option<&mut TreeNode> = None;
         let self_total_n = self.total_n();
 
         for child in &mut self.children {
             let value = (self.turn.coefficient() * child.total_q()) / child.total_n()
-                + c * (2. * self_total_n.ln() / child.total_n()).sqrt();
+                + settings.c * (2. * self_total_n.ln() / child.total_n()).sqrt();
+            //TODO what is this 2. ?????
             // println!("child: {:?} total: {}", child, child.total_n());
             // println!("value: {}", value);
             if value > best_value {
@@ -190,29 +192,29 @@ impl TreeNode {
     pub fn iteration(
         &mut self,
         game: &mut Chess,
-        c: f32,
         rng: &mut SmallRng,
         thread_run_stats: &mut RunStats,
+        settings: &Settings,
     ) -> f32 {
         thread_run_stats.iterations += 1;
         let delta = match self.state {
             NodeState::LeafNode => game.reward(),
             NodeState::FullyExpanded => {
                 // Choose and recurse into child...
-                let child = self.best_child(c);
+                let child = self.best_child(settings);
                 game.make_move(&child.action.unwrap());
-                child.iteration(game, c, rng, thread_run_stats)
+                child.iteration(game, rng, thread_run_stats, settings)
             }
             NodeState::Expandable => {
                 let allowed_actions = game.allowed_actions();
                 if allowed_actions.len() == 0 || game.is_insufficient_material() {
                     self.state = NodeState::LeafNode;
-                    return self.iteration(game, c, rng, thread_run_stats);
+                    return self.iteration(game, rng, thread_run_stats, settings);
                 }
                 let candidate_actions = self.candidate_actions(allowed_actions);
                 if candidate_actions.len() == 0 {
                     self.state = NodeState::FullyExpanded;
-                    return self.iteration(game, c, rng, thread_run_stats);
+                    return self.iteration(game, rng, thread_run_stats, settings);
                 }
                 let mut child = self.expand(candidate_actions, rng, thread_run_stats);
                 game.make_move(&child.action.unwrap());
@@ -284,30 +286,30 @@ impl MCTS {
         &mut self,
         root: TreeNode,
         game: &Chess,
-        ensemble_size: usize,
-        n_samples: usize,
-        c: f32,
         batch_run_stats: &mut RunStats,
+        settings: &Settings,
     ) -> TreeNode {
         // Iterate over ensemble and perform MCTS iterations
-        let thread_result_handles: Vec<JoinHandle<(TreeNode, RunStats)>> = (0..ensemble_size)
+        let thread_result_handles: Vec<JoinHandle<(TreeNode, RunStats)>> = (0..settings
+            .ensemble_size)
             .map(|thread_num| {
                 let thread_game = game.clone();
                 let mut thread_root = root.clone();
                 let mut rng = seeded_rng(self.starting_seed + thread_num as u8);
-                let mut thread_run_stats = RunStats::new();
+                let mut thread_run_stats: RunStats = Default::default();
+                let thread_settings = settings.clone();
 
                 thread::spawn(move || {
                     //Run iterations with playouts for this time slice
                     let t0 = Instant::now();
 
-                    for _ in 0..n_samples {
+                    for _ in 0..thread_settings.n_samples {
                         thread_run_stats.samples += 1;
                         thread_root.iteration(
                             &mut thread_game.clone(),
-                            c,
                             &mut rng,
                             &mut thread_run_stats,
+                            &thread_settings,
                         );
                     }
                     let time_spent = t0.elapsed().as_millis();
@@ -332,7 +334,7 @@ impl MCTS {
             );
 
         for stats in thread_run_stats {
-            batch_run_stats.add(&stats);
+            batch_run_stats.add_thread_stats(&stats, settings.ensemble_size);
         }
 
         timed_merge_trees(root, thread_roots.to_vec(), batch_run_stats)
@@ -342,38 +344,29 @@ impl MCTS {
         &mut self,
         root: TreeNode,
         game: &Chess,
-        ensemble_size: usize,
-        time_per_move_ms: f32,
-        c: f32,
         move_run_stats: &mut RunStats,
+        settings: &Settings,
     ) -> TreeNode {
         let mut samples_total = 0;
         let t0 = Instant::now();
 
-        let mut n_samples = (self.iterations_per_ms * time_per_move_ms)
+        let mut n_samples = (self.iterations_per_ms * settings.time_per_move_ms)
             .max(10.)
             .min(100.) as usize;
 
         let mut new_root = root;
         while n_samples >= 5 {
             let batch_t0 = Instant::now();
-            let mut batch_run_stats = RunStats::new();
+            let mut batch_run_stats: RunStats = Default::default();
             batch_run_stats.sample_batches = 1;
 
-            new_root = self.search(
-                new_root,
-                game,
-                ensemble_size,
-                n_samples,
-                c,
-                &mut batch_run_stats,
-            );
+            new_root = self.search(new_root, game, &mut batch_run_stats, settings);
             samples_total += n_samples;
 
             let time_spent = t0.elapsed().as_millis() as f32;
             self.iterations_per_ms = (samples_total as f32) / time_spent;
 
-            let time_left = time_per_move_ms - time_spent;
+            let time_left = settings.time_per_move_ms - time_spent;
             n_samples = (self.iterations_per_ms * time_left).max(0.).min(100.) as usize;
 
             let batch_time_spent = batch_t0.elapsed().as_millis();
