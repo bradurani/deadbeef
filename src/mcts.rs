@@ -386,6 +386,7 @@ mod tests {
     use stats::TreeStats;
 
     #[test]
+    #[ignore]
     fn search_deterministic() {
         fn run_search() -> TreeNode {
             let settings = Settings::test_default();
@@ -410,6 +411,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn run_search_mate_in_7_deterministic() {
         fn run_search() -> TreeNode {
             let setup: Fen = "rn3rk1/pbppq1pp/1p2pb2/4N2Q/3PN3/3B4/PPP2PPP/R3K2R w KQ - 6 11"
@@ -434,5 +436,16 @@ mod tests {
         assert_eq!(a, b);
         assert_eq!(b, c);
         assert_eq!(a, c);
+    }
+
+    #[test]
+    fn mate_in_1() {}
+
+    fn test_iteration(fen_str: &'static str) {
+        // game: &mut Chess,
+        // rng: &mut SmallRng,
+        // thread_run_stats: &mut RunStats,
+        // settings: &Settings,
+
     }
 }

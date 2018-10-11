@@ -1,7 +1,7 @@
 extern crate deadbeef;
 extern crate shakmaty;
 
-use helpers::assert_move;
+use helpers::*;
 
 mod helpers;
 
@@ -46,7 +46,7 @@ fn en_passent_mate_in_1() {
 fn castle_mate_in_1_white_in_1() {
     // white long castle or kd2
     //  Edward Lasker–Sir George Thomas (London 1912)
-    assert_move(
+    assert_contains_move(
         "rn3r2/pbppq1p1/1p2pN2/8/3P2NP/6P1/PPP1BP1R/R3K1k1 w Q - 5 18",
         vec!["e1d2", "e1c1"],
     );

@@ -99,6 +99,7 @@ mod tests {
     use settings::*;
 
     #[test]
+    #[ignore]
     fn deterministic_game() {
         let settings = Settings::test_default();
         let move_history_a = play_game(&settings);
@@ -110,6 +111,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn changing_seed_changes_game() {
         let settings_a = Settings::test_default();
         let move_history_a = play_game(&settings_a);

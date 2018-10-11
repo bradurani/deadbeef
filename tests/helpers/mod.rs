@@ -6,6 +6,7 @@ extern crate shakmaty;
 use deadbeef::mcts::{TreeNode, MCTS};
 use deadbeef::play;
 use deadbeef::settings::*;
+use deadbeef::setup::*;
 use deadbeef::stats::*;
 use shakmaty::fen::Fen;
 use shakmaty::uci::Uci;
@@ -40,16 +41,4 @@ pub fn assert_contains_move_with_settings(
     .unwrap();
 
     assert!(moves.contains(&best_child.action.unwrap()));
-}
-
-fn parse_fen(fen_str: &'static str) -> Chess {
-    let setup: Fen = fen_str.parse().unwrap();
-    let position: Chess = setup.position().unwrap();
-    position
-}
-
-fn parse_uci(uci_str: &'static str, position: &Chess) -> Move {
-    let uci: Uci = uci_str.parse().unwrap();
-    let m = uci.to_move(position).unwrap();
-    m
 }
