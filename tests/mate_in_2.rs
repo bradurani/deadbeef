@@ -33,24 +33,27 @@ fn bishop_mate_in_2() {
 #[test]
 fn queen_mate_in_2() {
     //e8e2, e8e5 d3c3
-    assert_move("4q3/8/8/8/8/3k4/8/3K4 b - - 0 1", "d3c3");
+    assert_contains_move(
+        "4q3/8/8/8/8/3k4/8/3K4 b - - 0 1",
+        vec!["d3c3", "e8e2", "e8e5"],
+    );
 }
 
 #[test]
 fn back_row_mate_in_2_white() {
-    assert_move(
+    assert_contains_move(
         //  Edward Lasker–Sir George Thomas (London 1912)
         "rn3r2/pbppq1p1/1p2pN2/8/3P2NP/6P1/PPP1BPk1/R3K2R w KQ - 3 17",
-        "h1h2", //or 0-0-0 e1c1
+        vec!["h1h2", "e1c1"], //or 0-0-0 e1c1
     );
 }
 
 #[test]
 fn king_back_row_mate_in_2() {
     //  Edward Lasker–Sir George Thomas (London 1912)
-    assert_move(
+    assert_contains_move(
         //  Edward Lasker–Sir George Thomas (London 1912)
         "rn3r2/pbppq1p1/1p2pN2/8/3P2NP/3B1kP1/PPP2P2/R3K2R w KQ - 1 16",
-        "e1f1", //e1g1
+        vec!["e1f1", "e1g1"],
     );
 }

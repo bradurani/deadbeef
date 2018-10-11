@@ -19,13 +19,13 @@ pub fn timed_merge_trees(
 }
 
 fn merge_trees<'a>(mut root: TreeNode, new_roots: Vec<TreeNode>) -> TreeNode {
-    assert_eq!(root.nn, 0.);
-    assert_eq!(root.nq, 0.);
+    debug_assert_eq!(root.nn, 0.);
+    debug_assert_eq!(root.nq, 0.);
 
     let mut action_map = deterministic_hash_map();
 
     for new_root in new_roots.into_iter() {
-        assert_eq!(new_root.action, root.action);
+        debug_assert_eq!(new_root.action, root.action);
         root.sn += new_root.nn;
         root.sq += new_root.nq;
         for new_child_root in new_root.children {

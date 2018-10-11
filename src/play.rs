@@ -86,8 +86,8 @@ pub fn find_best_move(
 }
 
 fn best_child_node(root: TreeNode) -> Option<TreeNode> {
-    assert_eq!(0., root.nn); // shoud have a merged node with no new calculations
-    assert_eq!(0., root.nq);
+    debug_assert_eq!(0., root.nn); // shoud have a merged node with no new calculations
+    debug_assert_eq!(0., root.nq);
     root.children
         .into_iter()
         .max_by(|n1, n2| n1.sn.partial_cmp(&n2.sn).unwrap())

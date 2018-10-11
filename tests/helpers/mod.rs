@@ -11,20 +11,24 @@ use shakmaty::fen::Fen;
 use shakmaty::uci::Uci;
 use shakmaty::{Chess, Move};
 
-pub fn assert_move(fen: &'static str, move_uci: &'static str) {
-    let mut test_run_stats: RunStats = Default::default();
-    let settings = Settings::test_default();
-    assert_move_with_settings(fen, move_uci, &mut test_run_stats, settings)
+pub fn assert_move(fen_str: &'static str, uci_str: &'static str) {
+    assert_contains_move(fen_str, vec![uci_str]);
 }
 
-pub fn assert_move_with_settings(
+pub fn assert_contains_move(fen_str: &'static str, uci_strs: Vec<&'static str>) {
+    let mut test_run_stats: RunStats = Default::default();
+    let settings = Settings::test_default();
+    assert_contains_move_with_settings(fen_str, uci_strs, &mut test_run_stats, &settings)
+}
+
+pub fn assert_contains_move_with_settings(
     fen_str: &'static str,
-    uci_str: &'static str,
+    uci_strs: Vec<&'static str>,
     test_run_stats: &mut RunStats,
-    settings: Settings,
+    settings: &Settings,
 ) {
     let position = parse_fen(fen_str);
-    let m = parse_uci(uci_str, &position);
+    let moves: Vec<Move> = uci_strs.iter().map(|u| parse_uci(u, &position)).collect();
 
     let best_child = play::find_best_move(
         &mut MCTS::new(&settings),
@@ -35,7 +39,7 @@ pub fn assert_move_with_settings(
     )
     .unwrap();
 
-    assert_eq!(m, best_child.action.unwrap())
+    assert!(moves.contains(&best_child.action.unwrap()));
 }
 
 fn parse_fen(fen_str: &'static str) -> Chess {

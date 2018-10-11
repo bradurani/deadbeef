@@ -44,21 +44,27 @@ fn en_passent_mate_in_1() {
 // positions with more than 1 mate solution
 #[test]
 fn castle_mate_in_1_white_in_1() {
-    // white castle or kd2
+    // white long castle or kd2
     //  Edward Lasker–Sir George Thomas (London 1912)
     assert_move(
         "rn3r2/pbppq1p1/1p2pN2/8/3P2NP/6P1/PPP1BP1R/R3K1k1 w Q - 5 18",
-        "e1d2",
+        vec!["e1d2", "e1c1"],
     );
 }
 
 #[test]
 fn promotion_mate_white_in_1() {
     // can mate promoting to queen or rook
-    assert_move("8/p7/P7/6p1/4p2p/2pk4/5p2/2K5 b - - 1 44", "f2f1q");
+    assert_contains_move(
+        "8/p7/P7/6p1/4p2p/2pk4/5p2/2K5 b - - 1 44",
+        vec!["f2f1q", "f2f1r"],
+    );
 }
 
 #[test]
 fn queen_multi_mate_white_in_1() {
-    assert_move("4k3/1Q6/4K3/8/8/8/8/8 w - - 0 1", "b7a8");
+    assert_contains_move(
+        "4k3/1Q6/4K3/8/8/8/8/8 w - - 0 1",
+        vec!["b7a8", "b7b8", "b7c8", "b7e7"],
+    );
 }
