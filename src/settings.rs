@@ -26,8 +26,12 @@ impl Settings {
         }
     }
 
-    #[cfg(test)]
+    //#[cfg(test)] //need to figure out how to not compile this outside tests
     pub fn test_default() -> Settings {
+        Settings::test_default_with_seed(1)
+    }
+
+    pub fn test_default_with_seed(seed: u8) -> Settings {
         Settings {
             starting_position: Chess::default(),
             starting_move_num: 1.0,
@@ -35,7 +39,7 @@ impl Settings {
             n_samples: 1000,
             ensemble_size: 4,
             c: 0.25,
-            starting_seed: 1,
+            starting_seed: seed,
             starting_iterations_per_ms: 0.5,
         }
     }

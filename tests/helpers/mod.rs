@@ -9,7 +9,7 @@ use deadbeef::settings::*;
 use deadbeef::stats::*;
 use shakmaty::fen::Fen;
 use shakmaty::uci::Uci;
-use shakmaty::Chess;
+use shakmaty::{Chess, Move};
 
 pub fn assert_move(fen: &'static str, move_uci: &'static str) {
     let mut test_run_stats: RunStats = Default::default();
@@ -18,14 +18,13 @@ pub fn assert_move(fen: &'static str, move_uci: &'static str) {
 }
 
 pub fn assert_move_with_settings(
-    fen: &'static str,
-    move_uci: &'static str,
+    fen_str: &'static str,
+    uci_str: &'static str,
     test_run_stats: &mut RunStats,
     settings: Settings,
 ) {
-    let position = parse_fen(fen);
-    let uci: Uci = move_uci.parse().unwrap();
-    let m = uci.to_move(&position).unwrap();
+    let position = parse_fen(fen_str);
+    let m = parse_uci(uci_str, &position);
 
     let best_child = play::find_best_move(
         &mut MCTS::new(&settings),
@@ -39,8 +38,14 @@ pub fn assert_move_with_settings(
     assert_eq!(m, best_child.action.unwrap())
 }
 
-fn parse_fen(fen: &'static str) -> Chess {
-    let setup: Fen = fen.parse().unwrap();
+fn parse_fen(fen_str: &'static str) -> Chess {
+    let setup: Fen = fen_str.parse().unwrap();
     let position: Chess = setup.position().unwrap();
     position
+}
+
+fn parse_uci(uci_str: &'static str, position: &Chess) -> Move {
+    let uci: Uci = uci_str.parse().unwrap();
+    let m = uci.to_move(position).unwrap();
+    m
 }

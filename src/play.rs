@@ -108,4 +108,13 @@ mod tests {
         assert_eq!(move_history_b, move_history_c);
         assert_eq!(move_history_a, move_history_c);
     }
+
+    #[test]
+    fn changing_seed_changes_game() {
+        let settings_a = Settings::test_default();
+        let move_history_a = play_game(&settings_a);
+        let settings_b = Settings::test_default_with_seed(7);
+        let move_history_b = play_game(&settings_b);
+        assert_ne!(move_history_a, move_history_b);
+    }
 }
