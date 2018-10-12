@@ -8,9 +8,7 @@ use deadbeef::play;
 use deadbeef::settings::*;
 use deadbeef::setup::*;
 use deadbeef::stats::*;
-use shakmaty::fen::Fen;
-use shakmaty::uci::Uci;
-use shakmaty::{Chess, Move};
+use shakmaty::Move;
 
 pub fn assert_move(fen_str: &'static str, uci_str: &'static str) {
     assert_contains_move(fen_str, vec![uci_str]);

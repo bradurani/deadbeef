@@ -4,7 +4,6 @@ extern crate shakmaty;
 use deadbeef::pgn;
 use deadbeef::play;
 use deadbeef::settings::*;
-use shakmaty::*;
 
 //TODO remove Copy from Move in Shakmaty
 pub fn main() {

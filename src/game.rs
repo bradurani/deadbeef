@@ -8,11 +8,11 @@ pub trait Game: Clone {
     /// Return a list with all allowed actions given the current game state.
     fn allowed_actions(&self) -> Vec<Move>;
 
-    /// Change the current game state according to the given action.
+    // Change the current game state according to the given action.
     fn make_move(&mut self, action: &Move);
 
-    /// Reward for the player when reaching the current game state.
-    fn reward(&self) -> f32;
+    // Reward for the player when reaching the current game state.
+    // fn reward(&self) -> f32;
 }
 
 impl Game for Chess {
@@ -32,18 +32,22 @@ impl Game for Chess {
         // self.play_safe(&action)
         // TODO add safe option for testing
     }
+}
 
+pub trait Reward {
+    fn reward(&self) -> f32;
+}
+
+impl Reward for Outcome {
     fn reward(&self) -> f32 {
-        let outcome = self.outcome();
-        match outcome {
-            Some(Outcome::Decisive {
+        match self {
+            Outcome::Decisive {
                 winner: Color::Black,
-            }) => -1.0,
-            Some(Outcome::Decisive {
+            } => -1.0,
+            Outcome::Decisive {
                 winner: Color::White,
-            }) => 1.0,
-            Some(Outcome::Draw) => 0.0,
-            None => 0.0,
+            } => 1.0,
+            Outcome::Draw => 0.0,
         }
     }
 }

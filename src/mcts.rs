@@ -1,4 +1,5 @@
 use game::*;
+use shakmaty::Color::*;
 use shakmaty::*;
 use std::f32;
 use std::fmt;
@@ -22,11 +23,14 @@ pub enum NodeState {
     Expandable,
 }
 
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TreeNode {
+    pub outcome: Option<Outcome>,
     pub action: Option<Move>, // how did we get here
     pub state: NodeState,     // is this a leaf node? fully expanded?
-    pub turn: Color,          //which player made this move
+    //TODO don't need turn
+    pub turn: Color, //which player made this move
+    //TODO don't need move number
     pub move_num: f32,
     pub nn: f32,                 //new qs computed during this search
     pub nq: f32,                 //new qs computed during this search
@@ -38,6 +42,7 @@ pub struct TreeNode {
 impl TreeNode {
     pub fn new(action: Option<Move>, turn: Color, move_num: f32) -> TreeNode {
         TreeNode {
+            outcome: None,
             action: action,
             children: Vec::new(),
             state: NodeState::Expandable,
@@ -52,6 +57,7 @@ impl TreeNode {
 
     pub fn new_root(game: &Chess, move_num: f32) -> TreeNode {
         TreeNode {
+            outcome: None,
             action: None,
             children: Vec::new(),
             state: NodeState::Expandable,
@@ -66,6 +72,7 @@ impl TreeNode {
 
     pub fn starting() -> TreeNode {
         TreeNode {
+            outcome: None,
             action: None,
             children: Vec::new(),
             state: NodeState::Expandable,
@@ -80,6 +87,7 @@ impl TreeNode {
 
     pub fn clone_empty(&self) -> TreeNode {
         TreeNode {
+            outcome: self.outcome,
             action: self.action,
             children: Vec::new(),
             state: self.state,
@@ -94,6 +102,7 @@ impl TreeNode {
 
     pub fn clone_childless(&self) -> TreeNode {
         TreeNode {
+            outcome: self.outcome,
             action: self.action,
             children: Vec::new(),
             state: self.state,
@@ -195,8 +204,14 @@ impl TreeNode {
         settings: &Settings,
     ) -> f32 {
         thread_run_stats.iterations += 1;
-        let delta = match self.state {
-            NodeState::LeafNode => game.reward(),
+        println!("{:?}", self.state);
+        // println!("{}", self);
+        let mut delta = match self.state {
+            NodeState::LeafNode => {
+                // println!("{}", game.outcome().unwrap());
+                // game.reward()
+                self.outcome.unwrap().reward()
+            }
             NodeState::FullyExpanded => {
                 // Choose and recurse into child...
                 let child = self.best_child(settings);
@@ -205,23 +220,51 @@ impl TreeNode {
             }
             NodeState::Expandable => {
                 let allowed_actions = game.allowed_actions();
+                //TODO cleanup
                 if allowed_actions.len() == 0 || game.is_insufficient_material() {
+                    println!("zero actions left");
                     self.state = NodeState::LeafNode;
                     return self.iteration(game, rng, thread_run_stats, settings);
                 }
                 let candidate_actions = self.candidate_actions(allowed_actions);
+                println!("candidate actions {:?}", candidate_actions.len());
                 if candidate_actions.len() == 0 {
+                    //if we ended up expanded as the result fo a tree merge
+                    //TODO check if merging filled out all outcomes
                     self.state = NodeState::FullyExpanded;
                     return self.iteration(game, rng, thread_run_stats, settings);
                 }
+                println!("expanding");
                 let mut child = self.expand(candidate_actions, rng, thread_run_stats);
+                println!("{:?}", child);
                 game.make_move(&child.action.unwrap());
-                let delta = playout(rng, game, thread_run_stats).reward();
-                child.nn += 1.;
-                child.nq += delta;
-                delta
+                // println!("{:?}", game.board());
+                if game.is_checkmate() {
+                    println!("found checkmate");
+                    child.state = NodeState::LeafNode;
+                    child.outcome = Some(Outcome::Decisive {
+                        winner: game.turn().not(),
+                    });
+                    child.nn += 1.;
+                    child.nq += 1.;
+                    f32::INFINITY
+                } else {
+                    println!("running playout");
+                    let played_game = playout(rng, game, thread_run_stats);
+                    let delta = played_game.outcome().map(|o| o.reward()).unwrap_or(0.);
+                    child.nn += 1.;
+                    child.nq += delta;
+                    delta
+                }
             }
         };
+        if delta == f32::INFINITY {
+            self.state = NodeState::LeafNode;
+            delta = 1.;
+            self.outcome = Some(Outcome::Decisive {
+                winner: game.turn().not(), //we've advanced the game so turn is 1 ahead
+            });
+        }
         self.nn += 1.;
         self.nq += delta;
         delta
@@ -382,6 +425,7 @@ impl MCTS {
 #[cfg(test)]
 mod tests {
     use mcts::*;
+    use setup::*;
     use shakmaty::fen::Fen;
     use stats::TreeStats;
 
@@ -439,13 +483,29 @@ mod tests {
     }
 
     #[test]
-    fn mate_in_1() {}
+    fn iteration_mate_in_1() {
+        let (node, score) = test_iteration_all_children("4k3/Q7/5K2/8/8/8/8/8 w - - 0 1");
+        assert_eq!(1., score);
+        assert_eq!(Outcome::Decisive { winner: White }, node.outcome.unwrap());
+    }
 
-    fn test_iteration(fen_str: &'static str) {
-        // game: &mut Chess,
-        // rng: &mut SmallRng,
-        // thread_run_stats: &mut RunStats,
-        // settings: &Settings,
+    fn test_iteration_all_children_with_stats(
+        fen_str: &'static str,
+        stats: &mut RunStats,
+    ) -> (TreeNode, f32) {
+        let game = parse_fen(fen_str);
+        let mut settings = Settings::test_default();
+        let mut rng = seeded_rng(settings.starting_seed);
+        let mut node = TreeNode::new_root(&game, 1.);
+        let mut last = 0.;
+        for _aa in game.allowed_actions() {
+            last = node.iteration(&mut game.clone(), &mut rng, stats, &mut settings);
+        }
+        (node, last)
+    }
 
+    fn test_iteration_all_children(fen_str: &'static str) -> (TreeNode, f32) {
+        let mut stats: RunStats = Default::default();
+        test_iteration_all_children_with_stats(fen_str, &mut stats)
     }
 }
