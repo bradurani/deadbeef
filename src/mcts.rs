@@ -125,7 +125,17 @@ impl TreeNode {
     }
 
     pub fn score(&self) -> f32 {
-        self.total_q() as f32 / self.total_n() as f32
+        match self.outcome {
+            Some(Outcome::Decisive { winner }) => {
+                if winner == self.turn.not() {
+                    f32::INFINITY
+                } else {
+                    f32::NEG_INFINITY
+                }
+            }
+            Some(Outcome::Draw) => 0.,
+            _ => self.sn,
+        }
     }
 
     /// Find the best child accoring to UCT1
@@ -273,7 +283,7 @@ impl TreeNode {
                     return self.outcome.unwrap().reward();
                 }
                 let candidate_actions = self.candidate_actions(allowed_actions);
-                // println!("candidate actions {:?}", candidate_actions.len());
+                println!("candidate actions {:?}", candidate_actions.len());
                 if candidate_actions.len() == 0 {
                     //if we ended up expanded as the result fo a tree merge
                     //TODO check if merging filled out all outcomes
@@ -294,6 +304,7 @@ impl TreeNode {
                     child.nq += 1.;
                     f32::INFINITY
                 } else {
+                    println!("playou");
                     let played_game = playout(rng, game, thread_run_stats);
                     let delta = played_game.outcome().map(|o| o.reward()).unwrap_or(0.);
                     child.nn += 1.;
@@ -319,17 +330,20 @@ impl TreeNode {
             match child.outcome {
                 Some(Outcome::Decisive { winner: color }) if color == game.turn().not() => {
                     println!("found child mate");
+                    println!("{:?}", child.action);
                     true
                 }
                 Some(_) => false, // stalemate or win
                 None => {
                     let mut child_game = game.clone();
                     child_game.make_move(&child.action.unwrap());
-                    let allowed_actions = game.allowed_actions();
+                    println!("checking {:?}", child_game.board());
+                    let allowed_actions = child_game.allowed_actions();
                     allowed_actions.iter().any(|aa| {
                         //TODO don't clone if the move is reversible
                         let mut grandchild_game = child_game.clone();
                         grandchild_game.make_move(aa);
+                        println!("IS THIS A CHECKMATE? {:?}", grandchild_game.board());
                         if grandchild_game.is_checkmate() {
                             println!("{}", "found grandchild mate");
                         }
@@ -352,26 +366,36 @@ impl fmt::Display for TreeNode {
             match node.action {
                 Some(a) => try!(writeln!(
                     f,
-                    "{}. {} q={} n={} s={}",
+                    "{}. {} q={} n={} s={} {}",
                     node.move_num,
                     a,
                     node.total_q(),
                     node.total_n(),
-                    node.score()
+                    node.score(),
+                    format_outcome(node.outcome)
                 )),
                 None => try!(writeln!(
                     f,
-                    "{}. Root q={} n={} s={}",
+                    "{}. Root q={} n={} s={} {}",
                     node.move_num,
                     node.total_q(),
                     node.total_n(),
-                    node.score()
+                    node.score(),
+                    format_outcome(node.outcome)
                 )),
             }
             for child in &node.children {
                 try!(fmt_subtree(f, child, indent_level + 1));
             }
             write!(f, "")
+        }
+
+        //TODO write to format buffer instead
+        fn format_outcome(outcome: Option<Outcome>) -> String {
+            match outcome {
+                None => "".to_string(),
+                Some(o) => format!("OUTCOME={}", o),
+            }
         }
 
         fmt_subtree(f, self, 0)
@@ -426,7 +450,7 @@ impl MCTS {
                     let time_spent = t0.elapsed().as_millis();
                     thread_run_stats.total_time = time_spent as u64;
                     // println!("thread: {}", thread_run_stats);
-                    // println!("root: {}", root);
+                    println!("thread root: {}\n", thread_root);
                     (thread_root, thread_run_stats)
                 })
             })
@@ -587,7 +611,7 @@ mod tests {
     fn iteration_mate_in_2_2_choices() {
         let mut stats: RunStats = Default::default();
         let (node, score) = test_iteration_all_children_with_stats(
-            "8/5Q2/1pkq2n1/p3p3/4P3/1P2K3/2P1B3/8 w - - 0 1",
+            "8/5Q2/1pkq2n1/pB2p3/4P3/1P2K3/2P5/8 b - - 1 1",
             &mut stats,
         );
         assert_eq!(1., score);
@@ -597,7 +621,7 @@ mod tests {
             },
             node.outcome.unwrap()
         );
-        assert_eq!(stats.iterations, 178);
+        assert_eq!(stats.iterations, 45);
         println!("{:?}", stats);
     }
 

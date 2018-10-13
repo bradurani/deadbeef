@@ -28,8 +28,8 @@ impl Game for Chess {
     }
 
     fn make_move(&mut self, action: &Move) {
-        self.play_unchecked(&action);
-        // self.play_safe(&action)
+        // self.play_unchecked(&action);
+        self.play_safe(&action)
         // TODO add safe option for testing
     }
 }

@@ -73,7 +73,7 @@ pub fn find_best_move(
         mcts.search(root, &game, move_run_stats, settings)
     };
 
-    // println!("{}", new_root);
+    println!("{}", new_root);
     println!("End: {:?}", TreeStats::tree_stats(&new_root));
 
     let best_child = best_child_node(new_root);
@@ -88,9 +88,10 @@ pub fn find_best_move(
 fn best_child_node(root: TreeNode) -> Option<TreeNode> {
     debug_assert_eq!(0., root.nn); // shoud have a merged node with no new calculations
     debug_assert_eq!(0., root.nq);
+    // TODO try the equation from the MCTS-Solver paper
     root.children
         .into_iter()
-        .max_by(|n1, n2| n1.sn.partial_cmp(&n2.sn).unwrap())
+        .max_by(|n1, n2| n1.score().partial_cmp(&n2.score()).unwrap())
 }
 
 #[cfg(test)]
