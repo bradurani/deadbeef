@@ -1,4 +1,5 @@
 use rand::rngs::SmallRng;
+#[allow(unused_imports)]
 use rand::{Rng, RngCore, SeedableRng};
 use std::collections::HashMap;
 use std::hash::{BuildHasherDefault, Hash};

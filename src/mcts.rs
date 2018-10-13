@@ -1,5 +1,4 @@
 use game::*;
-use shakmaty::Color::*;
 use shakmaty::*;
 use std::f32;
 use std::fmt;
@@ -191,6 +190,28 @@ impl TreeNode {
         candidate_actions
     }
 
+    fn new_outcome_based_on_child(
+        child_outcome: Option<Outcome>,
+        turn: Color,
+        children: &Vec<TreeNode>,
+        game: &mut Chess,
+    ) -> Option<Outcome> {
+        match child_outcome {
+            Some(Outcome::Decisive { winner: color }) if color == turn.not() => {
+                println!("found child mate.Looing for grandchildren");
+                if TreeNode::all_children_have_winning_grandchild(children, &game) {
+                    Some(Outcome::Decisive { winner: turn.not() }) //can't escape checkmate. All move are a win for opponent
+                } else {
+                    None
+                }
+            }
+            Some(Outcome::Decisive { winner: color }) if color == turn => {
+                Some(Outcome::Decisive { winner: turn })
+            }
+            _ => None,
+        }
+    }
+
     /// Recursively perform an MCTS iteration.
     ///
     /// XXX A non-recursive implementation would probably be faster.
@@ -204,7 +225,6 @@ impl TreeNode {
         settings: &Settings,
     ) -> f32 {
         thread_run_stats.iterations += 1;
-        println!("{:?}", self.state);
         // println!("{}", self);
         let mut delta = match self.state {
             NodeState::LeafNode => {
@@ -213,34 +233,50 @@ impl TreeNode {
                 self.outcome.unwrap().reward()
             }
             NodeState::FullyExpanded => {
-                // Choose and recurse into child...
-                let child = self.best_child(settings);
-                game.make_move(&child.action.unwrap());
-                child.iteration(game, rng, thread_run_stats, settings)
+                let (delta, outcome) = {
+                    let child = self.best_child(settings);
+                    let mut child_game = game.clone(); //TODO don't clone if the move is reversible
+                    child_game.make_move(&child.action.unwrap());
+                    let delta = child.iteration(&mut child_game, rng, thread_run_stats, settings);
+                    let outcome = child.outcome;
+                    (delta, outcome)
+                };
+
+                self.outcome = TreeNode::new_outcome_based_on_child(
+                    outcome,
+                    game.turn(),
+                    &self.children,
+                    game,
+                );
+
+                //we've now looked at the first grandchild node, which has propogated the win
+                //back up if it's a checkmate for our opponent. Now check all of them to see if
+                //we can't avoid mate in N
+                delta
             }
             NodeState::Expandable => {
                 let allowed_actions = game.allowed_actions();
                 //TODO cleanup
                 if allowed_actions.len() == 0 || game.is_insufficient_material() {
-                    println!("zero actions left");
+                    //TODO or 50 move rule
                     self.state = NodeState::LeafNode;
-                    return self.iteration(game, rng, thread_run_stats, settings);
+                    self.outcome = game.outcome();
+                    return self.outcome.unwrap().reward();
                 }
                 let candidate_actions = self.candidate_actions(allowed_actions);
-                println!("candidate actions {:?}", candidate_actions.len());
+                // println!("candidate actions {:?}", candidate_actions.len());
                 if candidate_actions.len() == 0 {
                     //if we ended up expanded as the result fo a tree merge
                     //TODO check if merging filled out all outcomes
                     self.state = NodeState::FullyExpanded;
                     return self.iteration(game, rng, thread_run_stats, settings);
                 }
-                println!("expanding");
                 let mut child = self.expand(candidate_actions, rng, thread_run_stats);
-                println!("{:?}", child);
+                // println!("{:?}", child);
                 game.make_move(&child.action.unwrap());
-                // println!("{:?}", game.board());
                 if game.is_checkmate() {
-                    println!("found checkmate");
+                    println!("FOUND CHECKMATE");
+                    println!("{:?}", game.board());
                     child.state = NodeState::LeafNode;
                     child.outcome = Some(Outcome::Decisive {
                         winner: game.turn().not(),
@@ -249,7 +285,6 @@ impl TreeNode {
                     child.nq += 1.;
                     f32::INFINITY
                 } else {
-                    println!("running playout");
                     let played_game = playout(rng, game, thread_run_stats);
                     let delta = played_game.outcome().map(|o| o.reward()).unwrap_or(0.);
                     child.nn += 1.;
@@ -268,6 +303,26 @@ impl TreeNode {
         self.nn += 1.;
         self.nq += delta;
         delta
+    }
+
+    fn all_children_have_winning_grandchild(children: &Vec<TreeNode>, game: &Chess) -> bool {
+        children.iter().all(|child| {
+            match child.outcome {
+                Some(Outcome::Decisive { winner: color }) if color == game.turn().not() => true,
+                Some(_) => false, // stalemate or win
+                None => {
+                    let mut child_game = game.clone();
+                    child_game.make_move(&child.action.unwrap());
+                    let allowed_actions = game.allowed_actions();
+                    allowed_actions.iter().any(|aa| {
+                        //TODO don't clone if the move is reversible
+                        let mut grandchild_game = child_game.clone();
+                        grandchild_game.make_move(aa);
+                        grandchild_game.is_checkmate()
+                    })
+                }
+            }
+        })
     }
 }
 
@@ -484,9 +539,33 @@ mod tests {
 
     #[test]
     fn iteration_mate_in_1() {
-        let (node, score) = test_iteration_all_children("4k3/Q7/5K2/8/8/8/8/8 w - - 0 1");
+        let mut stats: RunStats = Default::default();
+        let (node, score) =
+            test_iteration_all_children_with_stats("4k3/Q7/5K2/8/8/8/8/8 w - - 0 1", &mut stats);
         assert_eq!(1., score);
-        assert_eq!(Outcome::Decisive { winner: White }, node.outcome.unwrap());
+        assert_eq!(
+            Outcome::Decisive {
+                winner: Color::White
+            },
+            node.outcome.unwrap()
+        );
+        println!("{:?}", stats);
+    }
+
+    #[test]
+    fn iteration_mate_in_2() {
+        let mut stats: RunStats = Default::default();
+        let (node, score) =
+            test_iteration_all_children_with_stats("4q3/8/8/8/8/3k4/8/3K4 b - - 0 1", &mut stats);
+        assert_eq!(1., score);
+        assert_eq!(
+            Outcome::Decisive {
+                winner: Color::Black
+            },
+            node.outcome.unwrap()
+        );
+        assert_eq!(stats.iterations, 178);
+        println!("{:?}", stats);
     }
 
     fn test_iteration_all_children_with_stats(
@@ -498,9 +577,16 @@ mod tests {
         let mut rng = seeded_rng(settings.starting_seed);
         let mut node = TreeNode::new_root(&game, 1.);
         let mut last = 0.;
-        for _aa in game.allowed_actions() {
+        let mut counter = 0;
+        while node.outcome.is_none() {
             last = node.iteration(&mut game.clone(), &mut rng, stats, &mut settings);
+            counter += 1;
+            if counter > 100000 {
+                println!("{}", node);
+                panic!("did not find checkmate");
+            }
         }
+        println!("found {:?}", node.outcome);
         (node, last)
     }
 

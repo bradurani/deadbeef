@@ -7,7 +7,7 @@ pub fn timed_merge_trees(
     root: TreeNode,
     new_roots: Vec<TreeNode>,
     run_stats: &mut RunStats,
-    ) -> TreeNode {
+) -> TreeNode {
     let t0 = Instant::now();
 
     let combined_root = merge_trees(root, new_roots);
@@ -61,7 +61,7 @@ fn merge_trees<'a>(mut root: TreeNode, new_roots: Vec<TreeNode>) -> TreeNode {
 mod tests {
 
     use mcts::{NodeState, TreeNode};
-    use shakmaty::{Color, Move, Outcome, Role, Square};
+    use shakmaty::{Color, Move, Role, Square};
     use tree_merge::merge_trees;
 
     fn norm(role: char, from: &'static str, to: &'static str) -> Option<Move> {
@@ -236,7 +236,7 @@ mod tests {
                         sq: 0.,
                     }],
                 },
-                ],
+            ],
         };
         let t2 = TreeNode {
             outcome: None,
@@ -284,7 +284,7 @@ mod tests {
                     sq: 0.,
                     children: vec![],
                 },
-                ],
+            ],
         };
         let expected = TreeNode {
             outcome: None,
@@ -355,7 +355,7 @@ mod tests {
                         sq: 2.0,
                     }],
                 },
-                ],
+            ],
         };
         let roots = vec![t1, t2];
         let new_root = merge_trees(root, roots);
