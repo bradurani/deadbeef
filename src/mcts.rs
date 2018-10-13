@@ -198,7 +198,8 @@ impl TreeNode {
     ) -> Option<Outcome> {
         match child_outcome {
             Some(Outcome::Decisive { winner: color }) if color == turn.not() => {
-                println!("found child mate.Looing for grandchildren");
+                println!("checking for child mate. Looking for grandchildren");
+                println!("{:?}", game.board());
                 if TreeNode::all_children_have_winning_grandchild(children, &game) {
                     Some(Outcome::Decisive { winner: turn.not() }) //can't escape checkmate. All move are a win for opponent
                 } else {
@@ -238,16 +239,24 @@ impl TreeNode {
                     let mut child_game = game.clone(); //TODO don't clone if the move is reversible
                     child_game.make_move(&child.action.unwrap());
                     let delta = child.iteration(&mut child_game, rng, thread_run_stats, settings);
+                    println!("back from expand");
                     let outcome = child.outcome;
                     (delta, outcome)
                 };
 
-                self.outcome = TreeNode::new_outcome_based_on_child(
+                let outcome_based_on_children = TreeNode::new_outcome_based_on_child(
                     outcome,
                     game.turn(),
                     &self.children,
                     game,
                 );
+                match outcome_based_on_children {
+                    Some(Outcome::Decisive { winner: c }) => {
+                        println!("set outcome based on children")
+                    }
+                    _ => {}
+                }
+                self.outcome = outcome_based_on_children;
 
                 //we've now looked at the first grandchild node, which has propogated the win
                 //back up if it's a checkmate for our opponent. Now check all of them to see if
@@ -308,7 +317,10 @@ impl TreeNode {
     fn all_children_have_winning_grandchild(children: &Vec<TreeNode>, game: &Chess) -> bool {
         children.iter().all(|child| {
             match child.outcome {
-                Some(Outcome::Decisive { winner: color }) if color == game.turn().not() => true,
+                Some(Outcome::Decisive { winner: color }) if color == game.turn().not() => {
+                    println!("found child mate");
+                    true
+                }
                 Some(_) => false, // stalemate or win
                 None => {
                     let mut child_game = game.clone();
@@ -318,6 +330,9 @@ impl TreeNode {
                         //TODO don't clone if the move is reversible
                         let mut grandchild_game = child_game.clone();
                         grandchild_game.make_move(aa);
+                        if grandchild_game.is_checkmate() {
+                            println!("{}", "found grandchild mate");
+                        }
                         grandchild_game.is_checkmate()
                     })
                 }
@@ -486,7 +501,7 @@ mod tests {
 
     #[test]
     #[ignore]
-    fn search_deterministic() {
+    fn search_deterministic_starting_pos() {
         fn run_search() -> TreeNode {
             let settings = Settings::test_default();
             let mut test_run_stats: RunStats = Default::default();
@@ -511,7 +526,7 @@ mod tests {
 
     #[test]
     #[ignore]
-    fn run_search_mate_in_7_deterministic() {
+    fn run_search_deterministic_middle_game_position() {
         fn run_search() -> TreeNode {
             let setup: Fen = "rn3rk1/pbppq1pp/1p2pb2/4N2Q/3PN3/3B4/PPP2PPP/R3K2R w KQ - 6 11"
                 .parse()
@@ -561,6 +576,24 @@ mod tests {
         assert_eq!(
             Outcome::Decisive {
                 winner: Color::Black
+            },
+            node.outcome.unwrap()
+        );
+        assert_eq!(stats.iterations, 178);
+        println!("{:?}", stats);
+    }
+
+    #[test]
+    fn iteration_mate_in_2_2_choices() {
+        let mut stats: RunStats = Default::default();
+        let (node, score) = test_iteration_all_children_with_stats(
+            "8/5Q2/1pkq2n1/p3p3/4P3/1P2K3/2P1B3/8 w - - 0 1",
+            &mut stats,
+        );
+        assert_eq!(1., score);
+        assert_eq!(
+            Outcome::Decisive {
+                winner: Color::White
             },
             node.outcome.unwrap()
         );
