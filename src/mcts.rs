@@ -1,17 +1,12 @@
 // use display::*;
 use game::*;
-use shakmaty::*;
-use std::f32;
-use std::ops::Not;
-use std::thread;
-use std::thread::JoinHandle;
-use std::time::Instant;
-
 use playout::playout;
 use rand::rngs::SmallRng;
 use settings::*;
+use shakmaty::*;
 use stats::*;
-use tree_merge::timed_merge_trees;
+use std::f32;
+use std::ops::Not;
 use utils::*;
 
 #[derive(Debug, Copy, Clone, PartialEq, PartialOrd)]
@@ -271,12 +266,8 @@ impl TreeNode {
                     &self.children,
                     game,
                 );
-                match outcome_based_on_children {
-                    Some(Outcome::Decisive { winner }) => {
-                        self.state = NodeState::LeafNode;
-                        println!("set outcome based on children")
-                    }
-                    _ => {}
+                if outcome_based_on_children.is_some() {
+                    self.state = NodeState::LeafNode;
                 }
                 self.outcome = outcome_based_on_children;
 
@@ -299,7 +290,6 @@ impl TreeNode {
                     return self.iteration(game, rng, thread_run_stats, settings);
                 }
                 let mut child = self.expand(candidate_actions, rng, thread_run_stats);
-                // println!("{:?}", child);
                 game.make_move(&child.action.unwrap());
                 if game.is_checkmate() {
                     // println!("FOUND CHECKMATE");
@@ -366,186 +356,25 @@ impl TreeNode {
 
 #[derive(Debug)]
 pub struct MCTS {
-    iterations_per_ms: f32,
-    starting_seed: u8,
+    pub iterations_per_ms: f32,
 }
 
 impl MCTS {
     pub fn new(settings: &Settings) -> MCTS {
         MCTS {
             iterations_per_ms: settings.starting_iterations_per_ms,
-            starting_seed: settings.starting_seed,
         }
-    }
-
-    /// Perform n_samples MCTS iterations.
-    pub fn search(
-        &mut self,
-        root: TreeNode,
-        game: &Chess,
-        batch_run_stats: &mut RunStats,
-        settings: &Settings,
-    ) -> TreeNode {
-        // Iterate over ensemble and perform MCTS iterations
-        let thread_result_handles: Vec<JoinHandle<(TreeNode, RunStats)>> = (0..settings
-            .ensemble_size)
-            .map(|thread_num| {
-                let thread_game = game.clone();
-                let mut thread_root = root.clone();
-                let mut rng = seeded_rng(self.starting_seed + thread_num as u8);
-                let mut thread_run_stats: RunStats = Default::default();
-                let thread_settings = settings.clone();
-
-                thread::spawn(move || {
-                    //Run iterations with playouts for this time slice
-                    let t0 = Instant::now();
-
-                    for n in 0..thread_settings.n_samples {
-                        print!("{} ", n);
-                        thread_run_stats.samples += 1;
-                        thread_root.iteration(
-                            &mut thread_game.clone(),
-                            &mut rng,
-                            &mut thread_run_stats,
-                            &thread_settings,
-                        );
-                        if thread_root.is_decisive() {
-                            println!("found decisive in thread {}", thread_num);
-                            break;
-                        }
-                    }
-                    let time_spent = t0.elapsed().as_millis();
-                    thread_run_stats.total_time = time_spent as u64;
-                    // println!("thread: {}", thread_run_stats);
-                    // println!("thread root: {}\n", thread_root);
-                    (thread_root, thread_run_stats)
-                })
-            })
-            .collect();
-
-        let (thread_roots, thread_run_stats) = thread_result_handles
-            .into_iter()
-            .map(|th| th.join().expect("panicked joining threads"))
-            .fold(
-                (vec![], vec![]),
-                |(mut roots, mut stats), (thread_root, thread_run_stats)| {
-                    roots.push(thread_root);
-                    stats.push(thread_run_stats);
-                    (roots, stats)
-                },
-            );
-
-        for stats in thread_run_stats {
-            batch_run_stats.add_thread_stats(&stats, settings.ensemble_size);
-        }
-
-        timed_merge_trees(root, thread_roots.to_vec(), batch_run_stats)
-    }
-
-    pub fn search_time(
-        &mut self,
-        root: TreeNode,
-        game: &Chess,
-        move_run_stats: &mut RunStats,
-        settings: &Settings,
-    ) -> TreeNode {
-        let mut samples_total = 0;
-        let t0 = Instant::now();
-
-        let mut n_samples = (self.iterations_per_ms * settings.time_per_move_ms)
-            .max(10.)
-            .min(100.) as usize;
-
-        let mut new_root = root;
-        while n_samples >= 5 {
-            let batch_t0 = Instant::now();
-            let mut batch_run_stats: RunStats = Default::default();
-            batch_run_stats.sample_batches = 1;
-
-            new_root = self.search(new_root, game, &mut batch_run_stats, settings);
-            samples_total += n_samples;
-
-            let time_spent = t0.elapsed().as_millis() as f32;
-            self.iterations_per_ms = (samples_total as f32) / time_spent;
-
-            let time_left = settings.time_per_move_ms - time_spent;
-            n_samples = (self.iterations_per_ms * time_left).max(0.).min(100.) as usize;
-
-            let batch_time_spent = batch_t0.elapsed().as_millis();
-            batch_run_stats.total_time = batch_time_spent as u64;
-            // println!("Batch: {}", batch_run_stats);
-            move_run_stats.add(&batch_run_stats);
-            if new_root.is_decisive() {
-                println!("found decisive");
-                break;
-            }
-        }
-
-        println!("iterations_per_ms: {}", self.iterations_per_ms);
-
-        new_root
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use mcts::*;
+    use mcts::TreeNode;
+    use settings::*;
     use setup::*;
-    use shakmaty::fen::Fen;
-    use stats::TreeStats;
-
-    #[test]
-    #[ignore]
-    fn search_deterministic_starting_pos() {
-        fn run_search() -> TreeNode {
-            let settings = Settings::test_default();
-            let mut test_run_stats: RunStats = Default::default();
-            let mut mcts = MCTS::new(&settings);
-            let game = &Chess::default();
-            let root = TreeNode::new_root(game, 0.5);
-            mcts.search(root, game, &mut test_run_stats, &settings)
-        }
-        let a = run_search();
-        let b = run_search();
-        let c = run_search();
-        println!(
-            "{:?}\n{:?}\n{:?}",
-            TreeStats::tree_stats(&a),
-            TreeStats::tree_stats(&b),
-            TreeStats::tree_stats(&c)
-        );
-        assert_eq!(a, b);
-        assert_eq!(b, c);
-        assert_eq!(a, c);
-    }
-
-    #[test]
-    #[ignore]
-    fn run_search_deterministic_middle_game_position() {
-        fn run_search() -> TreeNode {
-            let setup: Fen = "rn3rk1/pbppq1pp/1p2pb2/4N2Q/3PN3/3B4/PPP2PPP/R3K2R w KQ - 6 11"
-                .parse()
-                .unwrap();
-            let game: Chess = setup.position().unwrap();
-            let settings = Settings::test_default();
-            let mut mcts = MCTS::new(&settings);
-            let root = TreeNode::new_root(&game, 1.);
-            let mut test_run_stats: RunStats = Default::default();
-            mcts.search(root, &game, &mut test_run_stats, &settings)
-        }
-        let a = run_search();
-        let b = run_search();
-        let c = run_search();
-        println!(
-            "{:?}\n{:?}\n{:?}",
-            TreeStats::tree_stats(&a),
-            TreeStats::tree_stats(&b),
-            TreeStats::tree_stats(&c)
-        );
-        assert_eq!(a, b);
-        assert_eq!(b, c);
-        assert_eq!(a, c);
-    }
+    use shakmaty::{Color, Outcome};
+    use stats::RunStats;
+    use utils::*;
 
     #[test]
     fn iteration_mate_in_1() {
@@ -559,7 +388,8 @@ mod tests {
             },
             node.outcome.unwrap()
         );
-        println!("{:?}", stats);
+        assert!(stats.iterations < 50);
+        println!("{}", stats);
     }
 
     #[test]
@@ -574,8 +404,8 @@ mod tests {
             },
             node.outcome.unwrap()
         );
-        assert_eq!(stats.iterations, 178);
-        println!("{:?}", stats);
+        assert!(stats.iterations < 200);
+        println!("{}", stats);
     }
 
     #[test]
@@ -592,8 +422,8 @@ mod tests {
             },
             node.outcome.unwrap()
         );
-        assert_eq!(stats.iterations, 45);
-        println!("{:?}", stats);
+        assert!(stats.iterations < 50);
+        println!("{}", stats);
     }
 
     fn test_iteration_all_children_with_stats(

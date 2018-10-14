@@ -7,27 +7,27 @@ mod helpers;
 
 #[test]
 fn queen_mate_white_in_1() {
-    assert_move("4k3/Q7/5K2/8/8/8/8/8 w - - 0 1", "a7e7");
+    assert_mate_move("4k3/Q7/5K2/8/8/8/8/8 w - - 0 1", "a7e7");
 }
 
 #[test]
 fn queen_mate_black_in_1() {
-    assert_move("4K3/q7/5k2/8/8/8/8/8 b - - 0 1", "a7e7");
+    assert_mate_move("4K3/q7/5k2/8/8/8/8/8 b - - 0 1", "a7e7");
 }
 
 #[test]
 fn queen_capture_mate_black_in_1() {
-    assert_move("1q6/8/5k2/4b3/8/8/PPP5/1K6 b - - 0 1", "b8b2");
+    assert_mate_move("1q6/8/5k2/4b3/8/8/PPP5/1K6 b - - 0 1", "b8b2");
 }
 
 #[test]
 fn knight_mate_white_in_1() {
-    assert_move("6rk/6pp/7N/8/3K4/8/8/8 w - - 0 1", "h6f7");
+    assert_mate_move("6rk/6pp/7N/8/3K4/8/8/8 w - - 0 1", "h6f7");
 }
 
 #[test]
 fn discovered_checkmate_white_in_1() {
-    assert_move(
+    assert_mate_move(
         "3rkb2/3q1pBp/4Np2/p7/Pp6/1P5P/2P2PP1/2QrRK2 w - - 0 1",
         "e6c7",
     );
@@ -35,7 +35,7 @@ fn discovered_checkmate_white_in_1() {
 
 #[test]
 fn en_passent_mate_in_1() {
-    assert_move(
+    assert_mate_move(
         "r3k2r/pbppqpb1/1pn3p1/7p/1N2pPn1/1PP4N/PB1P2PP/2QRKR2 b kq f3 0 1",
         "e4f3",
     )

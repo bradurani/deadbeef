@@ -1,6 +1,7 @@
 use game::*;
-use mcts::{TreeNode, MCTS};
+use mcts::TreeNode;
 use pgn;
+use search::*;
 use settings::*;
 use shakmaty::*;
 use stats::*;
@@ -11,14 +12,13 @@ pub fn play_game(settings: &Settings) -> Vec<Move> {
     let mut game = settings.starting_position.clone();
     let mut game_run_stats: RunStats = Default::default();
     let mut move_num = settings.starting_move_num;
-    let mut mcts: MCTS = MCTS::new(&settings);
     let mut root = TreeNode::new_root(&game, move_num);
 
     let t0 = Instant::now();
 
     loop {
         let mut move_run_stats: RunStats = Default::default();
-        let new_root = find_best_move(&mut mcts, root, &game, &mut move_run_stats, settings);
+        let new_root = find_best_move(root, &game, &mut move_run_stats, settings);
 
         match new_root {
             None => break,
@@ -46,37 +46,26 @@ pub fn play_game(settings: &Settings) -> Vec<Move> {
 }
 
 pub fn find_best_move(
-    mcts: &mut MCTS,
     root: TreeNode,
     game: &Chess,
     move_run_stats: &mut RunStats,
     settings: &Settings,
 ) -> Option<TreeNode> {
     let t0 = Instant::now();
+
     println!(
-        "\n{}  -  {} / {} = {}",
+        "\n{}    {} / {}  s: {}",
         root.move_num,
         root.sq,
         root.sn,
         root.score()
     );
 
-    if game.is_insufficient_material() {
+    if game.is_game_over() {
         return None;
     }
 
-    println!("Start {:?}", TreeStats::tree_stats(&root));
-
-    let new_root = if settings.use_steps() {
-        println!("using steps");
-        mcts.search_time(root, &game, move_run_stats, settings)
-    } else {
-        println!("using time");
-        mcts.search(root, &game, move_run_stats, settings)
-    };
-
-    println!("{}", new_root);
-    println!("End: {:?}", TreeStats::tree_stats(&new_root));
+    let new_root = search(root, &game, move_run_stats, settings);
 
     let best_child = best_child_node(new_root);
 
@@ -84,16 +73,17 @@ pub fn find_best_move(
     move_run_stats.total_time = time_spent as u64;
     println!("{}", move_run_stats);
 
-    best_child
+    Some(best_child)
 }
 
-fn best_child_node(root: TreeNode) -> Option<TreeNode> {
+fn best_child_node(root: TreeNode) -> TreeNode {
     debug_assert_eq!(0., root.nn); // shoud have a merged node with no new calculations
     debug_assert_eq!(0., root.nq);
     // TODO try the equation from the MCTS-Solver paper
     root.children
         .into_iter()
         .max_by(|n1, n2| n1.score().partial_cmp(&n2.score()).unwrap())
+        .unwrap()
 }
 
 #[cfg(test)]

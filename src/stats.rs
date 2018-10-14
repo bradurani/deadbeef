@@ -87,25 +87,37 @@ impl RunStats {
         self.samples += run_stats.samples;
         self.sample_batches += run_stats.sample_batches;
         self.playout_time += run_stats.playout_time; // thread_count as u64;
-        self.tree_merge_time += run_stats.tree_merge_time / thread_count as u64;
+        self.tree_merge_time += run_stats.tree_merge_time; // thread_count as u64;
         self.leaf_nodes += run_stats.leaf_nodes;
         // don't add total time since we use a separate timer at each
         // stat level
     }
 
     pub fn tree_merge_time_pct(&self) -> f64 {
-        self.tree_merge_time as f64 / self.total_time as f64 * 100.
+        if self.total_time == 0 {
+            0.
+        } else {
+            self.tree_merge_time as f64 / self.total_time as f64 * 100.
+        }
     }
 
     pub fn playout_time_pct(&self) -> f64 {
-        self.playout_time as f64 / self.total_time as f64 * 100.
+        if self.total_time == 0 {
+            0.
+        } else {
+            self.playout_time as f64 / self.total_time as f64 * 100.
+        }
     }
 
     pub fn other_time(&self) -> u64 {
-        self.total_time - self.tree_merge_time - self.playout_time
+        (self.total_time as i64 - self.tree_merge_time as i64 - self.playout_time as i64) as u64
     }
 
     pub fn other_time_pct(&self) -> f64 {
-        self.other_time() as f64 / self.total_time as f64 * 100.
+        if self.total_time == 0 {
+            0.
+        } else {
+            self.other_time() as f64 / self.total_time as f64 * 100.
+        }
     }
 }

@@ -10,6 +10,9 @@ pub struct Settings {
     pub starting_seed: u8,
     pub n_samples: isize,
     pub starting_iterations_per_ms: f32,
+    pub search_type: SearchType,
+    pub max_batch_size: usize,
+    pub min_batch_size: usize,
 }
 
 impl Settings {
@@ -23,6 +26,9 @@ impl Settings {
             c: 0.25,
             starting_seed: 1,
             starting_iterations_per_ms: 0.5,
+            search_type: SearchType::Time,
+            max_batch_size: 100,
+            min_batch_size: 4,
         }
     }
 
@@ -31,26 +37,46 @@ impl Settings {
         Settings::test_default_with_seed(1)
     }
 
+    pub fn test_mate_default() -> Settings {
+        Settings::test_mate_default_with_seed(1)
+    }
+
     pub fn test_default_with_seed(seed: u8) -> Settings {
         Settings {
             starting_position: Chess::default(),
             starting_move_num: 1.0,
             time_per_move_ms: -1.0,
-            n_samples: 1000000,
+            n_samples: 1000,
             ensemble_size: 1,
             c: 0.25,
             starting_seed: seed,
             starting_iterations_per_ms: 0.5,
+            search_type: SearchType::Steps,
+            max_batch_size: 100,
+            min_batch_size: 4,
         }
     }
-    pub fn use_steps(&self) -> bool {
-        if self.time_per_move_ms == -1. {
-            assert!(self.n_samples > 0);
-            return true;
-        } else {
-            assert!(self.n_samples == -1);
-            assert!(self.time_per_move_ms > 0.);
-            return false;
+
+    pub fn test_mate_default_with_seed(seed: u8) -> Settings {
+        Settings {
+            starting_position: Chess::default(),
+            starting_move_num: 1.0,
+            time_per_move_ms: -1.0,
+            n_samples: -1,
+            ensemble_size: 1,
+            c: 0.25,
+            starting_seed: seed,
+            starting_iterations_per_ms: 0.5,
+            search_type: SearchType::Mate,
+            max_batch_size: 100,
+            min_batch_size: 4,
         }
     }
+}
+
+#[derive(Clone, Debug)]
+pub enum SearchType {
+    Steps,
+    Time,
+    Mate,
 }
