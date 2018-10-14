@@ -68,8 +68,10 @@ pub fn find_best_move(
     println!("Start {:?}", TreeStats::tree_stats(&root));
 
     let new_root = if settings.use_steps() {
+        println!("using steps");
         mcts.search_time(root, &game, move_run_stats, settings)
     } else {
+        println!("using time");
         mcts.search(root, &game, move_run_stats, settings)
     };
 

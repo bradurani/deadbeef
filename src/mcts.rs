@@ -1,8 +1,7 @@
+// use display::*;
 use game::*;
 use shakmaty::*;
 use std::f32;
-use std::fmt;
-use std::i32;
 use std::ops::Not;
 use std::thread;
 use std::thread::JoinHandle;
@@ -138,13 +137,23 @@ impl TreeNode {
         }
     }
 
+    pub fn is_decisive(&self) -> bool {
+        match self.outcome {
+            Some(Outcome::Decisive { winner: _ }) => true,
+            _ => false,
+        }
+    }
+
     /// Find the best child accoring to UCT1
     pub fn best_child(&mut self, settings: &Settings) -> &mut TreeNode {
         let mut best_value: f32 = f32::NEG_INFINITY;
         let mut best_child: Option<&mut TreeNode> = None;
         let self_total_n = self.total_n();
-
+        //TODO don't we need to not explore leaf nodes here?
         for child in &mut self.children {
+            if child.state == NodeState::LeafNode {
+                continue;
+            }
             let value = (self.turn.coefficient() * child.total_q()) / child.total_n()
                 + settings.c * (2. * self_total_n.ln() / child.total_n()).sqrt();
             //TODO what is this 2. ?????
@@ -208,8 +217,8 @@ impl TreeNode {
     ) -> Option<Outcome> {
         match child_outcome {
             Some(Outcome::Decisive { winner: color }) if color == turn.not() => {
-                println!("checking for child mate. Looking for grandchildren");
-                println!("{:?}", game.board());
+                // println!("checking for child mate. Looking for grandchildren");
+                // println!("{:?}", game.board());
                 if TreeNode::all_children_have_winning_grandchild(children, &game) {
                     Some(Outcome::Decisive { winner: turn.not() }) //can't escape checkmate. All move are a win for opponent
                 } else {
@@ -238,22 +247,24 @@ impl TreeNode {
         thread_run_stats.iterations += 1;
         // println!("{}", self);
         let mut delta = match self.state {
-            NodeState::LeafNode => {
-                // println!("{}", game.outcome().unwrap());
-                // game.reward()
-                self.outcome.unwrap().reward()
-            }
+            // NodeState::LeafNode => {
+            //     // println!("{}", game.outcome().unwrap());
+            //     // game.reward()
+            //     thread_run_stats.leaf_nodes += 1;
+            //     self.outcome.unwrap().reward()
+            // }
             NodeState::FullyExpanded => {
                 let (delta, outcome) = {
                     let child = self.best_child(settings);
                     let mut child_game = game.clone(); //TODO don't clone if the move is reversible
                     child_game.make_move(&child.action.unwrap());
                     let delta = child.iteration(&mut child_game, rng, thread_run_stats, settings);
-                    println!("back from expand");
-                    let outcome = child.outcome;
-                    (delta, outcome)
+                    (delta, child.outcome)
                 };
 
+                //we've now looked at the first grandchild node, which has propogated the win
+                //back up if it's a checkmate for our opponent. Now check all of them to see if
+                //we can't avoid mate in N
                 let outcome_based_on_children = TreeNode::new_outcome_based_on_child(
                     outcome,
                     game.turn(),
@@ -261,16 +272,14 @@ impl TreeNode {
                     game,
                 );
                 match outcome_based_on_children {
-                    Some(Outcome::Decisive { winner: c }) => {
+                    Some(Outcome::Decisive { winner }) => {
+                        self.state = NodeState::LeafNode;
                         println!("set outcome based on children")
                     }
                     _ => {}
                 }
                 self.outcome = outcome_based_on_children;
 
-                //we've now looked at the first grandchild node, which has propogated the win
-                //back up if it's a checkmate for our opponent. Now check all of them to see if
-                //we can't avoid mate in N
                 delta
             }
             NodeState::Expandable => {
@@ -283,7 +292,6 @@ impl TreeNode {
                     return self.outcome.unwrap().reward();
                 }
                 let candidate_actions = self.candidate_actions(allowed_actions);
-                println!("candidate actions {:?}", candidate_actions.len());
                 if candidate_actions.len() == 0 {
                     //if we ended up expanded as the result fo a tree merge
                     //TODO check if merging filled out all outcomes
@@ -294,17 +302,17 @@ impl TreeNode {
                 // println!("{:?}", child);
                 game.make_move(&child.action.unwrap());
                 if game.is_checkmate() {
-                    println!("FOUND CHECKMATE");
-                    println!("{:?}", game.board());
+                    // println!("FOUND CHECKMATE");
+                    // println!("{:?}", game.board());
                     child.state = NodeState::LeafNode;
                     child.outcome = Some(Outcome::Decisive {
                         winner: game.turn().not(),
                     });
                     child.nn += 1.;
                     child.nq += 1.;
+                    thread_run_stats.leaf_nodes += 1;
                     f32::INFINITY
                 } else {
-                    println!("playou");
                     let played_game = playout(rng, game, thread_run_stats);
                     let delta = played_game.outcome().map(|o| o.reward()).unwrap_or(0.);
                     child.nn += 1.;
@@ -312,6 +320,7 @@ impl TreeNode {
                     delta
                 }
             }
+            _ => panic!("unknown leaf node type"),
         };
         if delta == f32::INFINITY {
             self.state = NodeState::LeafNode;
@@ -329,76 +338,29 @@ impl TreeNode {
         children.iter().all(|child| {
             match child.outcome {
                 Some(Outcome::Decisive { winner: color }) if color == game.turn().not() => {
-                    println!("found child mate");
-                    println!("{:?}", child.action);
+                    // println!("found child mate");
+                    // println!("{:?}", child.action);
                     true
                 }
                 Some(_) => false, // stalemate or win
                 None => {
                     let mut child_game = game.clone();
                     child_game.make_move(&child.action.unwrap());
-                    println!("checking {:?}", child_game.board());
+                    // println!("checking {:?}", child_game.board());
                     let allowed_actions = child_game.allowed_actions();
                     allowed_actions.iter().any(|aa| {
                         //TODO don't clone if the move is reversible
                         let mut grandchild_game = child_game.clone();
                         grandchild_game.make_move(aa);
-                        println!("IS THIS A CHECKMATE? {:?}", grandchild_game.board());
-                        if grandchild_game.is_checkmate() {
-                            println!("{}", "found grandchild mate");
-                        }
+                        // println!("IS THIS A CHECKMATE? {:?}", grandchild_game.board());
+                        // if grandchild_game.is_checkmate() {
+                        //     // println!("{}", "found grandchild mate");
+                        // }
                         grandchild_game.is_checkmate()
                     })
                 }
             }
         })
-    }
-}
-
-impl fmt::Display for TreeNode {
-    /// Output a nicely indented tree
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        // Nested definition for recursive formatting
-        fn fmt_subtree(f: &mut fmt::Formatter, node: &TreeNode, indent_level: i32) -> fmt::Result {
-            for _ in 0..indent_level {
-                try!(f.write_str("    "));
-            }
-            match node.action {
-                Some(a) => try!(writeln!(
-                    f,
-                    "{}. {} q={} n={} s={} {}",
-                    node.move_num,
-                    a,
-                    node.total_q(),
-                    node.total_n(),
-                    node.score(),
-                    format_outcome(node.outcome)
-                )),
-                None => try!(writeln!(
-                    f,
-                    "{}. Root q={} n={} s={} {}",
-                    node.move_num,
-                    node.total_q(),
-                    node.total_n(),
-                    node.score(),
-                    format_outcome(node.outcome)
-                )),
-            }
-            for child in &node.children {
-                try!(fmt_subtree(f, child, indent_level + 1));
-            }
-            write!(f, "")
-        }
-
-        //TODO write to format buffer instead
-        fn format_outcome(outcome: Option<Outcome>) -> String {
-            match outcome {
-                None => "".to_string(),
-                Some(o) => format!("OUTCOME={}", o),
-            }
-        }
-
-        fmt_subtree(f, self, 0)
     }
 }
 
@@ -438,7 +400,8 @@ impl MCTS {
                     //Run iterations with playouts for this time slice
                     let t0 = Instant::now();
 
-                    for _ in 0..thread_settings.n_samples {
+                    for n in 0..thread_settings.n_samples {
+                        print!("{} ", n);
                         thread_run_stats.samples += 1;
                         thread_root.iteration(
                             &mut thread_game.clone(),
@@ -446,11 +409,15 @@ impl MCTS {
                             &mut thread_run_stats,
                             &thread_settings,
                         );
+                        if thread_root.is_decisive() {
+                            println!("found decisive in thread {}", thread_num);
+                            break;
+                        }
                     }
                     let time_spent = t0.elapsed().as_millis();
                     thread_run_stats.total_time = time_spent as u64;
                     // println!("thread: {}", thread_run_stats);
-                    println!("thread root: {}\n", thread_root);
+                    // println!("thread root: {}\n", thread_root);
                     (thread_root, thread_run_stats)
                 })
             })
@@ -508,6 +475,10 @@ impl MCTS {
             batch_run_stats.total_time = batch_time_spent as u64;
             // println!("Batch: {}", batch_run_stats);
             move_run_stats.add(&batch_run_stats);
+            if new_root.is_decisive() {
+                println!("found decisive");
+                break;
+            }
         }
 
         println!("iterations_per_ms: {}", self.iterations_per_ms);

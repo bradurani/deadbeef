@@ -19,3 +19,4 @@ pub mod setup;
 pub mod stats;
 pub mod tree_merge;
 pub mod utils;
+pub mod display;
