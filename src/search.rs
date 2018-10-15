@@ -2,6 +2,7 @@ use mcts::*;
 use settings::*;
 use shakmaty::*;
 use stats::*;
+use std::io::*;
 use std::isize;
 use std::thread;
 use std::thread::JoinHandle;
@@ -15,7 +16,7 @@ pub fn search(
     move_run_stats: &mut RunStats,
     settings: &Settings,
 ) -> TreeNode {
-    println!("Start {:?}", TreeStats::tree_stats(&root));
+    println!("Starting {}", TreeStats::tree_stats(&root));
 
     let new_root = match &settings.search_type {
         SearchType::Steps => search_samples(root, &game, move_run_stats, settings),
@@ -23,8 +24,8 @@ pub fn search(
         SearchType::Mate => search_to_mate(root, &game, move_run_stats, settings),
     };
 
-    // println!("new root {}", new_root);
-    println!("End: {:?}", TreeStats::tree_stats(&new_root));
+    println!("new root {}", new_root);
+    println!("End: {}", TreeStats::tree_stats(&new_root));
     new_root
 }
 
@@ -58,7 +59,9 @@ pub fn search_time(
         mcts.iterations_per_ms = (samples_total as f32) / time_spent;
 
         let time_left = settings.time_per_move_ms - time_spent;
-        n_samples = (mcts.iterations_per_ms * time_left).max(0.).min(100.) as usize;
+        n_samples = (mcts.iterations_per_ms * time_left)
+            .max(0.)
+            .min(settings.max_batch_size as f32) as usize;
 
         let batch_time_spent = batch_t0.elapsed().as_millis();
         batch_run_stats.total_time = batch_time_spent as u64;
@@ -96,7 +99,13 @@ pub fn search_samples(
     let remainder = settings.n_samples as f32 % settings.max_batch_size as f32;
     println!("running {} batches and {} remainder", batches, remainder);
     let mut new_root = root;
-    for _i in 0..batches {
+    for i in 0..batches {
+        print!(".");
+        std::io::stdout().flush();
+        if i % 100 == 0 {
+            // print!(".");
+            println!("{}", new_root);
+        }
         new_root = search_threaded_batch(
             new_root,
             game,

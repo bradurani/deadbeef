@@ -127,13 +127,24 @@ impl fmt::Display for Settings {
 
         writeln!(
             f,
-            "SETTINGS: {}. {} t: {} c: {} seed: {}",
-            self.starting_move_num,
+            "SETTINGS: {} THREADS: {} C: {} SEED: {}",
+            // self.starting_move_num,
             // self.starting_position.board(),
             search_params(self),
             self.ensemble_size,
             self.c,
             self.starting_seed,
+        )
+    }
+}
+
+impl fmt::Display for TreeStats {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(
+            f,
+            "tree: nodes: {}, min_depth: {}, max_depth: {}, ns: {}\n\
+            top: {}",
+            self.nodes, self.min_depth, self.max_depth, self.ns, self.top_n)
         )
     }
 }

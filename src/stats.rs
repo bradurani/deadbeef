@@ -4,10 +4,10 @@ use std::i32;
 
 #[derive(Debug, Copy, Clone)]
 pub struct TreeStats {
-    nodes: i32,
-    min_depth: i32,
-    max_depth: i32,
-    ns: i32,
+    pub nodes: i32,
+    pub min_depth: i32,
+    pub max_depth: i32,
+    pub ns: i32,
 }
 
 impl TreeStats {

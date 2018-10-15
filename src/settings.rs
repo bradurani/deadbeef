@@ -65,7 +65,7 @@ impl Settings {
             time_per_move_ms: -1.0,
             n_samples: isize::MAX,
             ensemble_size: 4,
-            c: 0.25,
+            c: 1.,
             starting_seed: seed,
             starting_iterations_per_ms: 0.5,
             search_type: SearchType::Mate,

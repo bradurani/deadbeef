@@ -54,7 +54,7 @@ pub fn find_best_move(
     let t0 = Instant::now();
 
     println!(
-        "\n{}    {} / {}  s: {}",
+        "-------------------------------------\n{}    {} / {}  s: {}",
         root.move_num,
         root.sq,
         root.sn,
