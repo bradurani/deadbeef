@@ -2,6 +2,7 @@ use mcts::*;
 use settings::*;
 use shakmaty::*;
 use stats::*;
+use std::isize;
 use std::thread;
 use std::thread::JoinHandle;
 use std::time::Instant;
@@ -17,12 +18,12 @@ pub fn search(
     println!("Start {:?}", TreeStats::tree_stats(&root));
 
     let new_root = match &settings.search_type {
-        SearchType::Steps => search_steps(root, &game, move_run_stats, settings),
+        SearchType::Steps => search_samples(root, &game, move_run_stats, settings),
         SearchType::Time => search_time(root, &game, move_run_stats, settings),
         SearchType::Mate => search_to_mate(root, &game, move_run_stats, settings),
     };
 
-    println!("new root {}", new_root);
+    // println!("new root {}", new_root);
     println!("End: {:?}", TreeStats::tree_stats(&new_root));
     new_root
 }
@@ -50,7 +51,7 @@ pub fn search_time(
         let mut batch_run_stats: RunStats = Default::default();
         batch_run_stats.sample_batches = 1;
 
-        new_root = search_batch(new_root, game, n_samples, &mut batch_run_stats, settings);
+        new_root = search_threaded_batch(new_root, game, n_samples, &mut batch_run_stats, settings);
         samples_total += n_samples;
 
         let time_spent = t0.elapsed().as_millis() as f32;
@@ -80,21 +81,11 @@ pub fn search_to_mate(
     move_run_stats: &mut RunStats,
     settings: &Settings,
 ) -> TreeNode {
-    let mut new_root = root;
-    while !new_root.is_decisive() {
-        new_root = search_batch(
-            new_root,
-            game,
-            settings.max_batch_size,
-            move_run_stats,
-            settings,
-        );
-        println!("{}", new_root);
-    }
-    new_root
+    assert!(settings.n_samples == isize::MAX);
+    search_samples(root, game, move_run_stats, settings)
 }
 
-pub fn search_steps(
+pub fn search_samples(
     root: TreeNode,
     game: &Chess,
     move_run_stats: &mut RunStats,
@@ -106,7 +97,7 @@ pub fn search_steps(
     println!("running {} batches and {} remainder", batches, remainder);
     let mut new_root = root;
     for _i in 0..batches {
-        new_root = search_batch(
+        new_root = search_threaded_batch(
             new_root,
             game,
             settings.max_batch_size,
@@ -119,13 +110,13 @@ pub fn search_steps(
         }
     }
     if remainder as usize >= settings.min_batch_size {
-        new_root = search_batch(new_root, game, remainder as usize, move_run_stats, settings)
+        new_root =
+            search_threaded_batch(new_root, game, remainder as usize, move_run_stats, settings)
     }
     new_root
 }
 
-/// Perform n_samples MCTS iterations.
-pub fn search_batch(
+pub fn search_threaded_batch(
     root: TreeNode,
     game: &Chess,
     batch_n_samples: usize,

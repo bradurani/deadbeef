@@ -44,7 +44,7 @@ fn back_row_mate_in_2_white() {
     assert_contains_mate_move(
         //  Edward Lasker–Sir George Thomas (London 1912)
         "rn3r2/pbppq1p1/1p2pN2/8/3P2NP/6P1/PPP1BPk1/R3K2R w KQ - 3 17",
-        vec!["h1h2", "e1c1"], //or 0-0-0 e1c1
+        vec!["h1h2", "e1c1", "e1d2"],
     );
 }
 

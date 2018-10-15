@@ -1,4 +1,6 @@
+use mcts::NodeState;
 use mcts::TreeNode;
+use shakmaty::Outcome;
 use stats::*;
 use std::time::Instant;
 use utils::deterministic_hash_map;
@@ -28,6 +30,8 @@ fn merge_trees<'a>(mut root: TreeNode, new_roots: Vec<TreeNode>) -> TreeNode {
         debug_assert_eq!(new_root.action, root.action);
         root.sn += new_root.nn;
         root.sq += new_root.nq;
+        root.outcome = max_outcome(root.outcome, new_root.outcome);
+        root.state = max_state(root.state, new_root.state);
         for new_child_root in new_root.children {
             let grouped_new_child_roots = action_map
                 .entry(new_child_root.action.unwrap())
@@ -55,6 +59,43 @@ fn merge_trees<'a>(mut root: TreeNode, new_roots: Vec<TreeNode>) -> TreeNode {
     combined_root.children = merged_children;
 
     combined_root
+}
+
+fn max_outcome(root_outcome: Option<Outcome>, new_outcome: Option<Outcome>) -> Option<Outcome> {
+    match new_outcome {
+        Some(Outcome::Decisive { winner: new_winner }) => {
+            if cfg!(debug_assertions) {
+                match root_outcome {
+                    Some(Outcome::Decisive { winner }) => assert_eq!(new_winner, winner),
+                    _ => {}
+                }
+            }
+            new_outcome
+        }
+        Some(Outcome::Draw) => {
+            if cfg!(debug_assertions) {
+                match root_outcome {
+                    Some(Outcome::Decisive { winner: _winner }) => {
+                        panic!("new outcome draw but root was decisive")
+                    }
+                    _ => {}
+                }
+            }
+            new_outcome
+        }
+        None => root_outcome,
+    }
+}
+
+fn max_state(root_outcome: NodeState, new_outcome: NodeState) -> NodeState {
+    match new_outcome {
+        NodeState::LeafNode => NodeState::LeafNode,
+        NodeState::FullyExpanded => match root_outcome {
+            NodeState::LeafNode => NodeState::LeafNode,
+            _ => NodeState::FullyExpanded,
+        },
+        NodeState::Expandable => root_outcome,
+    }
 }
 
 #[cfg(test)]

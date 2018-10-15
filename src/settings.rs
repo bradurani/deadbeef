@@ -1,4 +1,5 @@
 use shakmaty::Chess;
+use std::isize;
 
 #[derive(Debug, Clone)]
 pub struct Settings {
@@ -62,8 +63,8 @@ impl Settings {
             starting_position: Chess::default(),
             starting_move_num: 1.0,
             time_per_move_ms: -1.0,
-            n_samples: -1,
-            ensemble_size: 1,
+            n_samples: isize::MAX,
+            ensemble_size: 4,
             c: 0.25,
             starting_seed: seed,
             starting_iterations_per_ms: 0.5,

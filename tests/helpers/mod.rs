@@ -3,7 +3,7 @@
 extern crate deadbeef;
 extern crate shakmaty;
 
-use deadbeef::mcts::{TreeNode, MCTS};
+use deadbeef::mcts::TreeNode;
 use deadbeef::play;
 use deadbeef::settings::*;
 use deadbeef::setup::*;
@@ -53,10 +53,11 @@ pub fn assert_contains_move_with_settings(
     settings: &Settings,
     assert_mate: bool,
 ) {
+    println!("\nevaluating: {}", fen_str);
     let position = parse_fen(fen_str);
     let moves: Vec<Move> = uci_strs.iter().map(|u| parse_uci(u, &position)).collect();
 
-    println!("settings\n {}", settings);
+    println!("{}", settings);
 
     let best_child = play::find_best_move(
         TreeNode::new_root(&position, settings.starting_iterations_per_ms),

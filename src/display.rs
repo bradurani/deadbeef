@@ -5,7 +5,7 @@ use shakmaty::*;
 use stats::*;
 use std::fmt;
 
-const TREENODE_MAX_DISPLAY_DEPTH: u32 = 1;
+const TREENODE_MAX_DISPLAY_DEPTH: u32 = 3;
 
 impl fmt::Display for RunStats {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -95,7 +95,7 @@ impl fmt::Display for TreeNode {
                     format_outcome(node.outcome)
                 )),
             }
-            if indent_level > max_indent_level {
+            if indent_level < max_indent_level - 1 {
                 for child in &node.children {
                     try!(fmt_subtree(f, child, indent_level + 1, max_indent_level));
                 }
@@ -127,7 +127,7 @@ impl fmt::Display for Settings {
 
         writeln!(
             f,
-            "{}. \n{}\nt: {} c: {} seed: {}",
+            "SETTINGS: {}. {} t: {} c: {} seed: {}",
             self.starting_move_num,
             // self.starting_position.board(),
             search_params(self),

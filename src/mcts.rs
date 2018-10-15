@@ -160,7 +160,6 @@ impl TreeNode {
             }
         }
         let found_best_child = best_child.unwrap();
-        // println!("Best child for {:?}: {}", child_turn, found_best_child);
         found_best_child
     }
 
@@ -393,7 +392,7 @@ mod tests {
     }
 
     #[test]
-    fn iteration_mate_in_2() {
+    fn iteration_mate_in_2_1_choice() {
         let mut stats: RunStats = Default::default();
         let (node, score) =
             test_iteration_all_children_with_stats("4q3/8/8/8/8/3k4/8/3K4 b - - 0 1", &mut stats);
@@ -406,6 +405,7 @@ mod tests {
         );
         assert!(stats.iterations < 200);
         println!("{}", stats);
+        println!("{}", node);
     }
 
     #[test]
@@ -424,6 +424,7 @@ mod tests {
         );
         assert!(stats.iterations < 50);
         println!("{}", stats);
+        println!("{}", node);
     }
 
     fn test_iteration_all_children_with_stats(

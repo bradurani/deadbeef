@@ -77,7 +77,7 @@ impl RunStats {
         // stat level
     }
 
-    pub fn add_thread_stats(&mut self, run_stats: &RunStats, thread_count: usize) {
+    pub fn add_thread_stats(&mut self, run_stats: &RunStats, _thread_count: usize) {
         self.nodes_created += run_stats.nodes_created;
         self.iterations += run_stats.iterations;
         self.playouts += run_stats.playouts;
