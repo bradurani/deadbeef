@@ -142,9 +142,8 @@ impl fmt::Display for TreeStats {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(
             f,
-            "tree: nodes: {}, min_depth: {}, max_depth: {}, ns: {}\n\
-            top: {}",
-            self.nodes, self.min_depth, self.max_depth, self.ns, self.top_n)
+            "tree: nodes: {}, min_depth: {}, max_depth: {}, ns: {}",
+            self.nodes, self.min_depth, self.max_depth, self.ns
         )
     }
 }

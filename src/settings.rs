@@ -21,8 +21,8 @@ impl Settings {
         Settings {
             starting_position: Chess::default(),
             starting_move_num: 1.0,
-            time_per_move_ms: -1.0,
-            n_samples: 1000,
+            time_per_move_ms: 2000.0,
+            n_samples: -1,
             ensemble_size: 4,
             c: 0.25,
             starting_seed: 1,
