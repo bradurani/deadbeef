@@ -109,12 +109,12 @@ impl Value for Board {
                 Color::Black => square,
             };
             let raw_value = match piece.role {
-                Role::Pawn => PAWN_VALUES[color_square.index()],
-                Role::Knight => KNIGHT_VALUES[color_square.index()],
-                Role::Bishop => BISHOP_VALUES[color_square.index()],
-                Role::Queen => QUEEN_VALUES[color_square.index()],
-                Role::Rook => ROOK_VALUES[color_square.index()],
-                Role::King => KING_VALUES[color_square.index()],
+                Role::Pawn => PAWN_VALUES[color_square.index() as usize],
+                Role::Knight => KNIGHT_VALUES[color_square.index() as usize],
+                Role::Bishop => BISHOP_VALUES[color_square.index() as usize],
+                Role::Queen => QUEEN_VALUES[color_square.index() as usize],
+                Role::Rook => ROOK_VALUES[color_square.index() as usize],
+                Role::King => KING_VALUES[color_square.index() as usize],
             };
             piece.color.coefficient() as i16 * raw_value
         }
