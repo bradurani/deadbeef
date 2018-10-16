@@ -448,9 +448,4 @@ mod tests {
         println!("found {:?}", node.outcome);
         (node, last)
     }
-
-    fn test_iteration_all_children(fen_str: &'static str) -> (TreeNode, f32) {
-        let mut stats: RunStats = Default::default();
-        test_iteration_all_children_with_stats(fen_str, &mut stats)
-    }
 }

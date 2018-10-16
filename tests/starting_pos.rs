@@ -2,6 +2,7 @@ extern crate deadbeef;
 extern crate shakmaty;
 
 use helpers::*;
+use shakmaty::fen::*;
 
 mod helpers;
 

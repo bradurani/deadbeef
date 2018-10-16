@@ -101,7 +101,7 @@ pub fn search_samples(
     let mut new_root = root;
     for i in 0..batches {
         print!(".");
-        std::io::stdout().flush();
+        std::io::stdout().flush().unwrap();
         if i % 100 == 0 {
             // print!(".");
             println!("{}", new_root);
@@ -227,7 +227,6 @@ mod tests {
                 .unwrap();
             let game: Chess = setup.position().unwrap();
             let settings = Settings::test_default();
-            let mut mcts = MCTS::new(&settings);
             let root = TreeNode::new_root(&game, 1.);
             let mut test_run_stats: RunStats = Default::default();
             search(root, &game, &mut test_run_stats, &settings)
