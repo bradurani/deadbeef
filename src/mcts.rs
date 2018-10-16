@@ -1,4 +1,6 @@
 // use display::*;
+use eval::Value;
+use eval::*;
 use game::*;
 use playout::playout;
 use rand::rngs::SmallRng;
@@ -109,7 +111,7 @@ impl TreeNode {
     }
 
     // saved ns from previous searches plus ns found in this search
-    // used for UCT1 to guide search efforts
+    // used for UT
     pub fn total_n(&self) -> f32 {
         self.sn + self.nn
     }
@@ -145,6 +147,8 @@ impl TreeNode {
         let mut best_child: Option<&mut TreeNode> = None;
         let self_total_n = self.total_n();
         //TODO don't we need to not explore leaf nodes here?
+        //TODO try alpha zerp version, MCTS-Solver version and Wikipedia weighted version (are they
+        //the same) can eval be used as any of the factors
         for child in &mut self.children {
             if child.state == NodeState::LeafNode {
                 continue;
@@ -306,7 +310,8 @@ impl TreeNode {
                     let delta = played_game.outcome().map(|o| o.reward()).unwrap_or(0.);
                     child.nn += 1.;
                     child.nq += delta;
-                    delta
+                    // delta + (game.board().value() as f32 / 100.)
+                    game.board().value() as f32
                 }
             }
             _ => panic!("unknown leaf node type"),

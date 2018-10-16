@@ -21,14 +21,14 @@ impl Settings {
         Settings {
             starting_position: Chess::default(),
             starting_move_num: 1.0,
-            time_per_move_ms: 2000.0,
+            time_per_move_ms: 500.0,
             n_samples: -1,
-            ensemble_size: 4,
+            ensemble_size: 8,
             c: 0.25,
             starting_seed: 1,
             starting_iterations_per_ms: 0.5,
             search_type: SearchType::Time,
-            max_batch_size: 100,
+            max_batch_size: 200,
             min_batch_size: 4,
         }
     }

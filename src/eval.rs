@@ -1,6 +1,5 @@
 use core::iter::Iterator;
 use game::*;
-use setup::*;
 use shakmaty::*;
 
 #[rustfmt::skip]
@@ -75,7 +74,7 @@ const KING_VALUES: [i16; 64] = [
     17,  30,  -3, -14,   6,  -1,  40,  18,
 ];
 
-trait Value {
+pub trait Value {
     fn value(&self) -> i16;
 }
 
@@ -127,6 +126,7 @@ impl Value for Board {
 #[cfg(test)]
 mod test {
     use super::*;
+    use setup::*;
 
     #[test]
     fn test_pawns() {
