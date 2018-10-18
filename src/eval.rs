@@ -117,8 +117,8 @@ impl Value for Board {
             };
             piece.color.coefficient() as i16 * raw_value
         }
-        self.pieces().into_iter().fold(0, |score, (square, piece)| {
-            score + piece.value() + positional_value(square, &piece)
+        self.pieces().into_iter().fold(0, |value, (square, piece)| {
+            value + piece.value() + positional_value(square, &piece)
         })
     }
 }

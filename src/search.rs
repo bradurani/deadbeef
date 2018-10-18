@@ -148,6 +148,10 @@ pub fn search_threaded_batch(
                 let t0 = Instant::now();
 
                 for _n in 0..batch_n_samples {
+                    if thread_root.is_decided() {
+                        println!("found decisive in thread {}", thread_num);
+                        break;
+                    }
                     thread_run_stats.samples += 1;
                     thread_root.iteration(
                         &mut thread_game.clone(),
@@ -155,10 +159,6 @@ pub fn search_threaded_batch(
                         &mut thread_run_stats,
                         &thread_settings,
                     );
-                    if thread_root.is_decisive() {
-                        println!("found decisive in thread {}", thread_num);
-                        break;
-                    }
                 }
                 let time_spent = t0.elapsed().as_millis();
                 thread_run_stats.total_time = time_spent as u64;

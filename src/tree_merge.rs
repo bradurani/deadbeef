@@ -23,6 +23,7 @@ pub fn timed_merge_trees(
 fn merge_trees<'a>(mut root: TreeNode, new_roots: Vec<TreeNode>) -> TreeNode {
     debug_assert_eq!(root.nn, 0.);
     debug_assert_eq!(root.nq, 0.);
+    debug_assert!(root.value.is_some());
 
     let mut action_map = deterministic_hash_map();
 
@@ -32,6 +33,7 @@ fn merge_trees<'a>(mut root: TreeNode, new_roots: Vec<TreeNode>) -> TreeNode {
         root.sq += new_root.nq;
         root.outcome = max_outcome(root.outcome, new_root.outcome);
         root.state = max_state(root.state, new_root.state);
+        debug_assert_eq!(root.value, new_root.value);
         for new_child_root in new_root.children {
             let grouped_new_child_roots = action_map
                 .entry(new_child_root.action.unwrap())
@@ -118,7 +120,7 @@ mod tests {
 
     #[test]
     fn merge_single_root() {
-        let root = TreeNode::new(norm('p', "e2", "e3"), Color::White, 1.);
+        let root = TreeNode::new(norm('p', "e2", "e3"), Color::White, 1., Some(0));
 
         let t1 = TreeNode {
             outcome: None,
@@ -127,6 +129,7 @@ mod tests {
             state: NodeState::Expandable,
             turn: Color::White,
             move_num: 1.,
+            value: Some(0),
             nn: 12.0,
             nq: 24.0,
             sn: 0.,
@@ -140,6 +143,7 @@ mod tests {
             state: NodeState::Expandable,
             turn: Color::White,
             move_num: 1.,
+            value: Some(0),
             nn: 0.0,
             nq: 0.0,
             sn: 12.,
@@ -159,6 +163,7 @@ mod tests {
             state: NodeState::Expandable,
             turn: Color::White,
             move_num: 1.,
+            value: Some(0),
             nn: 0.,
             nq: 0.,
             sn: 500.0,
@@ -171,6 +176,7 @@ mod tests {
             state: NodeState::Expandable,
             turn: Color::White,
             move_num: 1.,
+            value: Some(0),
             nn: 12.0,
             nq: 24.0,
             sn: 1000.,
@@ -183,6 +189,7 @@ mod tests {
             state: NodeState::Expandable,
             turn: Color::White,
             move_num: 1.,
+            value: Some(0),
             nn: 6.0,
             nq: 12.0,
             sn: 0.,
@@ -195,6 +202,7 @@ mod tests {
             state: NodeState::Expandable,
             turn: Color::White,
             move_num: 1.,
+            value: Some(0),
             nn: 0.,
             nq: 0.,
             sn: 518.,
@@ -214,6 +222,7 @@ mod tests {
             state: NodeState::FullyExpanded,
             turn: Color::White,
             move_num: 1.,
+            value: Some(2),
             children: vec![],
             nn: 0.,
             nq: 0.,
@@ -226,6 +235,7 @@ mod tests {
             state: NodeState::FullyExpanded,
             turn: Color::White,
             move_num: 1.,
+            value: Some(2),
             nn: 8.0,
             nq: 10.0,
             sn: 0.,
@@ -237,6 +247,7 @@ mod tests {
                     state: NodeState::Expandable,
                     turn: Color::Black,
                     move_num: 1.5,
+                    value: Some(12),
                     nn: 7.0,
                     nq: 9.0,
                     sn: 0.,
@@ -248,6 +259,7 @@ mod tests {
                         state: NodeState::Expandable,
                         turn: Color::White,
                         move_num: 2.0,
+                        value: Some(10),
                         nn: 1.0,
                         nq: 2.0,
                         sn: 0.,
@@ -260,6 +272,7 @@ mod tests {
                     state: NodeState::Expandable,
                     turn: Color::Black,
                     move_num: 1.5,
+                    value: Some(14),
                     nn: 1.0,
                     nq: 1.0,
                     sn: 0.,
@@ -271,6 +284,7 @@ mod tests {
                         state: NodeState::Expandable,
                         turn: Color::White,
                         move_num: 2.0,
+                        value: Some(9),
                         nn: 0.0,
                         nq: 1.0,
                         sn: 0.,
@@ -285,6 +299,7 @@ mod tests {
             state: NodeState::FullyExpanded,
             turn: Color::White,
             move_num: 1.,
+            value: Some(2),
             nn: 6.0,
             nq: 6.0,
             sn: 0.,
@@ -296,6 +311,7 @@ mod tests {
                     state: NodeState::Expandable,
                     turn: Color::Black,
                     move_num: 1.5,
+                    value: Some(14),
                     nn: 3.0,
                     nq: 3.0,
                     sn: 0.,
@@ -305,6 +321,7 @@ mod tests {
                         action: norm('p', "f2", "f3"),
                         state: NodeState::Expandable,
                         turn: Color::White,
+                        value: Some(9),
                         move_num: 2.0,
                         nn: 0.0,
                         nq: 2.0,
@@ -318,6 +335,7 @@ mod tests {
                     action: norm('p', "h7", "h5"),
                     state: NodeState::Expandable,
                     turn: Color::Black,
+                    value: Some(100),
                     move_num: 1.5,
                     nn: 3.0,
                     nq: 3.0,
@@ -333,6 +351,7 @@ mod tests {
             state: NodeState::FullyExpanded,
             turn: Color::White,
             move_num: 1.,
+            value: Some(2),
             nn: 0.,
             nq: 0.,
             sn: 514.0,
@@ -344,6 +363,7 @@ mod tests {
                     state: NodeState::Expandable,
                     turn: Color::Black,
                     move_num: 1.5,
+                    value: Some(14),
                     nn: 0.,
                     nq: 0.,
                     sn: 4.0,
@@ -355,6 +375,7 @@ mod tests {
                         state: NodeState::Expandable,
                         turn: Color::White,
                         move_num: 2.0,
+                        value: Some(9),
                         nn: 0.,
                         nq: 0.,
                         sn: 0.0,
@@ -367,6 +388,7 @@ mod tests {
                     state: NodeState::Expandable,
                     turn: Color::Black,
                     move_num: 1.5,
+                    value: Some(100),
                     nn: 0.,
                     nq: 0.,
                     sn: 3.0,
@@ -379,6 +401,7 @@ mod tests {
                     state: NodeState::Expandable,
                     turn: Color::Black,
                     move_num: 1.5,
+                    value: Some(12),
                     nn: 0.,
                     nq: 0.,
                     sn: 7.0,
@@ -390,6 +413,7 @@ mod tests {
                         state: NodeState::Expandable,
                         turn: Color::White,
                         move_num: 2.0,
+                        value: Some(10),
                         nn: 0.,
                         nq: 0.,
                         sn: 1.0,

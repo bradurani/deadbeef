@@ -22,7 +22,8 @@ pub enum NodeState {
 pub struct TreeNode {
     pub outcome: Option<Outcome>,
     pub action: Option<Move>, // how did we get here
-    pub state: NodeState,     // is this a leaf node? fully expanded?
+    pub value: Option<i16>,
+    pub state: NodeState, // is this a leaf node? fully expanded?
     //TODO don't need turn
     pub turn: Color, //which player made this move
     //TODO don't need move number
@@ -34,8 +35,9 @@ pub struct TreeNode {
     pub children: Vec<TreeNode>, // next steps we investigated
 }
 
+//TODO, make all contructors take a game, and never allow manual setting of value
 impl TreeNode {
-    pub fn new(action: Option<Move>, turn: Color, move_num: f32) -> TreeNode {
+    pub fn new(action: Option<Move>, turn: Color, move_num: f32, value: Option<i16>) -> TreeNode {
         TreeNode {
             outcome: None,
             action: action,
@@ -43,6 +45,7 @@ impl TreeNode {
             state: NodeState::Expandable,
             turn: turn,
             move_num: move_num,
+            value: value,
             nn: 0.,
             nq: 0.,
             sn: 0.,
@@ -58,6 +61,7 @@ impl TreeNode {
             state: NodeState::Expandable,
             turn: game.turn(),  // So we switch to White for move 1
             move_num: move_num, //So we increment to 1 for move 1
+            value: Some(game.board().value()),
             nn: 0.,
             nq: 0.,
             sn: 0.,
@@ -73,6 +77,7 @@ impl TreeNode {
             state: NodeState::Expandable,
             turn: Color::White,
             move_num: 0.5,
+            value: Some(Board::default().value()), //The starting position is not necessarily 0, so we calculate it
             nn: 0.,
             nq: 0.,
             sn: 0.,
@@ -88,6 +93,7 @@ impl TreeNode {
             state: self.state,
             turn: self.turn,
             move_num: self.move_num,
+            value: self.value,
             nn: 0.,
             nq: 0.,
             sn: 0.,
@@ -103,6 +109,7 @@ impl TreeNode {
             state: self.state,
             turn: self.turn,
             move_num: self.move_num,
+            value: self.value,
             nn: 0.,
             nq: 0.,
             sn: self.sn,
@@ -122,16 +129,17 @@ impl TreeNode {
 
     pub fn score(&self) -> f32 {
         match self.outcome {
-            Some(Outcome::Decisive { winner }) => {
-                if winner == self.turn.not() {
-                    f32::INFINITY
-                } else {
-                    f32::NEG_INFINITY
-                }
-            }
+            Some(Outcome::Decisive { winner }) => match winner {
+                Color::White => f32::INFINITY,
+                Color::Black => f32::NEG_INFINITY,
+            },
             Some(Outcome::Draw) => 0.,
             _ => self.sn,
         }
+    }
+
+    pub fn color_relative_score(&self) -> f32 {
+        self.score() * self.turn.coefficient()
     }
 
     pub fn is_decisive(&self) -> bool {
@@ -141,20 +149,27 @@ impl TreeNode {
         }
     }
 
+    pub fn is_decided(&self) -> bool {
+        self.outcome.is_some()
+    }
+
     /// Find the best child accoring to UCT1
     pub fn best_child(&mut self, settings: &Settings) -> &mut TreeNode {
         let mut best_value: f32 = f32::NEG_INFINITY;
         let mut best_child: Option<&mut TreeNode> = None;
         let self_total_n = self.total_n();
-        //TODO don't we need to not explore leaf nodes here?
         //TODO try alpha zerp version, MCTS-Solver version and Wikipedia weighted version (are they
         //the same) can eval be used as any of the factors
+        // println!("\n--");
+        // println!("best_child: {}", self);
         for child in &mut self.children {
+            // println!("child: {}", child);
             if child.state == NodeState::LeafNode {
                 continue;
             }
             let value = (self.turn.coefficient() * child.total_q()) / child.total_n()
                 + settings.c * (2. * self_total_n.ln() / child.total_n()).sqrt();
+            // println!("value {}", value);
             //TODO what is this 2. ?????
             // println!("child: {:?} total: {}", child, child.total_n());
             // println!("value: {}", value);
@@ -170,6 +185,7 @@ impl TreeNode {
     /// Add a child to the current node with an previously unexplored action.
     pub fn expand(
         &mut self,
+        game: &mut Chess,
         candidate_actions: Vec<Move>,
         rng: &mut SmallRng,
         thread_run_stats: &mut RunStats,
@@ -177,11 +193,13 @@ impl TreeNode {
         // println!("Candidate Action: {:?}", &candidate_actions);
 
         let action = *choose_random(rng, &candidate_actions);
+        game.make_move(&action);
 
         self.children.push(TreeNode::new(
             Some(action),
             self.turn.not(),
             self.move_num + 0.5,
+            Some(game.board().value()),
         ));
         thread_run_stats.nodes_created += 1;
         self.children.last_mut().unwrap()
@@ -213,6 +231,8 @@ impl TreeNode {
         children: &Vec<TreeNode>,
         game: &mut Chess,
     ) -> Option<Outcome> {
+        //TODO, do we need to cache the results of this? otherwise it's calculated on every
+        //traveral
         match child_outcome {
             Some(Outcome::Decisive { winner: color }) if color == turn.not() => {
                 // println!("checking for child mate. Looking for grandchildren");
@@ -225,6 +245,19 @@ impl TreeNode {
             }
             Some(Outcome::Decisive { winner: color }) if color == turn => {
                 Some(Outcome::Decisive { winner: turn })
+            }
+            Some(Outcome::Draw) => {
+                if children.iter().all(|c| c.outcome.is_some()) {
+                    //all children are draws or checkmate for opponent, so it's a draw for us
+                    debug_assert!(
+                        !children
+                            .iter()
+                            .any(|c| c.outcome.unwrap().winner().unwrap() == turn)
+                    );
+                    Some(Outcome::Draw)
+                } else {
+                    None
+                }
             }
             _ => None,
         }
@@ -289,40 +322,58 @@ impl TreeNode {
                 if candidate_actions.len() == 0 {
                     //if we ended up expanded as the result fo a tree merge
                     //TODO check if merging filled out all outcomes
+                    //TODO fix bugs related to
+                    self.outcome = self.outcome_based_on_immediate_children();
+                    if self.outcome.is_some() {
+                        self.state = NodeState::LeafNode;
+                        return self.outcome.unwrap().reward();
+                    }
                     self.state = NodeState::FullyExpanded;
                     return self.iteration(game, rng, thread_run_stats, settings);
                 }
-                let mut child = self.expand(candidate_actions, rng, thread_run_stats);
-                game.make_move(&child.action.unwrap());
-                if game.is_checkmate() {
-                    // println!("FOUND CHECKMATE");
-                    // println!("{:?}", game.board());
-                    child.state = NodeState::LeafNode;
-                    child.outcome = Some(Outcome::Decisive {
-                        winner: game.turn().not(),
-                    });
-                    child.nn += 1.;
-                    child.nq += 1.;
-                    thread_run_stats.leaf_nodes += 1;
-                    f32::INFINITY
-                } else {
-                    let played_game = playout(rng, game, thread_run_stats);
-                    let delta = played_game.outcome().map(|o| o.reward()).unwrap_or(0.);
-                    child.nn += 1.;
-                    child.nq += delta;
-                    // delta + (game.board().value() as f32 / 100.)
-                    game.board().value() as f32
+
+                //advances game to position after action
+                let (delta, outcome) = {
+                    let mut child = self.expand(game, candidate_actions, rng, thread_run_stats);
+                    if game.is_game_over() {
+                        let child_turn = game.turn().not();
+                        // println!("FOUND CHECKMATE");
+                        // println!("{:?}", game.board());
+                        child.state = NodeState::LeafNode;
+                        child.outcome = game.outcome();
+                        let delta = child.outcome.unwrap().reward();
+                        child.nn += 1.;
+                        child.nq += delta;
+                        thread_run_stats.leaf_nodes += 1;
+                        (delta, child.outcome)
+                    } else {
+                        let played_game = playout(rng, game, thread_run_stats);
+                        let delta = played_game.outcome().map(|o| o.reward()).unwrap_or(0.);
+                        child.nn += 1.;
+                        child.nq += delta;
+                        (delta, None)
+                    }
+                };
+                match outcome {
+                    None => {}
+                    Some(Outcome::Decisive { winner }) => {
+                        // opponent can mate next move. Game is lost
+                        self.state = NodeState::LeafNode;
+                        self.outcome = outcome;
+                    }
+                    Some(Outcome::Draw) => {
+                        // opponent can force a draw
+                        // could we use this to prevent forced draw if we're ahead?
+                    }
                 }
+                delta
             }
-            _ => panic!("unknown leaf node type"),
+            _ => {
+                println!("IMPOSSIBLE ITERATION");
+                println!("{}", self);
+                panic!("unknown leaf node type")
+            }
         };
-        if delta == f32::INFINITY {
-            self.state = NodeState::LeafNode;
-            delta = 1.;
-            self.outcome = Some(Outcome::Decisive {
-                winner: game.turn().not(), //we've advanced the game so turn is 1 ahead
-            });
-        }
         self.nn += 1.;
         self.nq += delta;
         delta
@@ -355,6 +406,35 @@ impl TreeNode {
                 }
             }
         })
+    }
+
+    // If we fill up all the children, we have to check to see if they're all draws so we can
+    // propogate draw upwards. Also, we could ahve filled all children with own wins during tree
+    // merge, so we need to propogate that up too
+    fn outcome_based_on_immediate_children(&self) -> Option<Outcome> {
+        debug_assert!(self.outcome.is_none());
+        let mut outcome = Some(Outcome::Decisive {
+            winner: self.turn.not(),
+        }); //unless I find something better, it's a win for my opponent
+        for child in self.children.iter() {
+            match child.outcome {
+                Some(Outcome::Decisive { winner }) if winner == self.turn => {
+                    panic!("found own win");
+                } //if I have a winning move, I should already be set to LeafNode
+                Some(Outcome::Decisive { winner }) if winner == self.turn.not() => {
+                    continue;
+                }
+                Some(Outcome::Draw) => outcome = Some(Outcome::Draw),
+                None => {
+                    outcome = None;
+                    break;
+                }
+                _ => {
+                    panic!("impossible outcome");
+                }
+            }
+        }
+        outcome
     }
 }
 
@@ -401,7 +481,7 @@ mod tests {
         let mut stats: RunStats = Default::default();
         let (node, score) =
             test_iteration_all_children_with_stats("4q3/8/8/8/8/3k4/8/3K4 b - - 0 1", &mut stats);
-        assert_eq!(1., score);
+        assert_eq!(-1., score);
         assert_eq!(
             Outcome::Decisive {
                 winner: Color::Black

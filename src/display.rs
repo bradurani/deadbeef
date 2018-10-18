@@ -5,7 +5,7 @@ use shakmaty::*;
 use stats::*;
 use std::fmt;
 
-const TREENODE_MAX_DISPLAY_DEPTH: u32 = 3;
+const TREENODE_MAX_DISPLAY_DEPTH: u32 = 10;
 
 impl fmt::Display for RunStats {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

@@ -82,7 +82,11 @@ fn best_child_node(root: TreeNode) -> TreeNode {
     // TODO try the equation from the MCTS-Solver paper
     root.children
         .into_iter()
-        .max_by(|n1, n2| n1.score().partial_cmp(&n2.score()).unwrap())
+        .max_by(|n1, n2| {
+            n1.color_relative_score()
+                .partial_cmp(&n2.color_relative_score())
+                .unwrap()
+        })
         .unwrap()
 }
 
