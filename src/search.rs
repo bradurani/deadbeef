@@ -68,7 +68,7 @@ pub fn search_time(
         // println!("Batch: {}", batch_run_stats);
         move_run_stats.add(&batch_run_stats);
         if new_root.is_decisive() {
-            println!("found decisive");
+            // println!("found decisive");
             break;
         }
     }
@@ -149,7 +149,7 @@ pub fn search_threaded_batch(
 
                 for _n in 0..batch_n_samples {
                     if thread_root.is_decided() {
-                        println!("found decisive in thread {}", thread_num);
+                        // println!("found decisive in thread {}", thread_num);
                         break;
                     }
                     thread_run_stats.samples += 1;
