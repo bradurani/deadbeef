@@ -8,5 +8,5 @@ mod helpers;
 
 #[test]
 fn opening_move() {
-    assert_move(Fen::STARTING_POSITION, "e4e5");
+    assert_move(Fen::STARTING_POSITION, "e2e4");
 }

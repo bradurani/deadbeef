@@ -1,5 +1,5 @@
 #![feature(duration_as_u128)]
-#![feature(tool_attributes)] // for rustfmt directives
+// #![feature(tool_attributes)] // for rustfmt directives
 
 #[cfg(test)]
 #[macro_use]

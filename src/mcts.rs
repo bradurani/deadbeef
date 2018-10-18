@@ -1,6 +1,5 @@
 // use display::*;
 use eval::Value;
-use eval::*;
 use game::*;
 use playout::playout;
 use rand::rngs::SmallRng;
@@ -284,7 +283,7 @@ impl TreeNode {
     ) -> f32 {
         thread_run_stats.iterations += 1;
         // println!("{}", self);
-        let mut delta = match self.state {
+        let delta = match self.state {
             // NodeState::LeafNode => {
             //     // println!("{}", game.outcome().unwrap());
             //     // game.reward()
@@ -343,7 +342,6 @@ impl TreeNode {
                 let (delta, outcome) = {
                     let mut child = self.expand(game, candidate_actions, rng, thread_run_stats);
                     if game.is_game_over() {
-                        let child_turn = game.turn().not();
                         // println!("FOUND CHECKMATE");
                         // println!("{:?}", game.board());
                         child.state = NodeState::LeafNode;
@@ -363,7 +361,7 @@ impl TreeNode {
                 };
                 match outcome {
                     None => {}
-                    Some(Outcome::Decisive { winner }) => {
+                    Some(Outcome::Decisive { winner: _w }) => {
                         // opponent can mate next move. Game is lost
                         self.state = NodeState::LeafNode;
                         self.outcome = outcome;
@@ -488,6 +486,8 @@ mod tests {
         let mut stats: RunStats = Default::default();
         let (node, score) =
             test_iteration_all_children_with_stats("4q3/8/8/8/8/3k4/8/3K4 b - - 0 1", &mut stats);
+        println!("{}", stats);
+        println!("{}", node);
         assert_eq!(-1., score);
         assert_eq!(
             Outcome::Decisive {
@@ -496,8 +496,6 @@ mod tests {
             node.outcome.unwrap()
         );
         assert!(stats.iterations < 200);
-        println!("{}", stats);
-        println!("{}", node);
     }
 
     #[test]
