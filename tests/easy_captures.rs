@@ -16,6 +16,12 @@ fn makes_winning_pawn_capture() {
 }
 
 #[test]
+fn black_does_not_blunder_queen() {
+    assert_move("5k1q/5Npp/3PK3/8/8/8/8/8 b - - 0 1", "h8g8");
+}
+
+#[test]
+#[ignore] //this one is tough
 fn black_saves_its_queen() {
     assert_move("3kq1b1/3p1p2/8/8/8/8/4R3/3QK3 b - - 0 1", "e8f8");
 }
@@ -24,6 +30,14 @@ fn black_saves_its_queen() {
 fn capture_bishop_and_save_queen() {
     assert_move(
         "3qkbnr/p1Bppp1p/b1r3p1/8/3PP3/2N2N2/PPP2PPP/R2Q1RK1 b k - 0 9",
-        "d8c7",
+        "c6c7",
+    );
+}
+
+#[test]
+fn do_not_blunder_knight() {
+    assert_move(
+        "rnbqkbnr/ppp1pppp/8/8/3Pp3/8/PPP2PPP/RNBQKBNR w KQkq - 0 3",
+        "c1f4",
     );
 }

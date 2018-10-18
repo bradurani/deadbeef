@@ -42,14 +42,34 @@ impl Settings {
         Settings::test_mate_default_with_seed(1)
     }
 
+    pub fn lib_test_default() -> Settings {
+        Settings::test_default_with_seed(1)
+    }
+
+    pub fn lib_test_default_with_seed(seed: u8) -> Settings {
+        Settings {
+            starting_position: Chess::default(),
+            starting_move_num: 1.0,
+            time_per_move_ms: -1.0,
+            n_samples: 100,
+            ensemble_size: 8,
+            c: 3.,
+            starting_seed: seed,
+            starting_iterations_per_ms: 0.5,
+            search_type: SearchType::Steps,
+            max_batch_size: 100,
+            min_batch_size: 4,
+        }
+    }
+
     pub fn test_default_with_seed(seed: u8) -> Settings {
         Settings {
             starting_position: Chess::default(),
             starting_move_num: 1.0,
             time_per_move_ms: -1.0,
-            n_samples: 50,
+            n_samples: 5000,
             ensemble_size: 8,
-            c: 0.25,
+            c: 3.,
             starting_seed: seed,
             starting_iterations_per_ms: 0.5,
             search_type: SearchType::Steps,

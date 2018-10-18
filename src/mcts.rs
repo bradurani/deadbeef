@@ -174,7 +174,7 @@ impl TreeNode {
             let mut weight = (self.turn.coefficient() * child.total_q()) / child.total_n()
                 + settings.c * (2. * self_total_n.ln() / child.total_n()).sqrt();
             // println!("raw weight {}", weight);
-            weight += child.color_relative_value() as f32;
+            weight += child.color_relative_value() as f32 / child.total_n();
             // println!("weighted weight {}", weight);
             // println!("value {}", value);
             //TODO what is this 2. ?????
@@ -507,6 +507,8 @@ mod tests {
             "8/5Q2/1pkq2n1/pB2p3/4P3/1P2K3/2P5/8 b - - 1 1",
             &mut stats,
         );
+        println!("{}", stats);
+        println!("{}", node);
         assert_eq!(1., score);
         assert_eq!(
             Outcome::Decisive {
@@ -514,9 +516,7 @@ mod tests {
             },
             node.outcome.unwrap()
         );
-        assert!(stats.iterations < 50);
-        println!("{}", stats);
-        println!("{}", node);
+        assert!(stats.iterations < 60);
     }
 
     fn test_iteration_all_children_with_stats(
@@ -524,7 +524,7 @@ mod tests {
         stats: &mut RunStats,
     ) -> (TreeNode, f32) {
         let game = parse_fen(fen_str);
-        let mut settings = Settings::test_default();
+        let mut settings = Settings::lib_test_default();
         let mut rng = seeded_rng(settings.starting_seed);
         let mut node = TreeNode::new_root(&game, 1.);
         let mut last = 0.;
