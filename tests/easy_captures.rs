@@ -19,3 +19,11 @@ fn makes_winning_pawn_capture() {
 fn black_saves_its_queen() {
     assert_move("3kq1b1/3p1p2/8/8/8/8/4R3/3QK3 b - - 0 1", "e8f8");
 }
+
+#[test]
+fn capture_bishop_and_save_queen() {
+    assert_move(
+        "3qkbnr/p1Bppp1p/b1r3p1/8/3PP3/2N2N2/PPP2PPP/R2Q1RK1 b k - 0 9",
+        "d8c7",
+    );
+}

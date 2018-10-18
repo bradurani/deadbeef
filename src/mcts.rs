@@ -134,12 +134,16 @@ impl TreeNode {
                 Color::Black => f32::NEG_INFINITY,
             },
             Some(Outcome::Draw) => 0.,
-            _ => self.sn,
+            _ => self.turn.not().coefficient() * self.sn,
         }
     }
 
     pub fn color_relative_score(&self) -> f32 {
-        self.score() * self.turn.coefficient()
+        self.score() * self.turn.not().coefficient()
+    }
+
+    pub fn color_relative_value(&self) -> f32 {
+        self.value.unwrap() as f32 * self.turn.not().coefficient()
     }
 
     pub fn is_decisive(&self) -> bool {
@@ -155,7 +159,7 @@ impl TreeNode {
 
     /// Find the best child accoring to UCT1
     pub fn best_child(&mut self, settings: &Settings) -> &mut TreeNode {
-        let mut best_value: f32 = f32::NEG_INFINITY;
+        let mut best_weight: f32 = f32::NEG_INFINITY;
         let mut best_child: Option<&mut TreeNode> = None;
         let self_total_n = self.total_n();
         //TODO try alpha zerp version, MCTS-Solver version and Wikipedia weighted version (are they
@@ -167,14 +171,17 @@ impl TreeNode {
             if child.state == NodeState::LeafNode {
                 continue;
             }
-            let value = (self.turn.coefficient() * child.total_q()) / child.total_n()
+            let mut weight = (self.turn.coefficient() * child.total_q()) / child.total_n()
                 + settings.c * (2. * self_total_n.ln() / child.total_n()).sqrt();
+            // println!("raw weight {}", weight);
+            weight += child.color_relative_value() as f32;
+            // println!("weighted weight {}", weight);
             // println!("value {}", value);
             //TODO what is this 2. ?????
             // println!("child: {:?} total: {}", child, child.total_n());
             // println!("value: {}", value);
-            if value > best_value {
-                best_value = value;
+            if weight > best_weight {
+                best_weight = weight;
                 best_child = Some(child);
             }
         }

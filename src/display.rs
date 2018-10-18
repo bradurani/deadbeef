@@ -75,23 +75,25 @@ impl fmt::Display for TreeNode {
             match node.action {
                 Some(a) => try!(writeln!(
                     f,
-                    "{}. {} {} q={} n={} s={} {}",
+                    "{}. {} {} q={} n={} s={} v={} {}",
                     node.move_num,
                     a,
                     node.state,
                     node.total_q(),
                     node.total_n(),
-                    node.score(),
+                    node.color_relative_score(),
+                    node.value.unwrap(),
                     format_outcome(node.outcome)
                 )),
                 None => try!(writeln!(
                     f,
-                    "{}. Root {} q={} n={} s={} {}",
+                    "{}. Root {} q={} n={} s={} v={} {}",
                     node.move_num,
                     node.state,
                     node.total_q(),
                     node.total_n(),
-                    node.score(),
+                    node.color_relative_score(),
+                    node.value.unwrap(),
                     format_outcome(node.outcome)
                 )),
             }
