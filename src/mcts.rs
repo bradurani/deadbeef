@@ -171,9 +171,9 @@ impl TreeNode {
                 continue;
             }
             let mut weight = (self.turn.coefficient() * child.total_q()) / child.total_n()
-                + settings.c * (2. * self_total_n.ln() / child.total_n()).sqrt();
+                + settings.c * (self_total_n.ln() / child.total_n()).sqrt();
             // println!("raw weight {}", weight);
-            weight += child.color_relative_value() as f32 / child.total_n();
+            // weight += child.color_relative_value() as f32 / child.total_n();
             // println!("weighted weight {}", weight);
             // println!("value {}", value);
             //TODO what is this 2. ?????
@@ -495,7 +495,7 @@ mod tests {
             },
             node.outcome.unwrap()
         );
-        assert!(stats.iterations < 200);
+        assert!(stats.nodes_created < 150);
     }
 
     #[test]
@@ -514,7 +514,7 @@ mod tests {
             },
             node.outcome.unwrap()
         );
-        assert!(stats.iterations < 60);
+        assert!(stats.nodes_created < 60);
     }
 
     fn test_iteration_all_children_with_stats(
