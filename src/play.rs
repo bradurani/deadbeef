@@ -9,6 +9,7 @@ use std::time::Instant;
 
 pub fn play_game(settings: &Settings) -> Vec<Move> {
     let mut move_history: Vec<Move> = Vec::new();
+    //TODO rename everything position
     let mut game = settings.starting_position.clone();
     let mut game_run_stats: RunStats = Default::default();
     let mut move_num = settings.starting_move_num;

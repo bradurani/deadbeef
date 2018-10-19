@@ -3,7 +3,6 @@ use settings::*;
 use shakmaty::*;
 use stats::*;
 use std::io::*;
-use std::isize;
 use std::thread;
 use std::thread::JoinHandle;
 use std::time::Instant;
@@ -21,7 +20,7 @@ pub fn search(
     let new_root = match &settings.search_type {
         SearchType::Steps => search_samples(root, &game, move_run_stats, settings),
         SearchType::Time => search_time(root, &game, move_run_stats, settings),
-        SearchType::Mate => search_to_mate(root, &game, move_run_stats, settings),
+        SearchType::Mate => search_to_outcome(root, &game, move_run_stats, settings),
     };
 
     println!("new root {}", new_root);
@@ -78,14 +77,16 @@ pub fn search_time(
     new_root
 }
 
-pub fn search_to_mate(
+pub fn search_to_outcome(
     root: TreeNode,
     game: &Chess,
     move_run_stats: &mut RunStats,
     settings: &Settings,
 ) -> TreeNode {
-    assert!(settings.n_samples == isize::MAX);
-    search_samples(root, game, move_run_stats, settings)
+    assert!(settings.n_samples >= 5000);
+    let new_root = search_samples(root, game, move_run_stats, settings);
+    assert!(new_root.outcome.is_some());
+    new_root
 }
 
 pub fn search_samples(
@@ -114,7 +115,7 @@ pub fn search_samples(
             settings,
         );
         move_run_stats.sample_batches += 1;
-        if new_root.is_decisive() {
+        if new_root.is_decided() {
             return new_root;
         }
     }

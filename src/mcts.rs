@@ -10,6 +10,8 @@ use std::f32;
 use std::ops::Not;
 use utils::*;
 
+const MAX_VALUE: f32 = 900.;
+
 #[derive(Debug, Copy, Clone, PartialEq, PartialOrd)]
 pub enum NodeState {
     LeafNode,
@@ -145,6 +147,14 @@ impl TreeNode {
         self.value.unwrap() as f32 * self.turn.not().coefficient()
     }
 
+    pub fn normalized_value(&self) -> f32 {
+        (self.value.unwrap() as f32 / MAX_VALUE)
+    }
+
+    pub fn normalized_color_relative_value(&self) -> f32 {
+        (self.value.unwrap() as f32 / MAX_VALUE) * self.turn.not().coefficient()
+    }
+
     pub fn is_decisive(&self) -> bool {
         match self.outcome {
             Some(Outcome::Decisive { winner: _ }) => true,
@@ -156,15 +166,24 @@ impl TreeNode {
         self.outcome.is_some()
     }
 
+    pub fn is_draw(&self) -> bool {
+        match self.outcome {
+            Some(Outcome::Draw) => true,
+            _ => false,
+        }
+    }
+
     /// Find the best child accoring to UCT1
     pub fn best_child(&mut self, settings: &Settings) -> &mut TreeNode {
+        // println!("\n--");
+        // println!("best_child for: {}", self);
+        debug_assert!(self.children.iter().any(|c| c.state != NodeState::LeafNode));
+
         let mut best_weight: f32 = f32::NEG_INFINITY;
         let mut best_child: Option<&mut TreeNode> = None;
         let self_total_n = self.total_n();
         //TODO try alpha zerp version, MCTS-Solver version and Wikipedia weighted version (are they
         //the same) can eval be used as any of the factors
-        // println!("\n--");
-        // println!("best_child: {}", self);
         for child in &mut self.children {
             // println!("child: {}", child);
             if child.state == NodeState::LeafNode {
@@ -173,7 +192,8 @@ impl TreeNode {
             let mut weight = (self.turn.coefficient() * child.total_q()) / child.total_n()
                 + settings.c * (self_total_n.ln() / child.total_n()).sqrt();
             // println!("raw weight {}", weight);
-            // weight += child.color_relative_value() as f32 / child.total_n();
+            // weight += 2. * (child.normalized_color_relative_value() as f32 / child.total_n());
+            weight += child.normalized_color_relative_value() * 5.;
             // println!("weighted weight {}", weight);
             // println!("value {}", value);
             //TODO what is this 2. ?????
@@ -233,33 +253,37 @@ impl TreeNode {
 
     fn new_outcome_based_on_child(
         child_outcome: Option<Outcome>,
-        turn: Color,
+        child_turn: Color,
         children: &Vec<TreeNode>,
         game: &mut Chess,
     ) -> Option<Outcome> {
         //TODO, do we need to cache the results of this? otherwise it's calculated on every
         //traveral
         match child_outcome {
-            Some(Outcome::Decisive { winner: color }) if color == turn.not() => {
+            Some(Outcome::Decisive { winner: color }) if color == child_turn.not() => {
                 // println!("checking for child mate. Looking for grandchildren");
                 // println!("{:?}", game.board());
                 if TreeNode::all_children_have_winning_grandchild(children, &game) {
-                    Some(Outcome::Decisive { winner: turn.not() }) //can't escape checkmate. All move are a win for opponent
+                    Some(Outcome::Decisive {
+                        winner: child_turn.not(),
+                    }) //can't escape checkmate. All moves are a win for parent
                 } else {
                     None
                 }
             }
-            Some(Outcome::Decisive { winner: color }) if color == turn => {
-                Some(Outcome::Decisive { winner: turn })
+            Some(Outcome::Decisive { winner: color }) if color == child_turn => {
+                Some(Outcome::Decisive { winner: child_turn }) //child has a winner, so parent has lost
             }
             Some(Outcome::Draw) => {
-                if children.iter().all(|c| c.outcome.is_some()) {
-                    //all children are draws or checkmate for opponent, so it's a draw for us
-                    debug_assert!(
-                        !children
-                            .iter()
-                            .any(|c| c.outcome.unwrap().winner().unwrap() == turn)
-                    );
+                if children.iter().all(|c| match c.outcome {
+                    None => false,
+                    Some(Outcome::Draw) => true,
+                    Some(Outcome::Decisive { winner }) if winner == child_turn.not() => true,
+                    _ => panic!("discovered a drawn child in a node that should be a leaf already"),
+                }) {
+                    // We shouldn't get here if we've already discovered a win for child
+                    // If there are only draws and wins for parent, child will choose the draw
+                    // so it's a draw
                     Some(Outcome::Draw)
                 } else {
                     None
@@ -318,6 +342,11 @@ impl TreeNode {
             NodeState::Expandable => {
                 let allowed_actions = game.allowed_actions();
                 //TODO cleanup
+                if game.halfmove_clock() == 101 {
+                    self.state = NodeState::LeafNode;
+                    self.outcome = Some(Outcome::Draw);
+                    return 0.;
+                }
                 if allowed_actions.len() == 0 || game.is_insufficient_material() {
                     //TODO or 50 move rule
                     self.state = NodeState::LeafNode;
@@ -350,13 +379,13 @@ impl TreeNode {
                         child.nn += 1.;
                         child.nq += delta;
                         thread_run_stats.leaf_nodes += 1;
-                        (delta, child.outcome)
+                        (delta + 5. * child.normalized_value(), child.outcome)
                     } else {
                         let played_game = playout(rng, game, thread_run_stats);
                         let delta = played_game.outcome().map(|o| o.reward()).unwrap_or(0.);
                         child.nn += 1.;
                         child.nq += delta;
-                        (delta, None)
+                        (delta + 5. * child.normalized_value(), None)
                     }
                 };
                 match outcome {

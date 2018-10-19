@@ -46,6 +46,19 @@ pub fn assert_contains_mate_move(fen_str: &'static str, uci_strs: Vec<&'static s
     assert_contains_move_with_settings(fen_str, uci_strs, &mut test_run_stats, &settings, true)
 }
 
+pub fn assert_draw(fen_str: &'static str, stats: &mut RunStats) {
+    let settings = Settings::test_mate_default();
+    let position = parse_fen(fen_str);
+    println!("halfmove clock: {}", position.halfmove_clock());
+    let root = TreeNode::new_root(&position, 100.);
+
+    println!("{}", settings);
+
+    let new_root = play::find_best_move(root, &position, stats, &settings);
+
+    assert!(new_root.map_or(false, |o| o.is_draw()));
+}
+
 pub fn assert_contains_move_with_settings(
     fen_str: &'static str,
     uci_strs: Vec<&'static str>,
