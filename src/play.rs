@@ -62,7 +62,7 @@ pub fn find_best_move(
         root.score()
     );
 
-    if game.is_game_over() {
+    if root.is_game_over_or_drawn(game) {
         return None;
     }
 
@@ -99,7 +99,7 @@ mod tests {
     #[test]
     #[ignore]
     fn deterministic_game() {
-        let settings = Settings::test_default();
+        let settings = Settings::lib_test_default();
         let move_history_a = play_game(&settings);
         let move_history_b = play_game(&settings);
         let move_history_c = play_game(&settings);
@@ -111,9 +111,9 @@ mod tests {
     #[test]
     #[ignore]
     fn changing_seed_changes_game() {
-        let settings_a = Settings::test_default();
+        let settings_a = Settings::lib_test_default();
         let move_history_a = play_game(&settings_a);
-        let settings_b = Settings::test_default_with_seed(7);
+        let settings_b = Settings::lib_test_default_with_seed(7);
         let move_history_b = play_game(&settings_b);
         assert_ne!(move_history_a, move_history_b);
     }

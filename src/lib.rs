@@ -5,11 +5,13 @@
 #[macro_use]
 extern crate pretty_assertions;
 
+extern crate bloom;
 extern crate core;
 extern crate rand;
 extern crate separator;
 extern crate shakmaty;
 extern crate twox_hash;
+pub mod repetition_detector;
 pub mod display;
 pub mod eval;
 pub mod game;

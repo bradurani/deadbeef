@@ -1,5 +1,6 @@
 use mcts::NodeState;
 use mcts::TreeNode;
+use repetition_detector::RepetitionDetector;
 use shakmaty::Outcome;
 use stats::*;
 use std::time::Instant;
@@ -31,6 +32,7 @@ fn merge_trees<'a>(mut root: TreeNode, new_roots: Vec<TreeNode>) -> TreeNode {
         debug_assert_eq!(new_root.action, root.action);
         root.sn += new_root.nn;
         root.sq += new_root.nq;
+        debug_assert_eq!(root.repetition_detector, new_root.repetition_detector);
         root.outcome = max_outcome(root.outcome, new_root.outcome);
         root.state = max_state(root.state, new_root.state);
         debug_assert_eq!(root.value, new_root.value);
@@ -120,7 +122,13 @@ mod tests {
 
     #[test]
     fn merge_single_root() {
-        let root = TreeNode::new(norm('p', "e2", "e3"), Color::White, 1., Some(0));
+        let root = TreeNode::new(
+            norm('p', "e2", "e3"),
+            Color::White,
+            1.,
+            Some(0),
+            RepetitionDetector::default(),
+        );
 
         let t1 = TreeNode {
             outcome: None,
@@ -130,6 +138,7 @@ mod tests {
             turn: Color::White,
             move_num: 1.,
             value: Some(0),
+            repetition_detector: RepetitionDetector::default(),
             nn: 12.0,
             nq: 24.0,
             sn: 0.,
@@ -144,6 +153,7 @@ mod tests {
             turn: Color::White,
             move_num: 1.,
             value: Some(0),
+            repetition_detector: RepetitionDetector::default(),
             nn: 0.0,
             nq: 0.0,
             sn: 12.,
@@ -164,6 +174,7 @@ mod tests {
             turn: Color::White,
             move_num: 1.,
             value: Some(0),
+            repetition_detector: RepetitionDetector::default(),
             nn: 0.,
             nq: 0.,
             sn: 500.0,
@@ -177,6 +188,7 @@ mod tests {
             turn: Color::White,
             move_num: 1.,
             value: Some(0),
+            repetition_detector: RepetitionDetector::default(),
             nn: 12.0,
             nq: 24.0,
             sn: 1000.,
@@ -190,6 +202,7 @@ mod tests {
             turn: Color::White,
             move_num: 1.,
             value: Some(0),
+            repetition_detector: RepetitionDetector::default(),
             nn: 6.0,
             nq: 12.0,
             sn: 0.,
@@ -203,6 +216,7 @@ mod tests {
             turn: Color::White,
             move_num: 1.,
             value: Some(0),
+            repetition_detector: RepetitionDetector::default(),
             nn: 0.,
             nq: 0.,
             sn: 518.,
@@ -223,6 +237,7 @@ mod tests {
             turn: Color::White,
             move_num: 1.,
             value: Some(2),
+            repetition_detector: RepetitionDetector::default(),
             children: vec![],
             nn: 0.,
             nq: 0.,
@@ -236,6 +251,7 @@ mod tests {
             turn: Color::White,
             move_num: 1.,
             value: Some(2),
+            repetition_detector: RepetitionDetector::default(),
             nn: 8.0,
             nq: 10.0,
             sn: 0.,
@@ -248,6 +264,7 @@ mod tests {
                     turn: Color::Black,
                     move_num: 1.5,
                     value: Some(12),
+                    repetition_detector: RepetitionDetector::default(),
                     nn: 7.0,
                     nq: 9.0,
                     sn: 0.,
@@ -260,6 +277,7 @@ mod tests {
                         turn: Color::White,
                         move_num: 2.0,
                         value: Some(10),
+                        repetition_detector: RepetitionDetector::default(),
                         nn: 1.0,
                         nq: 2.0,
                         sn: 0.,
@@ -273,6 +291,7 @@ mod tests {
                     turn: Color::Black,
                     move_num: 1.5,
                     value: Some(14),
+                    repetition_detector: RepetitionDetector::default(),
                     nn: 1.0,
                     nq: 1.0,
                     sn: 0.,
@@ -285,6 +304,7 @@ mod tests {
                         turn: Color::White,
                         move_num: 2.0,
                         value: Some(9),
+                        repetition_detector: RepetitionDetector::default(),
                         nn: 0.0,
                         nq: 1.0,
                         sn: 0.,
@@ -300,6 +320,7 @@ mod tests {
             turn: Color::White,
             move_num: 1.,
             value: Some(2),
+            repetition_detector: RepetitionDetector::default(),
             nn: 6.0,
             nq: 6.0,
             sn: 0.,
@@ -312,6 +333,7 @@ mod tests {
                     turn: Color::Black,
                     move_num: 1.5,
                     value: Some(14),
+                    repetition_detector: RepetitionDetector::default(),
                     nn: 3.0,
                     nq: 3.0,
                     sn: 0.,
@@ -322,6 +344,7 @@ mod tests {
                         state: NodeState::Expandable,
                         turn: Color::White,
                         value: Some(9),
+                        repetition_detector: RepetitionDetector::default(),
                         move_num: 2.0,
                         nn: 0.0,
                         nq: 2.0,
@@ -336,6 +359,7 @@ mod tests {
                     state: NodeState::Expandable,
                     turn: Color::Black,
                     value: Some(100),
+                    repetition_detector: RepetitionDetector::default(),
                     move_num: 1.5,
                     nn: 3.0,
                     nq: 3.0,
@@ -352,6 +376,7 @@ mod tests {
             turn: Color::White,
             move_num: 1.,
             value: Some(2),
+            repetition_detector: RepetitionDetector::default(),
             nn: 0.,
             nq: 0.,
             sn: 514.0,
@@ -364,6 +389,7 @@ mod tests {
                     turn: Color::Black,
                     move_num: 1.5,
                     value: Some(14),
+                    repetition_detector: RepetitionDetector::default(),
                     nn: 0.,
                     nq: 0.,
                     sn: 4.0,
@@ -376,6 +402,7 @@ mod tests {
                         turn: Color::White,
                         move_num: 2.0,
                         value: Some(9),
+                        repetition_detector: RepetitionDetector::default(),
                         nn: 0.,
                         nq: 0.,
                         sn: 0.0,
@@ -389,6 +416,7 @@ mod tests {
                     turn: Color::Black,
                     move_num: 1.5,
                     value: Some(100),
+                    repetition_detector: RepetitionDetector::default(),
                     nn: 0.,
                     nq: 0.,
                     sn: 3.0,
@@ -402,6 +430,7 @@ mod tests {
                     turn: Color::Black,
                     move_num: 1.5,
                     value: Some(12),
+                    repetition_detector: RepetitionDetector::default(),
                     nn: 0.,
                     nq: 0.,
                     sn: 7.0,
@@ -414,6 +443,7 @@ mod tests {
                         turn: Color::White,
                         move_num: 2.0,
                         value: Some(10),
+                        repetition_detector: RepetitionDetector::default(),
                         nn: 0.,
                         nq: 0.,
                         sn: 1.0,

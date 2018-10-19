@@ -1,5 +1,6 @@
 use shakmaty::*;
 
+pub const MAX_HALFMOVE_CLOCK: u32 = 101;
 /// A `Game` represets a game state.
 ///
 /// It is important that the game behaves fully deterministic,

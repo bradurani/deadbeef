@@ -115,7 +115,7 @@ pub fn search_samples(
             settings,
         );
         move_run_stats.sample_batches += 1;
-        if new_root.is_decided() {
+        if new_root.has_outcome() {
             return new_root;
         }
     }
@@ -149,7 +149,7 @@ pub fn search_threaded_batch(
                 let t0 = Instant::now();
 
                 for _n in 0..batch_n_samples {
-                    if thread_root.is_decided() {
+                    if thread_root.has_outcome() {
                         // println!("found decisive in thread {}", thread_num);
                         break;
                     }
@@ -199,7 +199,7 @@ mod tests {
     #[ignore]
     fn search_deterministic_starting_pos() {
         fn run_search() -> TreeNode {
-            let settings = Settings::test_default();
+            let settings = Settings::lib_test_default();
             let mut test_run_stats: RunStats = Default::default();
             let game = &Chess::default();
             let root = TreeNode::new_root(game, 0.5);
@@ -227,7 +227,7 @@ mod tests {
                 .parse()
                 .unwrap();
             let game: Chess = setup.position().unwrap();
-            let settings = Settings::test_default();
+            let settings = Settings::lib_test_default();
             let root = TreeNode::new_root(&game, 1.);
             let mut test_run_stats: RunStats = Default::default();
             search(root, &game, &mut test_run_stats, &settings)

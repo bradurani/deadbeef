@@ -25,3 +25,8 @@ fn king_rook_endgame_white() {
     //must under promote to rook to prevent a stalemate
     assert_move("8/6P1/7k/8/6K1/8/8/8 w - - 0 1", "g8g5");
 }
+
+#[test]
+fn rook_skewer() {
+    assert_move("R7/P4k2/8/8/8/8/r7/5K2 w - - 0 1", "a8h8");
+}

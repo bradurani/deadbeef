@@ -3,6 +3,7 @@ use eval::Value;
 use game::*;
 use playout::playout;
 use rand::rngs::SmallRng;
+use repetition_detector::RepetitionDetector;
 use settings::*;
 use shakmaty::*;
 use stats::*;
@@ -29,6 +30,7 @@ pub struct TreeNode {
     pub turn: Color, //which player made this move
     //TODO don't need move number
     pub move_num: f32,
+    pub repetition_detector: RepetitionDetector,
     pub nn: f32,                 //new qs computed during this search
     pub nq: f32,                 //new qs computed during this search
     pub sn: f32,                 // saved n from previous searches
@@ -38,7 +40,13 @@ pub struct TreeNode {
 
 //TODO, make all contructors take a game, and never allow manual setting of value
 impl TreeNode {
-    pub fn new(action: Option<Move>, turn: Color, move_num: f32, value: Option<i16>) -> TreeNode {
+    pub fn new(
+        action: Option<Move>,
+        turn: Color,
+        move_num: f32,
+        value: Option<i16>,
+        repetition_detector: RepetitionDetector,
+    ) -> TreeNode {
         TreeNode {
             outcome: None,
             action: action,
@@ -47,6 +55,7 @@ impl TreeNode {
             turn: turn,
             move_num: move_num,
             value: value,
+            repetition_detector: repetition_detector,
             nn: 0.,
             nq: 0.,
             sn: 0.,
@@ -55,6 +64,8 @@ impl TreeNode {
     }
 
     pub fn new_root(game: &Chess, move_num: f32) -> TreeNode {
+        let repetition_detector = RepetitionDetector::default();
+        repetition_detector.record_and_check(&Board::default());
         TreeNode {
             outcome: None,
             action: None,
@@ -63,6 +74,7 @@ impl TreeNode {
             turn: game.turn(),  // So we switch to White for move 1
             move_num: move_num, //So we increment to 1 for move 1
             value: Some(game.board().value()),
+            repetition_detector: repetition_detector,
             nn: 0.,
             nq: 0.,
             sn: 0.,
@@ -71,6 +83,8 @@ impl TreeNode {
     }
 
     pub fn starting() -> TreeNode {
+        let repetition_detector = RepetitionDetector::default();
+        repetition_detector.record_and_check(&Board::default());
         TreeNode {
             outcome: None,
             action: None,
@@ -79,6 +93,7 @@ impl TreeNode {
             turn: Color::White,
             move_num: 0.5,
             value: Some(Board::default().value()), //The starting position is not necessarily 0, so we calculate it
+            repetition_detector: repetition_detector,
             nn: 0.,
             nq: 0.,
             sn: 0.,
@@ -95,6 +110,7 @@ impl TreeNode {
             turn: self.turn,
             move_num: self.move_num,
             value: self.value,
+            repetition_detector: self.repetition_detector,
             nn: 0.,
             nq: 0.,
             sn: 0.,
@@ -111,6 +127,7 @@ impl TreeNode {
             turn: self.turn,
             move_num: self.move_num,
             value: self.value,
+            repetition_detector: self.repetition_detector,
             nn: 0.,
             nq: 0.,
             sn: self.sn,
@@ -162,7 +179,7 @@ impl TreeNode {
         }
     }
 
-    pub fn is_decided(&self) -> bool {
+    pub fn has_outcome(&self) -> bool {
         self.outcome.is_some()
     }
 
@@ -171,6 +188,10 @@ impl TreeNode {
             Some(Outcome::Draw) => true,
             _ => false,
         }
+    }
+
+    pub fn is_game_over_or_drawn(&self, game: &Chess) -> bool {
+        game.is_game_over() || game.halfmove_clock() >= MAX_HALFMOVE_CLOCK
     }
 
     /// Find the best child accoring to UCT1
@@ -220,12 +241,15 @@ impl TreeNode {
 
         let action = *choose_random(rng, &candidate_actions);
         game.make_move(&action);
+        let new_rep = self.repetition_detector.clone();
+        new_rep.record_and_check(game.board());
 
         self.children.push(TreeNode::new(
             Some(action),
             self.turn.not(),
             self.move_num + 0.5,
             Some(game.board().value()),
+            new_rep,
         ));
         thread_run_stats.nodes_created += 1;
         self.children.last_mut().unwrap()
@@ -306,6 +330,7 @@ impl TreeNode {
         settings: &Settings,
     ) -> f32 {
         thread_run_stats.iterations += 1;
+        debug_assert!(game.halfmove_clock() <= MAX_HALFMOVE_CLOCK);
         // println!("{}", self);
         let delta = match self.state {
             // NodeState::LeafNode => {
@@ -334,24 +359,21 @@ impl TreeNode {
                 );
                 if outcome_based_on_children.is_some() {
                     self.state = NodeState::LeafNode;
+                    thread_run_stats.leaf_nodes += 1;
+                    self.outcome = outcome_based_on_children;
+                    return self.outcome.unwrap().reward();
                 }
-                self.outcome = outcome_based_on_children;
-
                 delta
             }
             NodeState::Expandable => {
                 let allowed_actions = game.allowed_actions();
                 //TODO cleanup
-                if game.halfmove_clock() == 101 {
-                    self.state = NodeState::LeafNode;
-                    self.outcome = Some(Outcome::Draw);
-                    return 0.;
-                }
                 if allowed_actions.len() == 0 || game.is_insufficient_material() {
+                    panic!("shouldnt happen");
                     //TODO or 50 move rule
-                    self.state = NodeState::LeafNode;
-                    self.outcome = game.outcome();
-                    return self.outcome.unwrap().reward();
+                    // self.state = NodeState::LeafNode;
+                    // self.outcome = game.outcome();
+                    // return self.outcome.unwrap().reward();
                 }
                 let candidate_actions = self.candidate_actions(allowed_actions);
                 if candidate_actions.len() == 0 {
@@ -361,6 +383,7 @@ impl TreeNode {
                     self.outcome = self.outcome_based_on_immediate_children();
                     if self.outcome.is_some() {
                         self.state = NodeState::LeafNode;
+                        thread_run_stats.leaf_nodes += 1;
                         return self.outcome.unwrap().reward();
                     }
                     self.state = NodeState::FullyExpanded;
@@ -370,22 +393,28 @@ impl TreeNode {
                 //advances game to position after action
                 let (delta, outcome) = {
                     let mut child = self.expand(game, candidate_actions, rng, thread_run_stats);
-                    if game.is_game_over() {
+                    if game.halfmove_clock() == MAX_HALFMOVE_CLOCK {
+                        child.state = NodeState::LeafNode;
+                        thread_run_stats.leaf_nodes += 1;
+                        child.outcome = Some(Outcome::Draw);
+                        child.nn += 1.;
+                        (0., None)
+                    } else if game.is_game_over() {
                         // println!("FOUND CHECKMATE");
                         // println!("{:?}", game.board());
                         child.state = NodeState::LeafNode;
+                        thread_run_stats.leaf_nodes += 1;
                         child.outcome = game.outcome();
                         let delta = child.outcome.unwrap().reward();
                         child.nn += 1.;
                         child.nq += delta;
-                        thread_run_stats.leaf_nodes += 1;
-                        (delta + 5. * child.normalized_value(), child.outcome)
+                        (delta, child.outcome)
                     } else {
                         let played_game = playout(rng, game, thread_run_stats);
-                        let delta = played_game.outcome().map(|o| o.reward()).unwrap_or(0.);
+                        let delta = played_game.outcome().map_or(0., |o| o.reward());
                         child.nn += 1.;
                         child.nq += delta;
-                        (delta + 5. * child.normalized_value(), None)
+                        (delta + 5. * child.normalized_value().max(1.).min(-1.), None)
                     }
                 };
                 match outcome {
