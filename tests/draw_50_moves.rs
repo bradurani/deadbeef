@@ -36,5 +36,15 @@ fn draw_50_move_rule_in_6() {
 
 #[test]
 fn black_captures_to_prevent_draw() {
-    assert_mate_move("7k/7q/8/4p3/4P3/8/8/K7 b - - 99 150", "h7e4");
+    assert_move("7k/7q/8/4p3/4P3/8/8/K7 b - - 99 150", "h7e4");
+}
+
+#[test]
+fn black_captures_in_2_to_prevent_draw() {
+    assert_move("8/7r/8/4p3/2k1P3/8/8/1K6 b - - 98 150", "h7h4");
+}
+
+#[test]
+fn black_move_pawn_to_prevent_draw() {
+    assert_move("8/4p2r/8/8/2k5/8/8/1K6 b - - 100 150", "e7e5");
 }
