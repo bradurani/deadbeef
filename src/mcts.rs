@@ -45,7 +45,7 @@ impl TreeNode {
         turn: Color,
         move_num: f32,
         value: Option<i16>,
-        repetition_detector: RepetitionDetector,
+        rd: RepetitionDetector,
     ) -> TreeNode {
         TreeNode {
             outcome: None,
@@ -55,7 +55,7 @@ impl TreeNode {
             turn: turn,
             move_num: move_num,
             value: value,
-            repetition_detector: repetition_detector,
+            repetition_detector: rd,
             nn: 0.,
             nq: 0.,
             sn: 0.,
@@ -64,8 +64,6 @@ impl TreeNode {
     }
 
     pub fn new_root(game: &Chess, move_num: f32) -> TreeNode {
-        let repetition_detector = RepetitionDetector::default();
-        repetition_detector.record_and_check(&Board::default());
         TreeNode {
             outcome: None,
             action: None,
@@ -74,7 +72,7 @@ impl TreeNode {
             turn: game.turn(),  // So we switch to White for move 1
             move_num: move_num, //So we increment to 1 for move 1
             value: Some(game.board().value()),
-            repetition_detector: repetition_detector,
+            repetition_detector: RepetitionDetector::create_with_starting(game.board()),
             nn: 0.,
             nq: 0.,
             sn: 0.,
@@ -83,8 +81,6 @@ impl TreeNode {
     }
 
     pub fn starting() -> TreeNode {
-        let repetition_detector = RepetitionDetector::default();
-        repetition_detector.record_and_check(&Board::default());
         TreeNode {
             outcome: None,
             action: None,
@@ -93,7 +89,7 @@ impl TreeNode {
             turn: Color::White,
             move_num: 0.5,
             value: Some(Board::default().value()), //The starting position is not necessarily 0, so we calculate it
-            repetition_detector: repetition_detector,
+            repetition_detector: RepetitionDetector::starting(),
             nn: 0.,
             nq: 0.,
             sn: 0.,
@@ -110,7 +106,7 @@ impl TreeNode {
             turn: self.turn,
             move_num: self.move_num,
             value: self.value,
-            repetition_detector: self.repetition_detector,
+            repetition_detector: self.repetition_detector.clone(),
             nn: 0.,
             nq: 0.,
             sn: 0.,
@@ -127,7 +123,7 @@ impl TreeNode {
             turn: self.turn,
             move_num: self.move_num,
             value: self.value,
-            repetition_detector: self.repetition_detector,
+            repetition_detector: self.repetition_detector.clone(),
             nn: 0.,
             nq: 0.,
             sn: self.sn,
@@ -241,7 +237,7 @@ impl TreeNode {
 
         let action = *choose_random(rng, &candidate_actions);
         game.make_move(&action);
-        let new_rep = self.repetition_detector.clone();
+        let mut new_rep = self.repetition_detector.clone();
         new_rep.record_and_check(game.board());
 
         self.children.push(TreeNode::new(

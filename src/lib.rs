@@ -5,7 +5,6 @@
 #[macro_use]
 extern crate pretty_assertions;
 
-extern crate bloom;
 extern crate core;
 extern crate rand;
 extern crate separator;

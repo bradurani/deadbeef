@@ -1,38 +1,46 @@
-use bloom::BloomFilter;
 use shakmaty::Board;
+use std::collections::HashMap;
+use std::hash::{BuildHasherDefault, Hash};
+use twox_hash::XxHash;
+use utils::*;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct RepetitionDetector {
-    once: BloomFilter,
-    twice: BloomFilter,
+    map: HashMap<Board, u8, BuildHasherDefault<XxHash>>,
 }
 
 impl RepetitionDetector {
-    pub fn default() -> RepetitionDetector {
+    pub fn new() -> RepetitionDetector {
         RepetitionDetector {
-            once: bloom_filter(),
-            twice: bloom_filter(),
+            map: deterministic_hash_map(),
         }
     }
 
-    pub fn record_and_check(&self, board: &Board) -> u8 {
-        match self.once.contains(board) {
-            false => {
-                self.once.insert(board);
-                1
-            }
-            true => match self.twice.contains(board) {
-                false => {
-                    self.twice.insert(board);
-                    2
-                }
-                true => 3,
-            },
-        }
+    pub fn create_with_starting(starting_board: &Board) -> RepetitionDetector {
+        let mut detector = RepetitionDetector::new();
+        detector.record_and_check(starting_board);
+        detector
+    }
+
+    pub fn starting() -> RepetitionDetector {
+        RepetitionDetector::create_with_starting(&Board::new())
+    }
+
+    pub fn record_and_check(&mut self, board: &Board) -> u8 {
+        let entry = self.map.entry(board.clone()).or_insert(0);
+        *entry += 1;
+        debug_assert!(*entry < 3);
+        *entry
     }
 }
 
-fn bloom_filter() -> BloomFilter {
-    let mut filter: BloomFilter = BloomFilter::with_rate(0.0001, 300);
-    filter
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_increments_count() {
+        let mut rd = RepetitionDetector::starting();
+        assert_eq!(2, rd.record_and_check(&Board::new()));
+    }
 }
