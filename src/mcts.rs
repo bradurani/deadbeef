@@ -36,6 +36,8 @@ pub struct TreeNode {
     pub sn: f32,                 // saved n from previous searches
     pub sq: f32,                 // saved q from previous searchs. Used in UCT1, but not merged
     pub children: Vec<TreeNode>, // next steps we investigated
+    pub max_score: Option<u16>,
+    pub min_score: Option<u16>,
 }
 
 //TODO, make all contructors take a game, and never allow manual setting of value
@@ -56,6 +58,8 @@ impl TreeNode {
             move_num: move_num,
             value: value,
             repetition_detector: rd,
+            max_score: None,
+            min_score: None,
             nn: 0.,
             nq: 0.,
             sn: 0.,
@@ -77,6 +81,8 @@ impl TreeNode {
             nq: 0.,
             sn: 0.,
             sq: 0.,
+            max_score: None,
+            min_score: None,
         }
     }
 
@@ -94,6 +100,8 @@ impl TreeNode {
             nq: 0.,
             sn: 0.,
             sq: 0.,
+            max_score: None,
+            min_score: None,
         }
     }
 
@@ -111,6 +119,8 @@ impl TreeNode {
             nq: 0.,
             sn: 0.,
             sq: 0.,
+            max_score: None,
+            min_score: None,
         }
     }
 
@@ -128,6 +138,8 @@ impl TreeNode {
             nq: 0.,
             sn: self.sn,
             sq: self.sq,
+            max_score: None,
+            min_score: None,
         }
     }
 
@@ -190,11 +202,19 @@ impl TreeNode {
         game.is_game_over() || game.halfmove_clock() >= MAX_HALFMOVE_CLOCK
     }
 
+    pub fn winner(&self) -> Option<Color> {
+        self.outcome.and_then(|o| o.winner())
+    }
+
     /// Find the best child accoring to UCT1
     pub fn best_child(&mut self, settings: &Settings) -> &mut TreeNode {
         // println!("\n--");
         // println!("best_child for: {}", self);
-        debug_assert!(self.children.iter().any(|c| c.state != NodeState::LeafNode));
+        if cfg!(debug_assertions) {
+            if !self.children.iter().any(|c| c.state != NodeState::LeafNode) {
+                println!("found no best children \n{}", self);
+            }
+        }
 
         let mut best_weight: f32 = f32::NEG_INFINITY;
         let mut best_child: Option<&mut TreeNode> = None;
@@ -237,16 +257,15 @@ impl TreeNode {
 
         let action = *choose_random(rng, &candidate_actions);
         game.make_move(&action);
-        let mut new_rep = self.repetition_detector.clone();
-        new_rep.record_and_check(game.board());
-
-        self.children.push(TreeNode::new(
+        let new_rep = self.repetition_detector.clone();
+        let new_node = TreeNode::new(
             Some(action),
             self.turn.not(),
             self.move_num + 0.5,
             Some(game.board().value()),
             new_rep,
-        ));
+        );
+        self.children.push(new_node);
         thread_run_stats.nodes_created += 1;
         self.children.last_mut().unwrap()
     }
@@ -271,53 +290,48 @@ impl TreeNode {
         candidate_actions
     }
 
-    fn new_outcome_based_on_child(
+    fn set_outcome_based_on_child(
+        &mut self,
         child_outcome: Option<Outcome>,
-        child_turn: Color,
-        children: &Vec<TreeNode>,
-        game: &mut Chess,
-    ) -> Option<Outcome> {
-        //TODO, do we need to cache the results of this? otherwise it's calculated on every
-        //traveral
+        _game: &mut Chess,
+        thread_run_stats: &mut RunStats,
+    ) {
         match child_outcome {
-            Some(Outcome::Decisive { winner: color }) if color == child_turn.not() => {
-                // println!("checking for child mate. Looking for grandchildren");
-                // println!("{:?}", game.board());
-                if TreeNode::all_children_have_winning_grandchild(children, &game) {
-                    Some(Outcome::Decisive {
-                        winner: child_turn.not(),
-                    }) //can't escape checkmate. All moves are a win for parent
-                } else {
-                    None
+            // if parent has winning move
+            Some(Outcome::Decisive { winner }) if winner == self.turn.not() => {
+                // it's opponents turn, so checking if parent found a winner
+                if self
+                    .children
+                    .iter()
+                    .all(|c| c.winner().map_or(false, |w| w == self.turn.not()))
+                {
+                    self.outcome = Some(Outcome::Decisive {
+                        winner: self.turn.not(),
+                    });
+                    self.state = NodeState::LeafNode;
+                    thread_run_stats.leaf_nodes += 1;
                 }
             }
-            Some(Outcome::Decisive { winner: color }) if color == child_turn => {
-                Some(Outcome::Decisive { winner: child_turn }) //child has a winner, so parent has lost
+            Some(Outcome::Decisive { winner }) if winner == self.turn => {
+                // parent has a winning move so it's a win
+                self.outcome = Some(Outcome::Decisive { winner: self.turn });
+                self.state = NodeState::LeafNode;
+                thread_run_stats.leaf_nodes += 1;
             }
             Some(Outcome::Draw) => {
-                if children.iter().all(|c| match c.outcome {
-                    None => false,
-                    Some(Outcome::Draw) => true,
-                    Some(Outcome::Decisive { winner }) if winner == child_turn.not() => true,
-                    _ => panic!("discovered a drawn child in a node that should be a leaf already"),
-                }) {
-                    // We shouldn't get here if we've already discovered a win for child
-                    // If there are only draws and wins for parent, child will choose the draw
-                    // so it's a draw
-                    Some(Outcome::Draw)
-                } else {
-                    None
+                // self.min_score = Some(0);
+                if self.children.iter().all(|c| c.is_draw()) {
+                    // check for a very rare case where all grandchildren are draw by 50 move rule
+                    println!("ALL GRANDCHILDREN DRAW");
+                    self.max_score = Some(0);
+                    self.state = NodeState::LeafNode;
+                    self.outcome = Some(Outcome::Draw);
                 }
             }
-            _ => None,
+            _ => {}
         }
     }
 
-    /// Recursively perform an MCTS iteration.
-    ///
-    /// XXX A non-recursive implementation would probably be faster.
-    /// XXX But how to keep &mut pointers to all our parents while
-    /// XXX we fiddle with our leaf node?
     pub fn iteration(
         &mut self,
         game: &mut Chess,
@@ -329,108 +343,78 @@ impl TreeNode {
         debug_assert!(game.halfmove_clock() <= MAX_HALFMOVE_CLOCK);
         // println!("{}", self);
         let delta = match self.state {
-            // NodeState::LeafNode => {
-            //     // println!("{}", game.outcome().unwrap());
-            //     // game.reward()
-            //     thread_run_stats.leaf_nodes += 1;
-            //     self.outcome.unwrap().reward()
-            // }
             NodeState::FullyExpanded => {
-                let (delta, outcome) = {
+                let (delta, child_outcome) = {
                     let child = self.best_child(settings);
                     let mut child_game = game.clone(); //TODO don't clone if the move is reversible
                     child_game.make_move(&child.action.unwrap());
                     let delta = child.iteration(&mut child_game, rng, thread_run_stats, settings);
                     (delta, child.outcome)
                 };
-
-                //we've now looked at the first grandchild node, which has propogated the win
-                //back up if it's a checkmate for our opponent. Now check all of them to see if
-                //we can't avoid mate in N
-                let outcome_based_on_children = TreeNode::new_outcome_based_on_child(
-                    outcome,
-                    game.turn(),
-                    &self.children,
-                    game,
-                );
-                if outcome_based_on_children.is_some() {
-                    self.state = NodeState::LeafNode;
-                    thread_run_stats.leaf_nodes += 1;
-                    self.outcome = outcome_based_on_children;
-                    return self.outcome.unwrap().reward();
-                }
+                self.set_outcome_based_on_child(child_outcome, game, thread_run_stats);
                 delta
             }
             NodeState::Expandable => {
                 let allowed_actions = game.allowed_actions();
-                //TODO cleanup
-                if allowed_actions.len() == 0 || game.is_insufficient_material() {
-                    panic!("shouldnt happen");
-                    //TODO or 50 move rule
-                    // self.state = NodeState::LeafNode;
-                    // self.outcome = game.outcome();
-                    // return self.outcome.unwrap().reward();
-                }
                 let candidate_actions = self.candidate_actions(allowed_actions);
                 if candidate_actions.len() == 0 {
-                    //if we ended up expanded as the result fo a tree merge
-                    //TODO check if merging filled out all outcomes
-                    //TODO fix bugs related to
-                    self.outcome = self.outcome_based_on_immediate_children();
-                    if self.outcome.is_some() {
-                        self.state = NodeState::LeafNode;
-                        thread_run_stats.leaf_nodes += 1;
-                        return self.outcome.unwrap().reward();
-                    }
                     self.state = NodeState::FullyExpanded;
                     return self.iteration(game, rng, thread_run_stats, settings);
                 }
+                let last_child_expansion = candidate_actions.len() == 1;
 
                 //advances game to position after action
-                let (delta, outcome) = {
+                let (delta, outcome, min_score, node_state) = {
                     let mut child = self.expand(game, candidate_actions, rng, thread_run_stats);
-                    if game.halfmove_clock() == MAX_HALFMOVE_CLOCK {
+                    if game.halfmove_clock() == MAX_HALFMOVE_CLOCK
+                        || child.repetition_detector.record_and_check(game.board())
+                        || game.is_stalemate()
+                        || game.is_insufficient_material()
+                    {
                         child.state = NodeState::LeafNode;
                         thread_run_stats.leaf_nodes += 1;
                         child.outcome = Some(Outcome::Draw);
                         child.nn += 1.;
-                        (0., None)
-                    } else if game.is_game_over() {
-                        // println!("FOUND CHECKMATE");
+                        (0., None, Some(0), NodeState::Expandable)
+                    } else if game.is_checkmate() {
+                        // println!("FOUND OUTCOME");
                         // println!("{:?}", game.board());
                         child.state = NodeState::LeafNode;
-                        thread_run_stats.leaf_nodes += 1;
                         child.outcome = game.outcome();
+                        thread_run_stats.leaf_nodes += 1;
                         let delta = child.outcome.unwrap().reward();
                         child.nn += 1.;
                         child.nq += delta;
-                        (delta, child.outcome)
+                        (delta, child.outcome, None, NodeState::LeafNode)
                     } else {
                         let played_game = playout(rng, game, thread_run_stats);
                         let delta = played_game.outcome().map_or(0., |o| o.reward());
                         child.nn += 1.;
+                        let delta = (delta + 5. * child.normalized_value()).max(-1.).min(1.);
                         child.nq += delta;
-                        (delta + 5. * child.normalized_value().max(1.).min(-1.), None)
+                        (delta, None, None, NodeState::Expandable)
                     }
                 };
-                match outcome {
-                    None => {}
-                    Some(Outcome::Decisive { winner: _w }) => {
-                        // opponent can mate next move. Game is lost
+                if self.min_score == None {
+                    self.min_score = min_score;
+                }
+                if self.outcome == None {
+                    self.outcome = outcome;
+                }
+                self.state = node_state;
+                if last_child_expansion {
+                    // println!("LAST CHILD EXPANSION");
+                    // println!("{:?}", game.board());
+                    // if all children are draw, we're a draw
+                    if self.children.iter().all(|c| c.is_draw()) {
+                        self.outcome = Some(Outcome::Draw);
                         self.state = NodeState::LeafNode;
-                        self.outcome = outcome;
-                    }
-                    Some(Outcome::Draw) => {
-                        // opponent can force a draw
-                        // could we use this to prevent forced draw if we're ahead?
                     }
                 }
                 delta
             }
             _ => {
-                println!("IMPOSSIBLE ITERATION");
-                println!("{}", self);
-                panic!("unknown leaf node type")
+                panic!("IMPOSSIBLE ITERATION");
             }
         };
         self.nn += 1.;
@@ -438,63 +422,38 @@ impl TreeNode {
         delta
     }
 
-    fn all_children_have_winning_grandchild(children: &Vec<TreeNode>, game: &Chess) -> bool {
-        children.iter().all(|child| {
-            match child.outcome {
-                Some(Outcome::Decisive { winner: color }) if color == game.turn().not() => {
-                    // println!("found child mate");
-                    // println!("{:?}", child.action);
-                    true
-                }
-                Some(_) => false, // stalemate or win
-                None => {
-                    let mut child_game = game.clone();
-                    child_game.make_move(&child.action.unwrap());
-                    // println!("checking {:?}", child_game.board());
-                    let allowed_actions = child_game.allowed_actions();
-                    allowed_actions.iter().any(|aa| {
-                        //TODO don't clone if the move is reversible
-                        let mut grandchild_game = child_game.clone();
-                        grandchild_game.make_move(aa);
-                        // println!("IS THIS A CHECKMATE? {:?}", grandchild_game.board());
-                        // if grandchild_game.is_checkmate() {
-                        //     // println!("{}", "found grandchild mate");
-                        // }
-                        grandchild_game.is_checkmate()
-                    })
-                }
-            }
-        })
-    }
-
-    // If we fill up all the children, we have to check to see if they're all draws so we can
-    // propogate draw upwards. Also, we could ahve filled all children with own wins during tree
-    // merge, so we need to propogate that up too
-    fn outcome_based_on_immediate_children(&self) -> Option<Outcome> {
-        debug_assert!(self.outcome.is_none());
-        let mut outcome = Some(Outcome::Decisive {
-            winner: self.turn.not(),
-        }); //unless I find something better, it's a win for my opponent
-        for child in self.children.iter() {
-            match child.outcome {
-                Some(Outcome::Decisive { winner }) if winner == self.turn => {
-                    panic!("found own win");
-                } //if I have a winning move, I should already be set to LeafNode
-                Some(Outcome::Decisive { winner }) if winner == self.turn.not() => {
-                    continue;
-                }
-                Some(Outcome::Draw) => outcome = Some(Outcome::Draw),
-                None => {
-                    outcome = None;
-                    break;
-                }
-                _ => {
-                    panic!("impossible outcome");
-                }
-            }
-        }
-        outcome
-    }
+    // fn all_children_are_winning(&self, game: &Chess) -> bool {
+    //     println!("all_children \n{:?}", game.board());
+    //     self.children.iter().all(|child| {
+    //         println!("child: {:?}", child.action);
+    //         println!("child outcome: {:?}", child.outcome);
+    //         match child.outcome {
+    //             Some(Outcome::Decisive { winner }) if winner == self.turn => {
+    //                 println!("found child mate");
+    //                 println!("{:?}", child.action);
+    //                 self.max_score = Some(0);
+    //                 true
+    //             }
+    //             Some(_) => false, // stalemate or win
+    //             _ => false,       // None => {
+    //                                //     let mut child_game = game.clone();
+    //                                //     child_game.make_move(&child.action.unwrap());
+    //                                //     // println!("checking {:?}", child_game.board());
+    //                                //     let allowed_actions = child_game.allowed_actions();
+    //                                //     allowed_actions.iter().any(|aa| {
+    //                                //         //TODO don't clone if the move is reversible
+    //                                //         let mut grandchild_game = child_game.clone();
+    //                                //         grandchild_game.make_move(aa);
+    //                                //         // println!("IS THIS A CHECKMATE? {:?}", grandchild_game.board());
+    //                                //         // if grandchild_game.is_checkmate() {
+    //                                //         //     // println!("{}", "found grandchild mate");
+    //                                //         // }
+    //                                //         grandchild_game.is_checkmate()
+    //                                //     })
+    //                                // }
+    //         }
+    //     })
+    // }
 }
 
 #[derive(Debug)]
@@ -512,19 +471,15 @@ impl MCTS {
 
 #[cfg(test)]
 mod tests {
-    use mcts::TreeNode;
-    use settings::*;
+    use super::*;
+    use repetition_detector::*;
     use setup::*;
-    use shakmaty::{Color, Outcome};
-    use stats::RunStats;
-    use utils::*;
 
     #[test]
-    fn iteration_mate_in_1() {
+    fn test_iteration_mate_in_1() {
         let mut stats: RunStats = Default::default();
-        let (node, score) =
+        let (node, _score) =
             test_iteration_all_children_with_stats("4k3/Q7/5K2/8/8/8/8/8 w - - 0 1", &mut stats);
-        assert_eq!(1., score);
         assert_eq!(
             Outcome::Decisive {
                 winner: Color::White
@@ -532,11 +487,204 @@ mod tests {
             node.outcome.unwrap()
         );
         assert!(stats.iterations < 50);
+        assert_eq!(NodeState::LeafNode, node.state);
         println!("{}", stats);
     }
 
     #[test]
-    fn iteration_mate_in_2_1_choice() {
+    fn test_decisive_if_child_is_win() {
+        let mut stats: RunStats = Default::default();
+        let mut game = parse_fen("8/8/8/8/8/p2k4/r7/3K4 b - - 0 1");
+        let mut node = TreeNode {
+            outcome: None,
+            action: None,
+            children: vec![],
+            state: NodeState::Expandable,
+            turn: Color::Black,
+            move_num: 12.,
+            value: Some(6), //TODO make value not an option
+            repetition_detector: RepetitionDetector::new(),
+            max_score: None,
+            min_score: None,
+            nn: 1.,
+            nq: 0.,
+            sn: 0.,
+            sq: 0.,
+        };
+        let settings = Settings::lib_test_default();
+        let seed = 1; // should expand Ra1#
+        let delta = node.iteration(&mut game, &mut seeded_rng(seed), &mut stats, &settings);
+        assert_eq!(-1., delta);
+        assert_eq!(Some(Color::Black), node.winner());
+        assert_eq!(Color::Black, node.turn);
+        assert_eq!(NodeState::LeafNode, node.state);
+    }
+
+    #[test]
+    fn test_delta_1_in_dominate_position() {
+        let mut stats: RunStats = Default::default();
+        let mut game = parse_fen("8/8/8/8/8/p2k4/r7/3K4 b - - 0 1");
+        let mut node = TreeNode {
+            outcome: None,
+            action: None,
+            children: vec![],
+            state: NodeState::Expandable,
+            turn: Color::Black,
+            move_num: 12.,
+            value: Some(6), //TODO make value not an option
+            repetition_detector: RepetitionDetector::new(),
+            max_score: None,
+            min_score: None,
+            nn: 1.,
+            nq: 0.,
+            sn: 0.,
+            sq: 0.,
+        };
+        let settings = Settings::lib_test_default();
+        let seed = 2; // should NOT expand the winning Ra1#
+        let delta = node.iteration(&mut game, &mut seeded_rng(seed), &mut stats, &settings);
+        assert_eq!(-1., delta);
+        assert_eq!(None, node.outcome);
+        assert_eq!(Color::Black, node.turn);
+        assert_eq!(NodeState::Expandable, node.state);
+    }
+
+    #[test]
+    fn test_sets_min_score_if_child_is_draw() {
+        let mut stats: RunStats = Default::default();
+        let mut game = parse_fen("8/2kr4/8/8/8/3pK3/3Q4/8 b - - 0 1");
+        let mut repetition_detector = RepetitionDetector::new();
+        let drawing_position = parse_fen("8/2k1r3/8/8/8/3pK3/3Q4/8 w - - 0 1");
+        repetition_detector.record_and_check(drawing_position.board());
+        repetition_detector.record_and_check(drawing_position.board());
+        let mut node = TreeNode {
+            outcome: None,
+            action: None,
+            children: vec![],
+            state: NodeState::Expandable,
+            turn: Color::Black,
+            move_num: 12.,
+            value: Some(-100), //TODO make value not an option
+            repetition_detector: repetition_detector,
+            max_score: None,
+            min_score: Some(0),
+            nn: 1.,
+            nq: 0.,
+            sn: 0.,
+            sq: 0.,
+        };
+        let settings = Settings::lib_test_default();
+        let seed = 6;
+        let delta = node.iteration(&mut game, &mut seeded_rng(seed), &mut stats, &settings);
+        println!("{}", node);
+        assert_eq!(0., delta); //black is behind but has an option to draw, so delta is 0
+        assert_eq!(2., node.nn);
+        assert_eq!(None, node.outcome);
+        assert_eq!(Color::Black, node.turn);
+        assert_eq!(NodeState::Expandable, node.state);
+        assert_eq!(node.min_score, Some(0));
+        assert_eq!(node.max_score, None);
+    }
+
+    #[test]
+    fn test_is_draw_if_all_children_are_draws() {
+        let mut stats: RunStats = Default::default();
+        let game = parse_fen("q4rk1/5p2/8/6Q1/8/8/8/6K1 b - - 3 2");
+        let mut repetition_detector = RepetitionDetector::new();
+        let drawing_position_1 = parse_fen("q4r1k/5p2/8/6Q1/8/8/8/6K1 w - - 4 3");
+        let drawing_position_2 = parse_fen("q4r2/5p1k/8/6Q1/8/8/8/6K1 w - - 4 3");
+        repetition_detector.record_and_check(drawing_position_1.board());
+        repetition_detector.record_and_check(drawing_position_1.board());
+        repetition_detector.record_and_check(drawing_position_2.board());
+        repetition_detector.record_and_check(drawing_position_2.board());
+        let mut node = TreeNode {
+            outcome: None,
+            action: None,
+            children: vec![],
+            state: NodeState::Expandable,
+            turn: Color::Black,
+            move_num: 12.,
+            value: Some(-100), //TODO make value not an option
+            repetition_detector: repetition_detector,
+            max_score: None,
+            min_score: None,
+            nn: 1.,
+            nq: 0.,
+            sn: 0.,
+            sq: 0.,
+        };
+        let settings = Settings::lib_test_default();
+        let seed = 6;
+        node.iteration(
+            &mut game.clone(),
+            &mut seeded_rng(seed),
+            &mut stats,
+            &settings,
+        );
+        let delta = node.iteration(
+            &mut game.clone(),
+            &mut seeded_rng(seed),
+            &mut stats,
+            &settings,
+        );
+        println!("{}", node);
+        assert_eq!(0., delta);
+        assert_eq!(3., node.nn);
+        assert_eq!(Some(Outcome::Draw), node.outcome);
+        assert_eq!(Color::Black, node.turn);
+        assert_eq!(NodeState::LeafNode, node.state);
+        assert_eq!(None, node.max_score);
+        assert_eq!(Some(0), node.min_score);
+    }
+
+    #[test]
+    fn sets_max_score_if_opponent_can_force_draw() {
+        let mut stats: RunStats = Default::default();
+        let game = parse_fen("q4rk1/5p2/8/6Q1/8/8/8/6K1 b - - 3 2");
+        let mut repetition_detector = RepetitionDetector::new();
+        let drawing_position_1 = parse_fen("q4r1k/5p2/8/6Q1/8/8/8/6K1 w - - 4 3");
+        let drawing_position_2 = parse_fen("q4r2/5p1k/8/6Q1/8/8/8/6K1 w - - 4 3");
+        repetition_detector.record_and_check(drawing_position_1.board());
+        repetition_detector.record_and_check(drawing_position_2.board());
+        let mut node = TreeNode {
+            outcome: None,
+            action: None,
+            children: vec![],
+            state: NodeState::Expandable,
+            turn: Color::Black,
+            move_num: 12.,
+            value: Some(-100), //TODO make value not an option
+            repetition_detector: repetition_detector,
+            max_score: None,
+            min_score: None,
+            nn: 1.,
+            nq: 0.,
+            sn: 0.,
+            sq: 0.,
+        };
+        let settings = Settings::lib_test_default();
+        let seed = 6;
+        let mut delta = 0.;
+        for _i in 1..100000 {
+            delta = node.iteration(
+                &mut game.clone(),
+                &mut seeded_rng(seed),
+                &mut stats,
+                &settings,
+            );
+        }
+        println!("{}", node);
+        assert_eq!(-1., delta);
+        assert_eq!(3., node.nn);
+        assert_eq!(None, node.outcome);
+        assert_eq!(Color::Black, node.turn);
+        assert_eq!(NodeState::LeafNode, node.state);
+        assert_eq!(Some(0), node.max_score);
+        assert_eq!(None, node.min_score);
+    }
+
+    #[test]
+    fn test_iteration_mate_in_2_1_choice() {
         let mut stats: RunStats = Default::default();
         let (node, score) =
             test_iteration_all_children_with_stats("4q3/8/8/8/8/3k4/8/3K4 b - - 0 1", &mut stats);
@@ -553,7 +701,7 @@ mod tests {
     }
 
     #[test]
-    fn iteration_mate_in_2_2_choices() {
+    fn test_iteration_mate_in_2_2_choices() {
         let mut stats: RunStats = Default::default();
         let (node, score) = test_iteration_all_children_with_stats(
             "8/5Q2/1pkq2n1/pB2p3/4P3/1P2K3/2P5/8 b - - 1 1",
@@ -584,9 +732,9 @@ mod tests {
         while node.outcome.is_none() {
             last = node.iteration(&mut game.clone(), &mut rng, stats, &mut settings);
             counter += 1;
-            if counter > 100000 {
+            if counter > 150 {
                 println!("{}", node);
-                panic!("did not find checkmate");
+                panic!("did not find outcome");
             }
         }
         println!("found {:?}", node.outcome);

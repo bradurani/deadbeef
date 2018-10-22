@@ -1,6 +1,6 @@
 use shakmaty::Board;
 use std::collections::HashMap;
-use std::hash::{BuildHasherDefault, Hash};
+use std::hash::BuildHasherDefault;
 use twox_hash::XxHash;
 use utils::*;
 
@@ -26,11 +26,11 @@ impl RepetitionDetector {
         RepetitionDetector::create_with_starting(&Board::new())
     }
 
-    pub fn record_and_check(&mut self, board: &Board) -> u8 {
+    pub fn record_and_check(&mut self, board: &Board) -> bool {
         let entry = self.map.entry(board.clone()).or_insert(0);
         *entry += 1;
-        debug_assert!(*entry < 3);
-        *entry
+        debug_assert!(*entry < 4);
+        *entry == 3
     }
 }
 
@@ -41,6 +41,7 @@ mod test {
     #[test]
     fn test_increments_count() {
         let mut rd = RepetitionDetector::starting();
-        assert_eq!(2, rd.record_and_check(&Board::new()));
+        assert_eq!(false, rd.record_and_check(&Board::new()));
+        assert_eq!(true, rd.record_and_check(&Board::new()));
     }
 }
