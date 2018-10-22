@@ -5,7 +5,7 @@ use shakmaty::*;
 use stats::*;
 use std::fmt;
 
-const TREENODE_MAX_DISPLAY_DEPTH: u32 = 3;
+const TREENODE_MAX_DISPLAY_DEPTH: u32 = 5;
 
 impl fmt::Display for RunStats {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -75,7 +75,7 @@ impl fmt::Display for TreeNode {
             match node.action {
                 Some(a) => try!(writeln!(
                     f,
-                    "{}. {} {} q={} n={} s={} v={} {}",
+                    "{}. {} {} q={} n={} s={} v={} {} {} {}",
                     node.move_num,
                     a,
                     node.state,
@@ -83,23 +83,39 @@ impl fmt::Display for TreeNode {
                     node.total_n(),
                     node.color_relative_score(),
                     node.value.unwrap(),
+                    format_max(node.max_score),
+                    format_min(node.min_score),
                     format_outcome(node.outcome)
                 )),
                 None => try!(writeln!(
                     f,
-                    "{}. Root {} q={} n={} s={} v={} {}",
+                    "{}. Root {} q={} n={} s={} v={} {} {} {}",
                     node.move_num,
                     node.state,
                     node.total_q(),
                     node.total_n(),
                     node.color_relative_score(),
                     node.value.unwrap(),
+                    format_max(node.max_score),
+                    format_min(node.min_score),
                     format_outcome(node.outcome)
                 )),
             }
             if indent_level < max_indent_level - 1 {
                 for child in &node.children {
                     try!(fmt_subtree(f, child, indent_level + 1, max_indent_level));
+                }
+            }
+            fn format_max(max_score: Option<u16>) -> String {
+                match max_score {
+                    None => String::new(),
+                    Some(m) => format!("max {}", m),
+                }
+            }
+            fn format_min(min_score: Option<u16>) -> String {
+                match min_score {
+                    None => String::new(),
+                    Some(m) => format!("min {}", m),
                 }
             }
             write!(f, "")

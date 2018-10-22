@@ -33,3 +33,5 @@ fn stalemate_queen_trade() {
     assert_draw("8/8/6Q1/2p5/1pk3nb/5q2/5R2/r1N1K3 w - - 0 1", &mut stats);
     assert!(stats.nodes_created < 30);
 }
+
+"3r3k/4KQ2/8/8/8/8/8/8 b - - 51 87"
