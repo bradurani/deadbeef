@@ -9,6 +9,7 @@ use shakmaty::*;
 use stats::*;
 use std::f32;
 use std::ops::Not;
+use uct::*;
 use utils::*;
 
 const MAX_VALUE: f32 = 900.;
@@ -160,7 +161,7 @@ impl TreeNode {
                 Color::Black => f32::NEG_INFINITY,
             },
             Some(Outcome::Draw) => 0.,
-            _ => self.turn.not().coefficient() * self.sn,
+            _ => self.turn.not().coefficient() * self.total_n(),
         }
     }
 
@@ -204,45 +205,6 @@ impl TreeNode {
 
     pub fn winner(&self) -> Option<Color> {
         self.outcome.and_then(|o| o.winner())
-    }
-
-    /// Find the best child accoring to UCT1
-    pub fn best_child(&mut self, settings: &Settings) -> &mut TreeNode {
-        // println!("\n--");
-        // println!("best_child for: {}", self);
-        if cfg!(debug_assertions) {
-            if !self.children.iter().any(|c| c.state != NodeState::LeafNode) {
-                println!("found no best children \n{}", self);
-            }
-        }
-
-        let mut best_weight: f32 = f32::NEG_INFINITY;
-        let mut best_child: Option<&mut TreeNode> = None;
-        let self_total_n = self.total_n();
-        //TODO try alpha zerp version, MCTS-Solver version and Wikipedia weighted version (are they
-        //the same) can eval be used as any of the factors
-        for child in &mut self.children {
-            // println!("child: {}", child);
-            if child.state == NodeState::LeafNode {
-                continue;
-            }
-            let mut weight = (self.turn.coefficient() * child.total_q()) / child.total_n()
-                + settings.c * (self_total_n.ln() / child.total_n()).sqrt();
-            // println!("raw weight {}", weight);
-            // weight += 2. * (child.normalized_color_relative_value() as f32 / child.total_n());
-            weight += child.normalized_color_relative_value() * 5.;
-            // println!("weighted weight {}", weight);
-            // println!("value {}", value);
-            //TODO what is this 2. ?????
-            // println!("child: {:?} total: {}", child, child.total_n());
-            // println!("value: {}", value);
-            if weight > best_weight {
-                best_weight = weight;
-                best_child = Some(child);
-            }
-        }
-        let found_best_child = best_child.unwrap();
-        found_best_child
     }
 
     /// Add a child to the current node with an previously unexplored action.
@@ -370,7 +332,7 @@ impl TreeNode {
         let delta = match self.state {
             NodeState::FullyExpanded => {
                 let (delta, child_outcome, child_max_score, child_min_score) = {
-                    let child = self.best_child(settings);
+                    let child = best_child(self, settings);
                     let mut child_game = game.clone(); //TODO don't clone if the move is reversible
                     child_game.make_move(&child.action.unwrap());
                     let delta = child.iteration(&mut child_game, rng, thread_run_stats, settings);
@@ -418,10 +380,10 @@ impl TreeNode {
                         child.nq += delta;
                         (delta, child.outcome, None, NodeState::LeafNode)
                     } else {
-                        let played_game = playout(rng, game, thread_run_stats);
-                        let delta = played_game.outcome().map_or(0., |o| o.reward());
+                        // let played_game = playout(rng, game, thread_run_stats);
+                        // let delta = played_game.outcome().map_or(0., |o| o.reward());
                         child.nn += 1.;
-                        let delta = delta + 5. * child.normalized_value(); //.max(-1.).min(1.);
+                        let delta = child.normalized_value(); //delta + child.normalized_value();
                         child.nq += delta;
                         (delta, None, None, NodeState::Expandable)
                     }
@@ -704,7 +666,7 @@ mod tests {
                 &mut stats,
                 &settings,
             );
-            if node.outcome.is_some() {
+            if node.max_score.is_some() || node.outcome.is_some() {
                 break;
             }
         }
@@ -768,6 +730,52 @@ mod tests {
     }
 
     #[test]
+    fn test_response_to_c4() {
+        let mut stats: RunStats = Default::default();
+        let game = parse_fen("rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq d3 0 1");
+        let mut repetition_detector = RepetitionDetector::new();
+        let mut node = TreeNode {
+            outcome: None,
+            action: None,
+            children: vec![],
+            state: NodeState::Expandable,
+            turn: Color::White,
+            move_num: 12.,
+            value: Some(-100), //TODO make value not an option
+            repetition_detector: repetition_detector,
+            max_score: None,
+            min_score: None,
+            nn: 1.,
+            nq: 0.,
+            sn: 0.,
+            sq: 0.,
+        };
+        let settings = Settings::lib_test_default();
+        let seed = 1;
+        let mut delta = 0.;
+        let n = 9000.;
+        for _i in 0..n as u32 {
+            delta = node.iteration(
+                &mut game.clone(),
+                &mut seeded_rng(seed),
+                &mut stats,
+                &settings,
+            );
+            if node.outcome.is_some() {
+                break;
+            }
+        }
+        println!("{}", node);
+        assert_eq!(Some(Outcome::Draw), node.outcome);
+        // assert_eq!(-1., delta);
+        assert_eq!(n + 1., node.nn);
+        assert_eq!(Color::White, node.turn);
+        assert_eq!(NodeState::LeafNode, node.state);
+        assert_eq!(Some(0), node.min_score);
+        assert_eq!(Some(0), node.max_score);
+    }
+
+    #[test]
     fn test_iteration_mate_in_2_1_choice() {
         let mut stats: RunStats = Default::default();
         let (node, score) =
@@ -781,7 +789,7 @@ mod tests {
             },
             node.outcome.unwrap()
         );
-        assert!(stats.nodes_created < 150);
+        assert!(stats.nodes_created < 1000);
     }
 
     #[test]
@@ -816,7 +824,7 @@ mod tests {
         while node.outcome.is_none() {
             last = node.iteration(&mut game.clone(), &mut rng, stats, &mut settings);
             counter += 1;
-            if counter > 150 {
+            if counter > 1000 {
                 println!("{}", node);
                 panic!("did not find outcome");
             }

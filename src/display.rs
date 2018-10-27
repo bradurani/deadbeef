@@ -5,7 +5,7 @@ use shakmaty::*;
 use stats::*;
 use std::fmt;
 
-const TREENODE_MAX_DISPLAY_DEPTH: u32 = 5;
+const TREENODE_MAX_DISPLAY_DEPTH: u32 = 3;
 
 impl fmt::Display for RunStats {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -80,8 +80,8 @@ impl fmt::Display for TreeNode {
                     a,
                     node.state,
                     node.total_q(),
-                    node.total_n(),
                     node.color_relative_score(),
+                    node.total_n(),
                     node.value.unwrap(),
                     format_max(node.max_score),
                     format_min(node.min_score),

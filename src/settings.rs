@@ -21,10 +21,10 @@ impl Settings {
         Settings {
             starting_position: Chess::default(),
             starting_move_num: 1.0,
-            time_per_move_ms: 1000.0,
+            time_per_move_ms: 2000.0,
             n_samples: -1,
             ensemble_size: 8,
-            c: 1.,
+            c: 10.,
             starting_seed: 1,
             starting_iterations_per_ms: 0.5,
             search_type: SearchType::Time,
