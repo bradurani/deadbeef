@@ -79,8 +79,6 @@ pub fn find_best_move(
 }
 
 fn best_child_node(root: TreeNode) -> TreeNode {
-    debug_assert_eq!(0., root.nn); // shoud have a merged node with no new calculations
-    debug_assert_eq!(0., root.nq);
     // TODO try the equation from the MCTS-Solver paper
     root.children
         .into_iter()

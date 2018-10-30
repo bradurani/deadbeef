@@ -27,11 +27,8 @@ pub fn search(
         SearchType::Mate => search_to_outcome(root, &game, move_run_stats, settings),
     };
 
-    new_root
-        .children
-        .iter()
-        .for_each(|c| println!("\nchild\n{}", c));
-    // println!("End: {}", TreeStats::tree_stats(&root));
+    println!("\nnew_root\n{}", new_root);
+    println!("End: {}", TreeStats::tree_stats(&new_root));
 
     new_root
 }
@@ -134,7 +131,7 @@ pub fn search_samples(
 }
 
 pub fn search_threaded_batch(
-    root: TreeNode,
+    mut root: TreeNode,
     game: &Chess,
     batch_n_samples: usize,
     batch_run_stats: &mut RunStats,
@@ -143,11 +140,12 @@ pub fn search_threaded_batch(
     debug_assert!(batch_n_samples >= settings.min_batch_size);
     debug_assert!(batch_n_samples <= settings.max_batch_size);
 
-    let coefficient = root.turn.coefficient();
-    let total_n = root.total_n();
+    // let coefficient = root.turn.coefficient();
+    // let total_n = root.total_n();
 
-    let mut new_root = root.clone_childless();
     // sort_children_by_weight(&mut root.children, coefficient, total_n, settings);
+    let mut new_root = root.clone_childless();
+    ensure_expanded(&mut root, game, batch_run_stats, settings); //for a new game where root has no children, expand them
 
     let thread_result_handles: Vec<JoinHandle<(SafeTreeNode, RunStats)>> = root
         .children
@@ -168,7 +166,7 @@ pub fn search_threaded_batch(
                 let mut thread_child = safe_thread_child.lock().unwrap();
                 for _n in 0..batch_n_samples {
                     if thread_child.has_outcome() {
-                        // println!("found decisive in thread {}", thread_num);
+                        println!("found decisive in thread {}", thread_num);
                         break;
                     }
                     thread_run_stats.samples += 1;
@@ -182,7 +180,7 @@ pub fn search_threaded_batch(
                 let time_spent = t0.elapsed().as_millis();
                 thread_run_stats.total_time = time_spent as u64;
                 // println!("thread: {}", thread_run_stats);
-                // println!("thread root: {}\n", thread_root);
+                // println!("thread child: {:?}\n", thread_child);
                 (safe_thread_child.clone(), thread_run_stats) // only Arc reference is cloned
             })
         })
@@ -199,8 +197,16 @@ pub fn search_threaded_batch(
                 .expect("unwrapping mutex")
         })
         .collect();
+
     new_root.children = new_children;
     new_root
+}
+
+fn ensure_expanded(root: &mut TreeNode, game: &Chess, stats: &mut RunStats, settings: &Settings) {
+    let mut rng = seeded_rng(settings.starting_seed);
+    while ![NodeState::FullyExpanded, NodeState::LeafNode].contains(&root.state) {
+        root.iteration(&mut game.clone(), &mut rng, stats, settings);
+    }
 }
 
 #[cfg(test)]

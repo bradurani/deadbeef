@@ -369,11 +369,17 @@ impl TreeNode {
             NodeState::Expandable => {
                 let allowed_actions = game.allowed_actions();
                 let candidate_actions = self.candidate_actions(allowed_actions);
-                if candidate_actions.len() == 0 {
-                    self.state = NodeState::FullyExpanded;
-                    return self.iteration(game, rng, thread_run_stats, settings);
+                println!("board\n{}", game.board());
+                println!("self\n{}", self);
+                debug_assert!(candidate_actions.len() > 0);
+                let mut last_child_expansion = false;
+                let mut new_state = self.state;
+
+                if candidate_actions.len() == 1 {
+                    new_state = NodeState::FullyExpanded;
+                    println!("SETTING EXPANDED ");
+                    last_child_expansion = true;
                 }
-                let last_child_expansion = candidate_actions.len() == 1;
 
                 //advances game to position after action
                 let (delta, outcome, min_score, node_state) = {
@@ -387,7 +393,7 @@ impl TreeNode {
                         thread_run_stats.leaf_nodes += 1;
                         child.outcome = Some(Outcome::Draw);
                         child.nn += 1.;
-                        (0., None, Some(0), NodeState::Expandable)
+                        (0., None, Some(0), new_state)
                     } else if game.is_checkmate() {
                         // println!("FOUND OUTCOME");
                         // println!("{:?}", game.board());
@@ -404,7 +410,7 @@ impl TreeNode {
                         child.nn += 1.;
                         let delta = child.normalized_value(); //delta + child.normalized_value();
                         child.nq += delta;
-                        (delta, None, None, NodeState::Expandable)
+                        (delta, None, None, new_state)
                     }
                 };
                 if self.min_score == None {
@@ -414,6 +420,7 @@ impl TreeNode {
                     self.outcome = outcome;
                 }
                 self.state = node_state;
+                println!("set node state to: {}", node_state);
                 if last_child_expansion {
                     // println!("LAST CHILD EXPANSION");
                     // println!("{:?}", game.board());
