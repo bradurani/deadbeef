@@ -1,13 +1,17 @@
+use game::*;
 use mcts::*;
 use settings::*;
 use shakmaty::*;
 use stats::*;
 use std::io::*;
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::thread::JoinHandle;
 use std::time::Instant;
-use tree_merge::timed_merge_trees;
+use uct::*;
 use utils::*;
+
+type SafeTreeNode = Arc<Mutex<TreeNode>>;
 
 pub fn search(
     root: TreeNode,
@@ -23,8 +27,12 @@ pub fn search(
         SearchType::Mate => search_to_outcome(root, &game, move_run_stats, settings),
     };
 
-    println!("new root {}", new_root);
-    println!("End: {}", TreeStats::tree_stats(&new_root));
+    new_root
+        .children
+        .iter()
+        .for_each(|c| println!("\nchild\n{}", c));
+    // println!("End: {}", TreeStats::tree_stats(&root));
+
     new_root
 }
 
@@ -73,7 +81,6 @@ pub fn search_time(
     }
 
     println!("iterations_per_ms: {}", mcts.iterations_per_ms);
-
     new_root
 }
 
@@ -136,10 +143,20 @@ pub fn search_threaded_batch(
     debug_assert!(batch_n_samples >= settings.min_batch_size);
     debug_assert!(batch_n_samples <= settings.max_batch_size);
 
-    let thread_result_handles: Vec<JoinHandle<(TreeNode, RunStats)>> = (0..settings.ensemble_size)
-        .map(|thread_num| {
+    let coefficient = root.turn.coefficient();
+    let total_n = root.total_n();
+
+    let mut new_root = root.clone_childless();
+    // sort_children_by_weight(&mut root.children, coefficient, total_n, settings);
+
+    let thread_result_handles: Vec<JoinHandle<(SafeTreeNode, RunStats)>> = root
+        .children
+        .into_iter()
+        // .take(settings.threads)
+        .map(|child| Arc::new(Mutex::new(child)))
+        .enumerate()
+        .map(|(thread_num, safe_thread_child)| {
             let thread_game = game.clone();
-            let mut thread_root = root.clone();
             let mut rng = seeded_rng(settings.starting_seed + thread_num as u8);
             let mut thread_run_stats: RunStats = Default::default();
             let thread_settings = settings.clone();
@@ -148,13 +165,14 @@ pub fn search_threaded_batch(
                 //Run iterations with playouts for this time slice
                 let t0 = Instant::now();
 
+                let mut thread_child = safe_thread_child.lock().unwrap();
                 for _n in 0..batch_n_samples {
-                    if thread_root.has_outcome() {
+                    if thread_child.has_outcome() {
                         // println!("found decisive in thread {}", thread_num);
                         break;
                     }
                     thread_run_stats.samples += 1;
-                    thread_root.iteration(
+                    thread_child.iteration(
                         &mut thread_game.clone(),
                         &mut rng,
                         &mut thread_run_stats,
@@ -165,28 +183,24 @@ pub fn search_threaded_batch(
                 thread_run_stats.total_time = time_spent as u64;
                 // println!("thread: {}", thread_run_stats);
                 // println!("thread root: {}\n", thread_root);
-                (thread_root, thread_run_stats)
+                (safe_thread_child.clone(), thread_run_stats) // only Arc reference is cloned
             })
         })
         .collect();
 
-    let (thread_roots, thread_run_stats) = thread_result_handles
+    let new_children = thread_result_handles
         .into_iter()
         .map(|th| th.join().expect("panicked joining threads"))
-        .fold(
-            (vec![], vec![]),
-            |(mut roots, mut stats), (thread_root, thread_run_stats)| {
-                roots.push(thread_root);
-                stats.push(thread_run_stats);
-                (roots, stats)
-            },
-        );
-
-    for stats in thread_run_stats {
-        batch_run_stats.add_thread_stats(&stats, settings.ensemble_size);
-    }
-
-    timed_merge_trees(root, thread_roots.to_vec(), batch_run_stats)
+        .map(|(safe_thread_child, thread_run_stats)| {
+            batch_run_stats.add_thread_stats(&thread_run_stats, settings.threads);
+            Arc::try_unwrap(safe_thread_child)
+                .expect("unwraping arc")
+                .into_inner()
+                .expect("unwrapping mutex")
+        })
+        .collect();
+    new_root.children = new_children;
+    new_root
 }
 
 #[cfg(test)]

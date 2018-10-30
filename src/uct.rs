@@ -1,6 +1,7 @@
 use game::*;
 use mcts::*;
 use settings::*;
+use std::cmp::Ordering::*;
 use std::f32;
 
 pub fn best_child<'a>(parent: &'a mut TreeNode, settings: &Settings) -> &'a mut TreeNode {
@@ -43,7 +44,7 @@ pub fn best_child<'a>(parent: &'a mut TreeNode, settings: &Settings) -> &'a mut 
     found_best_child
 }
 
-fn weight(
+pub fn weight(
     child: &TreeNode,
     parent_coefficient: f32,
     parent_total_n: f32,
@@ -54,4 +55,31 @@ fn weight(
     // println!("raw weight {}", weight);
     weight += child.normalized_color_relative_value(); // / child.total_n();
     weight
+}
+
+pub fn sort_children_by_weight(
+    children: &mut Vec<TreeNode>,
+    parent_coefficient: f32,
+    parent_total_n: f32,
+    settings: &Settings,
+) {
+    if cfg!(debug_assertions) {
+        if !children.iter().any(|c| c.state != NodeState::LeafNode) {
+            println!("found no best children \n");
+        }
+    }
+
+    children.sort_by(|a, b| {
+        if a.state == NodeState::LeafNode && b.state == NodeState::LeafNode {
+            Equal
+        } else if a.state == NodeState::LeafNode {
+            Less
+        } else if b.state == NodeState::LeafNode {
+            Greater
+        } else {
+            weight(b, parent_coefficient, parent_total_n, settings)
+                .partial_cmp(&weight(a, parent_coefficient, parent_total_n, settings))
+                .unwrap_or(Equal)
+        }
+    });
 }

@@ -144,6 +144,25 @@ impl TreeNode {
         }
     }
 
+    pub fn clone_with_new_children(&self, children: Vec<TreeNode>) -> TreeNode {
+        TreeNode {
+            outcome: self.outcome,
+            action: self.action,
+            children: children,
+            state: self.state,
+            turn: self.turn,
+            move_num: self.move_num,
+            value: self.value,
+            repetition_detector: self.repetition_detector.clone(),
+            nn: 0.,
+            nq: 0.,
+            sn: self.sn,
+            sq: self.sq,
+            max_score: None,
+            min_score: None,
+        }
+    }
+
     // saved ns from previous searches plus ns found in this search
     // used for UT
     pub fn total_n(&self) -> f32 {
@@ -631,6 +650,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_sets_max_score_if_opponent_can_force_draw() {
         let mut stats: RunStats = Default::default();
         let game = parse_fen("q4rk1/5p2/8/6Q1/8/8/8/6K1 b - - 3 2");

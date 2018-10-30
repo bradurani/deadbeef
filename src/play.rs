@@ -18,8 +18,9 @@ pub fn play_game(settings: &Settings) -> Vec<Move> {
     let t0 = Instant::now();
 
     loop {
+        let temp_root = root; // silly hack: https://stackoverflow.com/questions/37986640/cannot-obtain-a-mutable-reference-when-iterating-a-recursive-structure-cannot-b
         let mut move_run_stats: RunStats = Default::default();
-        let new_root = find_best_move(root, &game, &mut move_run_stats, settings);
+        let new_root = find_best_move(temp_root, &game, &mut move_run_stats, settings);
 
         match new_root {
             None => break,

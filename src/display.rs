@@ -149,7 +149,7 @@ impl fmt::Display for Settings {
             // self.starting_move_num,
             // self.starting_position.board(),
             search_params(self),
-            self.ensemble_size,
+            self.threads,
             self.c,
             self.starting_seed,
         )

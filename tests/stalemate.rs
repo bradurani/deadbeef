@@ -34,4 +34,4 @@ fn stalemate_queen_trade() {
     assert!(stats.nodes_created < 30);
 }
 
-"3r3k/4KQ2/8/8/8/8/8/8 b - - 51 87"
+// "3r3k/4KQ2/8/8/8/8/8/8 b - - 51 87"
