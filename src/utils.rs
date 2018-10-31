@@ -6,6 +6,7 @@ use std::hash::{BuildHasherDefault, Hash};
 use twox_hash::XxHash;
 
 pub fn choose_random<'a, T, R: Rng>(rng: &mut R, vec: &'a Vec<T>) -> &'a T {
+    debug_assert!(vec.len() > 0);
     rng.next_u32();
     rng.choose(&vec).unwrap()
 }

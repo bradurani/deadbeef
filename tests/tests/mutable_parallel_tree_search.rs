@@ -20,8 +20,7 @@ fn main() {
     };
     for _i in 1..5 {
         // for 5 turns, deepen search tree and pick best move
-        let temp = root;
-        root = find_best_child(temp);
+        root = find_best_child(root);
         println!("{:#?}", root);
     }
 }

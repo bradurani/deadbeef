@@ -271,12 +271,11 @@ impl TreeNode {
         candidate_actions
     }
 
-    fn set_outcome_based_on_child(
+    pub fn set_outcome_based_on_child(
         &mut self,
         child_outcome: Option<Outcome>,
         child_min_score: Option<u16>,
         child_max_score: Option<u16>,
-        _game: &mut Chess,
         thread_run_stats: &mut RunStats,
     ) {
         match child_outcome {
@@ -284,10 +283,12 @@ impl TreeNode {
                 self.set_best_outcome_from_child_draw_or_loss(child_outcome, thread_run_stats)
             }
             Some(Outcome::Decisive { winner }) if winner == self.turn.not() => {
+                // one of the children is a win for opponent. Check if they all are and if so,
+                // we have no good move, so we've lost
                 self.set_best_outcome_from_child_draw_or_loss(child_outcome, thread_run_stats)
             }
             Some(Outcome::Decisive { winner }) if winner == self.turn => {
-                // parent has a winning move so it's a win
+                // one of the children is a winning move for this parent, so this node is a one
                 self.outcome = Some(Outcome::Decisive { winner: self.turn });
                 self.state = NodeState::LeafNode;
                 thread_run_stats.leaf_nodes += 1;
@@ -361,7 +362,6 @@ impl TreeNode {
                     child_outcome,
                     child_min_score,
                     child_max_score,
-                    game,
                     thread_run_stats,
                 );
                 delta
@@ -369,15 +369,12 @@ impl TreeNode {
             NodeState::Expandable => {
                 let allowed_actions = game.allowed_actions();
                 let candidate_actions = self.candidate_actions(allowed_actions);
-                println!("board\n{}", game.board());
-                println!("self\n{}", self);
                 debug_assert!(candidate_actions.len() > 0);
                 let mut last_child_expansion = false;
                 let mut new_state = self.state;
 
                 if candidate_actions.len() == 1 {
                     new_state = NodeState::FullyExpanded;
-                    println!("SETTING EXPANDED ");
                     last_child_expansion = true;
                 }
 
@@ -420,10 +417,7 @@ impl TreeNode {
                     self.outcome = outcome;
                 }
                 self.state = node_state;
-                println!("set node state to: {}", node_state);
                 if last_child_expansion {
-                    // println!("LAST CHILD EXPANSION");
-                    // println!("{:?}", game.board());
                     // if all children are draw, we're a draw
                     if self.children.iter().all(|c| c.is_draw()) {
                         self.outcome = Some(Outcome::Draw);

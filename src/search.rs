@@ -146,15 +146,16 @@ pub fn search_threaded_batch(
     // sort_children_by_weight(&mut root.children, coefficient, total_n, settings);
     let mut new_root = root.clone_childless();
     ensure_expanded(&mut root, game, batch_run_stats, settings); //for a new game where root has no children, expand them
+    new_root.state = NodeState::FullyExpanded;
 
-    let thread_result_handles: Vec<JoinHandle<(SafeTreeNode, RunStats)>> = root
+    let thread_result_handles: Vec<JoinHandle<(SafeTreeNode, f32, f32, RunStats)>> = root
         .children
         .into_iter()
         // .take(settings.threads)
         .map(|child| Arc::new(Mutex::new(child)))
         .enumerate()
         .map(|(thread_num, safe_thread_child)| {
-            let thread_game = game.clone();
+            let mut thread_game = game.clone();
             let mut rng = seeded_rng(settings.starting_seed + thread_num as u8);
             let mut thread_run_stats: RunStats = Default::default();
             let thread_settings = settings.clone();
@@ -164,33 +165,41 @@ pub fn search_threaded_batch(
                 let t0 = Instant::now();
 
                 let mut thread_child = safe_thread_child.lock().unwrap();
+                thread_game.make_move(&thread_child.action.unwrap());
+
+                let mut new_n = 0.;
+                let mut new_q = 0.;
                 for _n in 0..batch_n_samples {
                     if thread_child.has_outcome() {
                         println!("found decisive in thread {}", thread_num);
                         break;
                     }
                     thread_run_stats.samples += 1;
-                    thread_child.iteration(
+                    new_q += thread_child.iteration(
                         &mut thread_game.clone(),
                         &mut rng,
                         &mut thread_run_stats,
                         &thread_settings,
                     );
+                    new_n += 1.;
                 }
                 let time_spent = t0.elapsed().as_millis();
                 thread_run_stats.total_time = time_spent as u64;
                 // println!("thread: {}", thread_run_stats);
                 // println!("thread child: {:?}\n", thread_child);
-                (safe_thread_child.clone(), thread_run_stats) // only Arc reference is cloned
+                (safe_thread_child.clone(), new_n, new_q, thread_run_stats) // only Arc reference is cloned
             })
         })
         .collect();
 
-    let new_children = thread_result_handles
+    let new_children: Vec<TreeNode> = thread_result_handles
         .into_iter()
         .map(|th| th.join().expect("panicked joining threads"))
-        .map(|(safe_thread_child, thread_run_stats)| {
+        .map(|(safe_thread_child, new_n, new_q, thread_run_stats)| {
+            // add stats from the children here, so we have a reference to new_root again
             batch_run_stats.add_thread_stats(&thread_run_stats, settings.threads);
+            new_root.nn += new_n;
+            new_root.nq += new_q;
             Arc::try_unwrap(safe_thread_child)
                 .expect("unwraping arc")
                 .into_inner()
@@ -198,6 +207,11 @@ pub fn search_threaded_batch(
         })
         .collect();
 
+    // set the outcome based on the children. Needs refactor
+    for c in new_children.iter() {
+        // this is inefficient because this method was designed to be used in iterate()
+        new_root.set_outcome_based_on_child(c.outcome, c.min_score, c.max_score, batch_run_stats);
+    }
     new_root.children = new_children;
     new_root
 }

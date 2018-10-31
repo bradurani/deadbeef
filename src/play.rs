@@ -29,9 +29,6 @@ pub fn play_game(settings: &Settings) -> Vec<Move> {
                 move_history.push(best_move);
                 game.make_move(&best_move);
                 root = found_new_root;
-
-                println!("{:?}", game.board());
-                println!("Move: {}", best_move);
             }
         }
         game_run_stats.add(&move_run_stats);
