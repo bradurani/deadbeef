@@ -8,7 +8,6 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::thread::JoinHandle;
 use std::time::Instant;
-use uct::*;
 use utils::*;
 
 type SafeTreeNode = Arc<Mutex<TreeNode>>;
@@ -27,7 +26,7 @@ pub fn search(
         SearchType::Mate => search_to_outcome(root, &game, move_run_stats, settings),
     };
 
-    println!("\nnew_root\n{}", new_root);
+    // println!("\nnew_root\n{}", new_root);
     println!("End: {}", TreeStats::tree_stats(&new_root));
 
     new_root
@@ -198,8 +197,8 @@ pub fn search_threaded_batch(
         .map(|(safe_thread_child, new_n, new_q, thread_run_stats)| {
             // add stats from the children here, so we have a reference to new_root again
             batch_run_stats.add_thread_stats(&thread_run_stats, settings.threads);
-            new_root.nn += new_n;
-            new_root.nq += new_q;
+            new_root.n += new_n;
+            new_root.q += new_q;
             Arc::try_unwrap(safe_thread_child)
                 .expect("unwraping arc")
                 .into_inner()

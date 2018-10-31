@@ -21,7 +21,7 @@ impl Settings {
         Settings {
             starting_position: Chess::default(),
             starting_move_num: 1.0,
-            time_per_move_ms: 2000.0,
+            time_per_move_ms: 1000.0,
             n_samples: -1,
             threads: 8,
             c: 10.,

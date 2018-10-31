@@ -32,10 +32,8 @@ pub struct TreeNode {
     //TODO don't need move number
     pub move_num: f32,
     pub repetition_detector: RepetitionDetector,
-    pub nn: f32,                 //new qs computed during this search
-    pub nq: f32,                 //new qs computed during this search
-    pub sn: f32,                 // saved n from previous searches
-    pub sq: f32,                 // saved q from previous searchs. Used in UCT1, but not merged
+    pub n: f32,                  //new qs computed during this search
+    pub q: f32,                  //new qs computed during this search
     pub children: Vec<TreeNode>, // next steps we investigated
     pub max_score: Option<u16>,
     pub min_score: Option<u16>,
@@ -61,10 +59,8 @@ impl TreeNode {
             repetition_detector: rd,
             max_score: None,
             min_score: None,
-            nn: 0.,
-            nq: 0.,
-            sn: 0.,
-            sq: 0.,
+            n: 0.,
+            q: 0.,
         }
     }
 
@@ -78,10 +74,8 @@ impl TreeNode {
             move_num: move_num, //So we increment to 1 for move 1
             value: Some(game.board().value()),
             repetition_detector: RepetitionDetector::create_with_starting(game.board()),
-            nn: 0.,
-            nq: 0.,
-            sn: 0.,
-            sq: 0.,
+            n: 0.,
+            q: 0.,
             max_score: None,
             min_score: None,
         }
@@ -97,10 +91,8 @@ impl TreeNode {
             move_num: 0.5,
             value: Some(Board::default().value()), //The starting position is not necessarily 0, so we calculate it
             repetition_detector: RepetitionDetector::starting(),
-            nn: 0.,
-            nq: 0.,
-            sn: 0.,
-            sq: 0.,
+            n: 0.,
+            q: 0.,
             max_score: None,
             min_score: None,
         }
@@ -116,10 +108,8 @@ impl TreeNode {
             move_num: self.move_num,
             value: self.value,
             repetition_detector: self.repetition_detector.clone(),
-            nn: 0.,
-            nq: 0.,
-            sn: 0.,
-            sq: 0.,
+            n: 0.,
+            q: 0.,
             max_score: None,
             min_score: None,
         }
@@ -135,10 +125,8 @@ impl TreeNode {
             move_num: self.move_num,
             value: self.value,
             repetition_detector: self.repetition_detector.clone(),
-            nn: 0.,
-            nq: 0.,
-            sn: self.sn,
-            sq: self.sq,
+            n: 0.,
+            q: 0.,
             max_score: None,
             min_score: None,
         }
@@ -154,23 +142,11 @@ impl TreeNode {
             move_num: self.move_num,
             value: self.value,
             repetition_detector: self.repetition_detector.clone(),
-            nn: 0.,
-            nq: 0.,
-            sn: self.sn,
-            sq: self.sq,
+            n: 0.,
+            q: 0.,
             max_score: None,
             min_score: None,
         }
-    }
-
-    // saved ns from previous searches plus ns found in this search
-    // used for UT
-    pub fn total_n(&self) -> f32 {
-        self.sn + self.nn
-    }
-
-    pub fn total_q(&self) -> f32 {
-        self.sq + self.nq
     }
 
     pub fn score(&self) -> f32 {
@@ -180,7 +156,7 @@ impl TreeNode {
                 Color::Black => f32::NEG_INFINITY,
             },
             Some(Outcome::Draw) => 0.,
-            _ => self.turn.not().coefficient() * self.total_n(),
+            _ => self.turn.not().coefficient() * self.n,
         }
     }
 
@@ -389,7 +365,7 @@ impl TreeNode {
                         child.state = NodeState::LeafNode;
                         thread_run_stats.leaf_nodes += 1;
                         child.outcome = Some(Outcome::Draw);
-                        child.nn += 1.;
+                        child.n += 1.;
                         (0., None, Some(0), new_state)
                     } else if game.is_checkmate() {
                         // println!("FOUND OUTCOME");
@@ -398,15 +374,15 @@ impl TreeNode {
                         child.outcome = game.outcome();
                         thread_run_stats.leaf_nodes += 1;
                         let delta = child.outcome.unwrap().reward();
-                        child.nn += 1.;
-                        child.nq += delta;
+                        child.n += 1.;
+                        child.q += delta;
                         (delta, child.outcome, None, NodeState::LeafNode)
                     } else {
                         // let played_game = playout(rng, game, thread_run_stats);
                         // let delta = played_game.outcome().map_or(0., |o| o.reward());
-                        child.nn += 1.;
+                        child.n += 1.;
                         let delta = child.normalized_value(); //delta + child.normalized_value();
-                        child.nq += delta;
+                        child.q += delta;
                         (delta, None, None, new_state)
                     }
                 };
@@ -430,43 +406,10 @@ impl TreeNode {
                 panic!("IMPOSSIBLE ITERATION");
             }
         };
-        self.nn += 1.;
-        self.nq += delta;
+        self.n += 1.;
+        self.q += delta;
         delta
     }
-
-    // fn all_children_are_winning(&self, game: &Chess) -> bool {
-    //     println!("all_children \n{:?}", game.board());
-    //     self.children.iter().all(|child| {
-    //         println!("child: {:?}", child.action);
-    //         println!("child outcome: {:?}", child.outcome);
-    //         match child.outcome {
-    //             Some(Outcome::Decisive { winner }) if winner == self.turn => {
-    //                 println!("found child mate");
-    //                 println!("{:?}", child.action);
-    //                 self.max_score = Some(0);
-    //                 true
-    //             }
-    //             Some(_) => false, // stalemate or win
-    //             _ => false,       // None => {
-    //                                //     let mut child_game = game.clone();
-    //                                //     child_game.make_move(&child.action.unwrap());
-    //                                //     // println!("checking {:?}", child_game.board());
-    //                                //     let allowed_actions = child_game.allowed_actions();
-    //                                //     allowed_actions.iter().any(|aa| {
-    //                                //         //TODO don't clone if the move is reversible
-    //                                //         let mut grandchild_game = child_game.clone();
-    //                                //         grandchild_game.make_move(aa);
-    //                                //         // println!("IS THIS A CHECKMATE? {:?}", grandchild_game.board());
-    //                                //         // if grandchild_game.is_checkmate() {
-    //                                //         //     // println!("{}", "found grandchild mate");
-    //                                //         // }
-    //                                //         grandchild_game.is_checkmate()
-    //                                //     })
-    //                                // }
-    //         }
-    //     })
-    // }
 }
 
 #[derive(Debug)]
@@ -519,10 +462,8 @@ mod tests {
             repetition_detector: RepetitionDetector::new(),
             max_score: None,
             min_score: None,
-            nn: 1.,
-            nq: 0.,
-            sn: 0.,
-            sq: 0.,
+            n: 1.,
+            q: 0.,
         };
         let settings = Settings::lib_test_default();
         let seed = 1; // should expand Ra1#
@@ -548,10 +489,8 @@ mod tests {
             repetition_detector: RepetitionDetector::new(),
             max_score: None,
             min_score: None,
-            nn: 1.,
-            nq: 0.,
-            sn: 0.,
-            sq: 0.,
+            n: 1.,
+            q: 0.,
         };
         let settings = Settings::lib_test_default();
         let seed = 2; // should NOT expand the winning Ra1#
@@ -581,17 +520,15 @@ mod tests {
             repetition_detector: repetition_detector,
             max_score: None,
             min_score: Some(0),
-            nn: 1.,
-            nq: 0.,
-            sn: 0.,
-            sq: 0.,
+            n: 1.,
+            q: 0.,
         };
         let settings = Settings::lib_test_default();
         let seed = 6;
         let delta = node.iteration(&mut game, &mut seeded_rng(seed), &mut stats, &settings);
         println!("{}", node);
         assert_eq!(0., delta); //black is behind but has an option to draw, so delta is 0
-        assert_eq!(2., node.nn);
+        assert_eq!(2., node.n);
         assert_eq!(None, node.outcome);
         assert_eq!(Color::Black, node.turn);
         assert_eq!(NodeState::Expandable, node.state);
@@ -621,10 +558,8 @@ mod tests {
             repetition_detector: repetition_detector,
             max_score: None,
             min_score: None,
-            nn: 1.,
-            nq: 0.,
-            sn: 0.,
-            sq: 0.,
+            n: 1.,
+            q: 0.,
         };
         let settings = Settings::lib_test_default();
         let seed = 6;
@@ -642,7 +577,7 @@ mod tests {
         );
         println!("{}", node);
         assert_eq!(0., delta);
-        assert_eq!(3., node.nn);
+        assert_eq!(3., node.n);
         assert_eq!(Some(Outcome::Draw), node.outcome);
         assert_eq!(Color::Black, node.turn);
         assert_eq!(NodeState::LeafNode, node.state);
@@ -671,10 +606,8 @@ mod tests {
             repetition_detector: repetition_detector,
             max_score: None,
             min_score: None,
-            nn: 1.,
-            nq: 0.,
-            sn: 0.,
-            sq: 0.,
+            n: 1.,
+            q: 0.,
         };
         let settings = Settings::lib_test_default();
         let seed = 6;
@@ -694,7 +627,7 @@ mod tests {
         println!("{}", node);
         assert_eq!(None, node.outcome);
         // assert_eq!(-1., delta);
-        assert_eq!(n + 1., node.nn);
+        assert_eq!(n + 1., node.n);
         assert_eq!(Color::Black, node.turn);
         assert_eq!(NodeState::FullyExpanded, node.state);
         assert_eq!(Some(0), node.min_score);
@@ -720,10 +653,8 @@ mod tests {
             repetition_detector: repetition_detector,
             max_score: None,
             min_score: None,
-            nn: 1.,
-            nq: 0.,
-            sn: 0.,
-            sq: 0.,
+            n: 1.,
+            q: 0.,
         };
         let settings = Settings::lib_test_default();
         let seed = 1;
@@ -743,7 +674,7 @@ mod tests {
         println!("{}", node);
         assert_eq!(Some(Outcome::Draw), node.outcome);
         // assert_eq!(-1., delta);
-        assert_eq!(n + 1., node.nn);
+        assert_eq!(n + 1., node.n);
         assert_eq!(Color::White, node.turn);
         assert_eq!(NodeState::LeafNode, node.state);
         assert_eq!(Some(0), node.min_score);
@@ -766,10 +697,8 @@ mod tests {
             repetition_detector: repetition_detector,
             max_score: None,
             min_score: None,
-            nn: 1.,
-            nq: 0.,
-            sn: 0.,
-            sq: 0.,
+            n: 1.,
+            q: 0.,
         };
         let settings = Settings::lib_test_default();
         let seed = 1;
@@ -789,7 +718,7 @@ mod tests {
         println!("{}", node);
         assert_eq!(Some(Outcome::Draw), node.outcome);
         // assert_eq!(-1., delta);
-        assert_eq!(n + 1., node.nn);
+        assert_eq!(n + 1., node.n);
         assert_eq!(Color::White, node.turn);
         assert_eq!(NodeState::LeafNode, node.state);
         assert_eq!(Some(0), node.min_score);

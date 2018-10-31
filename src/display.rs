@@ -5,43 +5,38 @@ use shakmaty::*;
 use stats::*;
 use std::fmt;
 
-const TREENODE_MAX_DISPLAY_DEPTH: u32 = 3;
+const TREENODE_MAX_DISPLAY_DEPTH: u32 = 2;
 
 impl fmt::Display for RunStats {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
             "\n\
-            PLAYOUTS:    moves {}, total: {} (avg: {})  maxouts: {}\n\
+             PLAYOUTS:    moves {}, total: {} (avg: {})  maxouts: {}\n\
              NODES:       nodes {}, iterations: {}, leafs: {}\n\
              SAMPLES:     samples: {}, batches: {}\n\
-             TREE_MERGES: {}\n\
-             TIME:        playouts: {} ({:.*}%), tree_merge: {} ({:.*}%), other: {}({:.*}%), total: {}\n",
-             self.playout_moves.separated_string(),
-             self.playouts.separated_string(),
-             if self.playouts == 0 {
-                 0
-             } else {
-                 self.playout_moves / self.playouts
-             },
-             self.maxouts.separated_string(),
-             self.nodes_created.separated_string(),
-             self.iterations.separated_string(),
-             self.leaf_nodes.separated_string(),
-             self.samples.separated_string(),
-             self.sample_batches.separated_string(),
-             self.tree_merges.separated_string(),
-             self.playout_time.separated_string(),
-             1,
-             self.playout_time_pct(),
-             self.tree_merge_time.separated_string(),
-             1,
-             self.tree_merge_time_pct(),
-             self.other_time().separated_string(),
-             1,
-             self.other_time_pct(),
-             self.total_time
-                 )
+             TIME:        playouts: {} ({:.*}%), other: {}({:.*}%), total: {}\n",
+            self.playout_moves.separated_string(),
+            self.playouts.separated_string(),
+            if self.playouts == 0 {
+                0
+            } else {
+                self.playout_moves / self.playouts
+            },
+            self.maxouts.separated_string(),
+            self.nodes_created.separated_string(),
+            self.iterations.separated_string(),
+            self.leaf_nodes.separated_string(),
+            self.samples.separated_string(),
+            self.sample_batches.separated_string(),
+            self.playout_time.separated_string(),
+            1,
+            self.playout_time_pct(),
+            self.other_time().separated_string(),
+            1,
+            self.other_time_pct(),
+            self.total_time
+        )
     }
 }
 
@@ -79,9 +74,9 @@ impl fmt::Display for TreeNode {
                     node.move_num,
                     a,
                     node.state,
-                    node.total_q(),
+                    node.q,
                     node.color_relative_score(),
-                    node.total_n(),
+                    node.n,
                     node.value.unwrap(),
                     format_max(node.max_score),
                     format_min(node.min_score),
@@ -92,8 +87,8 @@ impl fmt::Display for TreeNode {
                     "{}. Root {} q={} n={} s={} v={} {} {} {}",
                     node.move_num,
                     node.state,
-                    node.total_q(),
-                    node.total_n(),
+                    node.q,
+                    node.n,
                     node.color_relative_score(),
                     node.value.unwrap(),
                     format_max(node.max_score),

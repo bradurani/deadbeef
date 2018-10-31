@@ -28,6 +28,7 @@ pub fn play_game(settings: &Settings) -> Vec<Move> {
                 let best_move = found_new_root.action.unwrap();
                 move_history.push(best_move);
                 game.make_move(&best_move);
+                println!("{:?}", game.board());
                 root = found_new_root;
             }
         }
@@ -53,10 +54,10 @@ pub fn find_best_move(
     let t0 = Instant::now();
 
     println!(
-        "-------------------------------------\n{}    {} / {}  s: {}",
+        "\n-------------------------------------\n{}    {} / {}  s: {}",
         root.move_num,
-        root.sq,
-        root.sn,
+        root.q,
+        root.n,
         root.score()
     );
 
@@ -65,6 +66,8 @@ pub fn find_best_move(
     }
 
     let new_root = search(root, &game, move_run_stats, settings);
+
+    println!("new root\n{}", new_root);
 
     let best_child = best_child_node(new_root);
 
