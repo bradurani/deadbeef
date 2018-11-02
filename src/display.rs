@@ -1,4 +1,5 @@
 use mcts::*;
+use pad::PadStr;
 use separator::Separatable;
 use settings::*;
 use shakmaty::*;
@@ -45,9 +46,9 @@ impl fmt::Display for NodeState {
             f,
             "{}",
             match self {
-                NodeState::LeafNode => "LN",
-                NodeState::FullyExpanded => "FE",
-                NodeState::Expandable => "E",
+                NodeState::LeafNode => "LN ",
+                NodeState::FullyExpanded => "FE ",
+                NodeState::Expandable => "E  ",
             }
         )
     }
@@ -86,12 +87,14 @@ impl<'a> fmt::Display for DisplayTreeNode<'a> {
                     f,
                     "{}. {} {} q={} n={} s={} v={} w={} {} {} {}",
                     node.move_num,
-                    a,
+                    a.to_string().pad_to_width(7),
                     node.state,
-                    node.q,
-                    node.color_relative_score(),
-                    node.n,
-                    node.normalized_color_relative_value(),
+                    node.q.to_string().pad_to_width(12),
+                    node.n.to_string().pad_to_width(7),
+                    node.color_relative_score().to_string().pad_to_width(8),
+                    node.normalized_color_relative_value()
+                        .to_string()
+                        .pad_to_width(15),
                     weight(node, parent_n, settings),
                     format_max(node.max_score),
                     format_min(node.min_score),
@@ -102,10 +105,12 @@ impl<'a> fmt::Display for DisplayTreeNode<'a> {
                     "{}. Root {} q={} n={} s={} v={} {} {} {}",
                     node.move_num,
                     node.state,
-                    node.q,
-                    node.n,
-                    node.color_relative_score(),
-                    node.normalized_color_relative_value(),
+                    node.q.to_string().pad_to_width(12),
+                    node.n.to_string().pad_to_width(7),
+                    node.color_relative_score().to_string().pad_to_width(8),
+                    node.normalized_color_relative_value()
+                        .to_string()
+                        .pad_to_width(15),
                     format_max(node.max_score),
                     format_min(node.min_score),
                     format_outcome(node.outcome)
@@ -128,15 +133,13 @@ impl<'a> fmt::Display for DisplayTreeNode<'a> {
                     Some(m) => format!("min {}", m),
                 }
             }
-            write!(f, "")
-        }
-
-        //TODO write to format buffer instead
-        fn format_outcome(outcome: Option<Outcome>) -> String {
-            match outcome {
-                None => "".to_string(),
-                Some(o) => format!("OUTCOME={}", o),
+            fn format_outcome(outcome: Option<Outcome>) -> String {
+                match outcome {
+                    None => "".to_string(),
+                    Some(o) => format!("OUTCOME={}", o),
+                }
             }
+            write!(f, "")
         }
 
         fmt_subtree(f, &self.node, self.settings, 0., 0)
