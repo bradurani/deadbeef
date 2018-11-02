@@ -1,3 +1,4 @@
+use display::*;
 use game::*;
 use mcts::TreeNode;
 use pgn;
@@ -67,7 +68,7 @@ pub fn find_best_move(
 
     let new_root = search(root, &game, move_run_stats, settings);
 
-    println!("new root\n{}", new_root);
+    print_tree(&new_root, settings);
 
     let best_child = best_child_node(new_root);
 

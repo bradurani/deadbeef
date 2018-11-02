@@ -1,3 +1,4 @@
+use args::*;
 use shakmaty::Chess;
 use std::isize;
 
@@ -14,22 +15,27 @@ pub struct Settings {
     pub search_type: SearchType,
     pub max_batch_size: usize,
     pub min_batch_size: usize,
+    pub max_tree_display_depth: u8,
+    pub print_tree: bool,
 }
 
 impl Settings {
     pub fn game_default() -> Settings {
         Settings {
             starting_position: Chess::default(),
+            // TODO remove
             starting_move_num: 1.0,
-            time_per_move_ms: 1000.0,
+            time_per_move_ms: 5000.0,
             n_samples: -1,
-            threads: 8,
-            c: 10.,
+            threads: 12,
+            c: 0.5,
             starting_seed: 1,
             starting_iterations_per_ms: 0.5,
             search_type: SearchType::Time,
-            max_batch_size: 400,
+            max_batch_size: 10,
             min_batch_size: 4,
+            max_tree_display_depth: parse_max_tree_display_depth(),
+            print_tree: parse_print_tree(),
         }
     }
 
@@ -59,6 +65,8 @@ impl Settings {
             search_type: SearchType::Steps,
             max_batch_size: 100,
             min_batch_size: 4,
+            max_tree_display_depth: parse_max_tree_display_depth(),
+            print_tree: parse_print_tree(),
         }
     }
 
@@ -75,6 +83,8 @@ impl Settings {
             search_type: SearchType::Steps,
             max_batch_size: 100,
             min_batch_size: 4,
+            max_tree_display_depth: parse_max_tree_display_depth(),
+            print_tree: parse_print_tree(),
         }
     }
 
@@ -91,6 +101,8 @@ impl Settings {
             search_type: SearchType::Mate,
             max_batch_size: 100,
             min_batch_size: 4,
+            max_tree_display_depth: parse_max_tree_display_depth(),
+            print_tree: parse_print_tree(),
         }
     }
 }

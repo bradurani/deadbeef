@@ -4,8 +4,7 @@ use settings::*;
 use shakmaty::*;
 use stats::*;
 use std::fmt;
-
-const TREENODE_MAX_DISPLAY_DEPTH: u32 = 2;
+use uct::*;
 
 impl fmt::Display for RunStats {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -54,15 +53,30 @@ impl fmt::Display for NodeState {
     }
 }
 
-impl fmt::Display for TreeNode {
+pub struct DisplayTreeNode<'a> {
+    node: &'a TreeNode,
+    settings: &'a Settings,
+}
+
+impl<'a> DisplayTreeNode<'a> {
+    pub fn new(node: &'a TreeNode, settings: &'a Settings) -> DisplayTreeNode<'a> {
+        DisplayTreeNode {
+            node: node,
+            settings: settings,
+        }
+    }
+}
+
+impl<'a> fmt::Display for DisplayTreeNode<'a> {
     /// Output a nicely indented tree
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // Nested definition for recursive formatting
         fn fmt_subtree(
             f: &mut fmt::Formatter,
             node: &TreeNode,
-            indent_level: u32,
-            max_indent_level: u32,
+            settings: &Settings,
+            parent_n: f32,
+            indent_level: u8,
         ) -> fmt::Result {
             for _ in 0..indent_level {
                 try!(f.write_str("    "));
@@ -70,14 +84,15 @@ impl fmt::Display for TreeNode {
             match node.action {
                 Some(a) => try!(writeln!(
                     f,
-                    "{}. {} {} q={} n={} s={} v={} {} {} {}",
+                    "{}. {} {} q={} n={} s={} v={} w={} {} {} {}",
                     node.move_num,
                     a,
                     node.state,
                     node.q,
                     node.color_relative_score(),
                     node.n,
-                    node.value.unwrap(),
+                    node.normalized_color_relative_value(),
+                    weight(node, parent_n, settings),
                     format_max(node.max_score),
                     format_min(node.min_score),
                     format_outcome(node.outcome)
@@ -90,15 +105,15 @@ impl fmt::Display for TreeNode {
                     node.q,
                     node.n,
                     node.color_relative_score(),
-                    node.value.unwrap(),
+                    node.normalized_color_relative_value(),
                     format_max(node.max_score),
                     format_min(node.min_score),
                     format_outcome(node.outcome)
                 )),
             }
-            if indent_level < max_indent_level - 1 {
+            if indent_level < settings.max_tree_display_depth {
                 for child in &node.children {
-                    try!(fmt_subtree(f, child, indent_level + 1, max_indent_level));
+                    try!(fmt_subtree(f, child, settings, node.n, indent_level + 1));
                 }
             }
             fn format_max(max_score: Option<u16>) -> String {
@@ -124,7 +139,7 @@ impl fmt::Display for TreeNode {
             }
         }
 
-        fmt_subtree(f, self, 0, TREENODE_MAX_DISPLAY_DEPTH)
+        fmt_subtree(f, &self.node, self.settings, 0., 0)
     }
 }
 
@@ -158,5 +173,12 @@ impl fmt::Display for TreeStats {
             "tree: nodes: {}, min_depth: {}, max_depth: {}, ns: {}",
             self.nodes, self.min_depth, self.max_depth, self.ns
         )
+    }
+}
+
+// TODO should be a macro
+pub fn print_tree(node: &TreeNode, settings: &Settings) {
+    if settings.print_tree {
+        println!("{}", DisplayTreeNode::new(node, settings));
     }
 }

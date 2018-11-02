@@ -10,6 +10,7 @@ extern crate rand;
 extern crate separator;
 extern crate shakmaty;
 extern crate twox_hash;
+pub mod args;
 pub mod display;
 pub mod eval;
 pub mod game;
