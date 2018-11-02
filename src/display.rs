@@ -79,10 +79,10 @@ impl<'a> fmt::Display for DisplayTreeNode<'a> {
             indent_level: u8,
         ) -> fmt::Result {
             for _ in 0..indent_level {
-                try!(f.write_str("    "));
+                f.write_str("    ")?;
             }
             match node.action {
-                Some(a) => try!(writeln!(
+                Some(a) => writeln!(
                     f,
                     "{}. {} {} q={} n={} s={} v={} w={} {} {} {}",
                     node.move_num,
@@ -96,8 +96,8 @@ impl<'a> fmt::Display for DisplayTreeNode<'a> {
                     format_max(node.max_score),
                     format_min(node.min_score),
                     format_outcome(node.outcome)
-                )),
-                None => try!(writeln!(
+                )?,
+                None => writeln!(
                     f,
                     "{}. Root {} q={} n={} s={} v={} {} {} {}",
                     node.move_num,
@@ -109,11 +109,11 @@ impl<'a> fmt::Display for DisplayTreeNode<'a> {
                     format_max(node.max_score),
                     format_min(node.min_score),
                     format_outcome(node.outcome)
-                )),
+                )?,
             }
             if indent_level < settings.max_tree_display_depth {
                 for child in &node.children {
-                    try!(fmt_subtree(f, child, settings, node.n, indent_level + 1));
+                    fmt_subtree(f, child, settings, node.n, indent_level + 1)?;
                 }
             }
             fn format_max(max_score: Option<u16>) -> String {
