@@ -1,4 +1,5 @@
 // use display::*;
+use display::*;
 use eval::Value;
 use game::*;
 use playout::playout;
@@ -256,14 +257,17 @@ impl TreeNode {
     ) {
         match child_outcome {
             Some(Outcome::Draw) => {
+                println!("searching draw {:?}", "");
                 self.set_best_outcome_from_child_draw_or_loss(child_outcome, thread_run_stats)
             }
             Some(Outcome::Decisive { winner }) if winner == self.turn.not() => {
+                println!("search win for {:?}", self.turn.not());
                 // one of the children is a win for opponent. Check if they all are and if so,
                 // we have no good move, so we've lost
                 self.set_best_outcome_from_child_draw_or_loss(child_outcome, thread_run_stats)
             }
             Some(Outcome::Decisive { winner }) if winner == self.turn => {
+                println!("found win for {:?}", self.turn);
                 // one of the children is a winning move for this parent, so this node is a one
                 self.outcome = Some(Outcome::Decisive { winner: self.turn });
                 self.state = NodeState::LeafNode;
@@ -410,6 +414,13 @@ impl TreeNode {
         self.q += delta;
         delta
     }
+
+    pub fn set_outcome_based_on_all_children(&mut self, stats: &mut RunStats) {
+        for c in self.children.iter_mut() {
+            // this is inefficient because this method was designed to be used in iterate()
+            self.set_outcome_based_on_child(c.outcome, c.min_score, c.max_score, stats);
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -434,8 +445,9 @@ mod tests {
     #[test]
     fn test_iteration_mate_in_1() {
         let mut stats: RunStats = Default::default();
+        let settings = Settings::lib_test_default();
         let (node, _score) =
-            test_iteration_all_children_with_stats("4k3/Q7/5K2/8/8/8/8/8 w - - 0 1", &mut stats);
+            test_iteration_all_children("4k3/Q7/5K2/8/8/8/8/8 w - - 0 1", &mut stats, &settings);
         assert_eq!(
             Outcome::Decisive {
                 winner: Color::White
@@ -526,7 +538,7 @@ mod tests {
         let settings = Settings::lib_test_default();
         let seed = 6;
         let delta = node.iteration(&mut game, &mut seeded_rng(seed), &mut stats, &settings);
-        println!("{}", node);
+        print_tree(&node, &settings);
         assert_eq!(0., delta); //black is behind but has an option to draw, so delta is 0
         assert_eq!(2., node.n);
         assert_eq!(None, node.outcome);
@@ -575,7 +587,7 @@ mod tests {
             &mut stats,
             &settings,
         );
-        println!("{}", node);
+        print_tree(&node, &settings);
         assert_eq!(0., delta);
         assert_eq!(3., node.n);
         assert_eq!(Some(Outcome::Draw), node.outcome);
@@ -586,7 +598,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn test_sets_max_score_if_opponent_can_force_draw() {
         let mut stats: RunStats = Default::default();
         let game = parse_fen("q4rk1/5p2/8/6Q1/8/8/8/6K1 b - - 3 2");
@@ -624,7 +635,7 @@ mod tests {
                 break;
             }
         }
-        println!("{}", node);
+        print_tree(&node, &settings);
         assert_eq!(None, node.outcome);
         // assert_eq!(-1., delta);
         assert_eq!(n + 1., node.n);
@@ -671,7 +682,7 @@ mod tests {
                 break;
             }
         }
-        println!("{}", node);
+        print_tree(&node, &settings);
         assert_eq!(Some(Outcome::Draw), node.outcome);
         // assert_eq!(-1., delta);
         assert_eq!(n + 1., node.n);
@@ -715,7 +726,7 @@ mod tests {
                 break;
             }
         }
-        println!("{}", node);
+        print_tree(&node, &settings);
         assert_eq!(Some(Outcome::Draw), node.outcome);
         // assert_eq!(-1., delta);
         assert_eq!(n + 1., node.n);
@@ -728,10 +739,11 @@ mod tests {
     #[test]
     fn test_iteration_mate_in_2_1_choice() {
         let mut stats: RunStats = Default::default();
+        let settings = Settings::lib_test_default();
         let (node, score) =
-            test_iteration_all_children_with_stats("4q3/8/8/8/8/3k4/8/3K4 b - - 0 1", &mut stats);
+            test_iteration_all_children("4q3/8/8/8/8/3k4/8/3K4 b - - 0 1", &mut stats, &settings);
         println!("{}", stats);
-        println!("{}", node);
+        print_tree(&node, &settings);
         assert_eq!(-1., score);
         assert_eq!(
             Outcome::Decisive {
@@ -745,12 +757,14 @@ mod tests {
     #[test]
     fn test_iteration_mate_in_2_2_choices() {
         let mut stats: RunStats = Default::default();
-        let (node, score) = test_iteration_all_children_with_stats(
+        let settings = Settings::lib_test_default();
+        let (node, score) = test_iteration_all_children(
             "8/5Q2/1pkq2n1/pB2p3/4P3/1P2K3/2P5/8 b - - 1 1",
             &mut stats,
+            &settings,
         );
         println!("{}", stats);
-        println!("{}", node);
+        print_tree(&node, &settings);
         assert_eq!(1., score);
         assert_eq!(
             Outcome::Decisive {
@@ -761,21 +775,21 @@ mod tests {
         assert!(stats.nodes_created < 60);
     }
 
-    fn test_iteration_all_children_with_stats(
+    fn test_iteration_all_children(
         fen_str: &'static str,
         stats: &mut RunStats,
+        settings: &Settings,
     ) -> (TreeNode, f32) {
         let game = parse_fen(fen_str);
-        let mut settings = Settings::lib_test_default();
         let mut rng = seeded_rng(settings.starting_seed);
         let mut node = TreeNode::new_root(&game, 1.);
         let mut last = 0.;
         let mut counter = 0;
         while node.outcome.is_none() {
-            last = node.iteration(&mut game.clone(), &mut rng, stats, &mut settings);
+            last = node.iteration(&mut game.clone(), &mut rng, stats, &settings);
             counter += 1;
             if counter > 1000 {
-                println!("{}", node);
+                print_tree(&node, &settings);
                 panic!("did not find outcome");
             }
         }

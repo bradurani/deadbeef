@@ -213,12 +213,11 @@ pub fn search_threaded_batch(
         .collect();
 
     // set the outcome based on the children. Needs refactor
-    for c in new_children.iter() {
-        // this is inefficient because this method was designed to be used in iterate()
-        new_root.set_outcome_based_on_child(c.outcome, c.min_score, c.max_score, batch_run_stats);
-    }
-    sort_children_by_weight(&mut new_children, new_root.n, settings);
+    println!("checking chidlers");
+    print_tree(&new_root, &settings);
     new_root.children = new_children;
+    new_root.set_outcome_based_on_all_children(batch_run_stats);
+    sort_children_by_weight(&mut new_root.children, new_root.n, settings);
     new_root
 }
 

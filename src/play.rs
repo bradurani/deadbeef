@@ -1,4 +1,5 @@
 use display::*;
+use input::*;
 use game::*;
 use mcts::TreeNode;
 use pgn;
@@ -7,6 +8,48 @@ use settings::*;
 use shakmaty::*;
 use stats::*;
 use std::time::Instant;
+
+pub fn play_2_player_game(settings: &Settings) -> Vec<Move> {
+    let mut move_history: Vec<Move> = Vec::new();
+    //TODO rename everything position
+    let mut game = settings.starting_position.clone();
+    let mut game_run_stats: RunStats = Default::default();
+    let mut move_num = settings.starting_move_num;
+
+    let t0 = Instant::now();
+
+    loop {
+        let action = stdin(&game);
+        game.play_safe(&action);
+        move_num += 0.5;
+        move_history.push(action);
+
+        let mut root = TreeNode::new_root(&game, move_num);
+        let mut move_run_stats: RunStats = Default::default();
+        let new_root = find_best_move(root, &game, &mut move_run_stats, settings);
+
+        match new_root {
+            None => break,
+            Some(found_new_root) => {
+                let best_move = found_new_root.action.unwrap();
+                move_history.push(best_move);
+                game.make_move(&best_move);
+                println!("{:?}", game.board());
+                root = found_new_root;
+            }
+        }
+        game_run_stats.add(&move_run_stats);
+
+        let pgn = pgn::to_pgn(&settings.starting_position, &move_history); //TODO build incrementally
+        println!("{}", pgn);
+
+        move_num += 0.5;
+    }
+    let time_spent = t0.elapsed().as_millis();
+    game_run_stats.total_time = time_spent as u64;
+    println!("\nGame: {}", game_run_stats);
+    move_history
+}
 
 pub fn play_game(settings: &Settings) -> Vec<Move> {
     let mut move_history: Vec<Move> = Vec::new();

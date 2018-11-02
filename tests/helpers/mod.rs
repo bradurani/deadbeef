@@ -3,6 +3,7 @@
 extern crate deadbeef;
 extern crate shakmaty;
 
+use deadbeef::display::*;
 use deadbeef::mcts::TreeNode;
 use deadbeef::play;
 use deadbeef::settings::*;
@@ -79,6 +80,7 @@ pub fn assert_contains_move_with_settings(
         &settings,
     )
     .unwrap();
+    print_tree(&best_child, &settings);
     let best_action = best_child.action.unwrap();
     if assert_mate {
         assert!(best_child.is_decisive());

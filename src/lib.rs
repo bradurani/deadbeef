@@ -6,12 +6,13 @@
 extern crate pretty_assertions;
 
 extern crate core;
+extern crate pad;
 extern crate rand;
 extern crate separator;
 extern crate shakmaty;
 extern crate twox_hash;
-extern crate pad;
 pub mod args;
+pub mod input;
 pub mod display;
 pub mod eval;
 pub mod game;

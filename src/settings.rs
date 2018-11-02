@@ -32,7 +32,7 @@ impl Settings {
             starting_seed: 1,
             starting_iterations_per_ms: 0.5,
             search_type: SearchType::Time,
-            max_batch_size: 10,
+            max_batch_size: 50,
             min_batch_size: 4,
             max_tree_display_depth: parse_max_tree_display_depth(),
             print_tree: parse_print_tree(),
