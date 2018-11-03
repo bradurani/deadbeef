@@ -540,7 +540,7 @@ mod tests {
         assert_eq!(Some(Outcome::Draw), node.outcome);
         assert_eq!(Color::Black, node.turn);
         assert_eq!(NodeState::LeafNode, node.state);
-        assert_eq!(None, node.max_score);
+        assert_eq!(Some(0), node.max_score);
         assert_eq!(Some(0), node.min_score);
     }
 
