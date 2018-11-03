@@ -75,7 +75,7 @@ impl Settings {
             starting_position: Chess::default(),
             starting_move_num: 1.0,
             time_per_move_ms: -1.0,
-            n_samples: 4000,
+            n_samples: 40000,
             threads: 8,
             c: 0.5,
             starting_seed: seed,

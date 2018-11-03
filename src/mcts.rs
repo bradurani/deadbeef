@@ -570,7 +570,7 @@ mod tests {
         let settings = Settings::lib_test_default();
         let seed = 6;
         let mut delta = 0.;
-        let n = 2000000.;
+        let n = 2000.;
         for _i in 0..n as u32 {
             delta = node.iteration(
                 &mut game.clone(),
@@ -588,8 +588,8 @@ mod tests {
         assert_eq!(n + 1., node.n);
         assert_eq!(Color::Black, node.turn);
         assert_eq!(NodeState::FullyExpanded, node.state);
-        assert_eq!(Some(0), node.min_score);
-        assert_eq!(None, node.max_score);
+        assert_eq!(Some(0), node.max_score);
+        assert_eq!(None, node.min_score);
     }
 
     #[test]
