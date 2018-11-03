@@ -126,27 +126,10 @@ impl TreeNode {
             move_num: self.move_num,
             value: self.value,
             repetition_detector: self.repetition_detector.clone(),
-            n: 0.,
-            q: 0.,
-            max_score: None,
-            min_score: None,
-        }
-    }
-
-    pub fn clone_with_new_children(&self, children: Vec<TreeNode>) -> TreeNode {
-        TreeNode {
-            outcome: self.outcome,
-            action: self.action,
-            children: children,
-            state: self.state,
-            turn: self.turn,
-            move_num: self.move_num,
-            value: self.value,
-            repetition_detector: self.repetition_detector.clone(),
-            n: 0.,
-            q: 0.,
-            max_score: None,
-            min_score: None,
+            n: self.n,
+            q: self.q,
+            max_score: self.max_score,
+            min_score: self.min_score,
         }
     }
 
@@ -157,7 +140,7 @@ impl TreeNode {
                 Color::Black => f32::NEG_INFINITY,
             },
             Some(Outcome::Draw) => 0.,
-            _ => self.turn.not().coefficient() * self.n,
+            _ => (self.turn.not().coefficient() * self.n),
         }
     }
 
@@ -255,7 +238,6 @@ impl TreeNode {
             .any(|c| c.outcome == Some(Outcome::Decisive { winner: self.turn }))
         {
             // one of the children is a winning move for this parent, so this node is a winner
-            println!("found win for {:?}", self.turn);
             self.outcome = Some(Outcome::Decisive { winner: self.turn });
         } else if self.children.iter().all(|c| {
             c.outcome == Some(Outcome::Decisive {
@@ -274,16 +256,16 @@ impl TreeNode {
             self.outcome = Some(Outcome::Draw);
             self.max_score = Some(0);
             self.min_score = Some(0);
-        } else if self.children.iter().any(|c| c.min_score == Some(0)) {
+        } else if self.children.iter().any(|c| c.max_score == Some(0)) {
             // one of my children allows me to force a draw, the move leading to this position is at
             // best, a draw for my opponent
-            self.max_score = Some(0)
+            self.min_score = Some(0)
         }
         // no else because I don't belive this is mutually exclusive to the above condition
-        if self.children.iter().all(|c| c.max_score == Some(0)) {
+        if self.children.iter().all(|c| c.min_score == Some(0)) {
             // all of my children allow opponent to force a draw, so the move leading to this is
             // at worst a draw for my opponent
-            self.min_score = Some(0)
+            self.max_score = Some(0)
         }
         if self.outcome.is_some() {
             self.state = NodeState::LeafNode;
@@ -373,11 +355,7 @@ impl TreeNode {
                 }
                 self.state = node_state;
                 if last_child_expansion {
-                    // if all children are draw, we're a draw
-                    if self.children.iter().all(|c| c.is_draw()) {
-                        self.outcome = Some(Outcome::Draw);
-                        self.state = NodeState::LeafNode;
-                    }
+                    self.set_outcome_from_children(thread_run_stats)
                 }
                 delta
             }

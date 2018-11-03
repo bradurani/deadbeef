@@ -9,9 +9,11 @@ use std::env::*;
 //TODO remove Copy from Move in Shakmaty
 pub fn main() {
     let args: Vec<String> = args().collect();
-    let settings = Settings::game_default();
+    let settings = Settings::parse_args(&args);
     let move_history = if args[1] == "2" {
         play::play_2_player_game(&settings)
+    } else if args[1] == "m" {
+        play::play_move(&settings)
     } else {
         play::play_game(&settings)
     };

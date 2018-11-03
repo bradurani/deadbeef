@@ -10,6 +10,10 @@ use std::ops::Not;
 // 3) value factor: (none)
 
 pub fn weight(child: &TreeNode, parent_n: f32, settings: &Settings) -> f32 {
+    if child.outcome.is_some() {
+        // can skip this check during traversal
+        return 0.;
+    }
     let weight = (child.turn.not().coefficient() * child.q) / child.n
         + settings.c * (parent_n.ln() / child.n).sqrt();
     // println!("raw weight {}", weight);
@@ -28,9 +32,9 @@ pub fn sort_children_by_weight(children: &mut Vec<TreeNode>, parent_n: f32, sett
         if a.state == NodeState::LeafNode && b.state == NodeState::LeafNode {
             Equal
         } else if a.state == NodeState::LeafNode {
-            Less
-        } else if b.state == NodeState::LeafNode {
             Greater
+        } else if b.state == NodeState::LeafNode {
+            Less
         } else {
             weight(b, parent_n, settings)
                 .partial_cmp(&weight(a, parent_n, settings))

@@ -103,14 +103,17 @@ pub fn search_samples(
     assert!(settings.n_samples > 0);
     let batches = settings.n_samples as usize / settings.max_batch_size;
     let remainder = settings.n_samples as f32 % settings.max_batch_size as f32;
-    println!("running {} batches and {} remainder", batches, remainder);
+    println!(
+        "running {} batches and {} remainder from {} samples",
+        batches, remainder, settings.n_samples
+    );
     let mut new_root = root;
     for i in 0..batches {
         print!(".");
         std::io::stdout().flush().unwrap();
         if i % 100 == 0 {
-            // print!(".");
-            print_tree(&new_root, settings);
+            print!(".");
+            // print_tree(&new_root, settings);
         }
         new_root = search_threaded_batch(
             new_root,
@@ -142,10 +145,6 @@ pub fn search_threaded_batch(
     debug_assert!(batch_n_samples <= settings.max_batch_size);
     debug_assert!(root.state != NodeState::LeafNode);
 
-    // let coefficient = root.turn.coefficient();
-    // let total_n = root.total_n();
-
-    // sort_children_by_weight(&mut root.children, coefficient, total_n, settings);
     let mut new_root = root.clone_childless();
     ensure_expanded(&mut root, game, batch_run_stats, settings); //for a new game where root has no children, expand them
     new_root.state = NodeState::FullyExpanded;
@@ -175,7 +174,6 @@ pub fn search_threaded_batch(
 
                     for _n in 0..batch_n_samples {
                         if thread_child.has_outcome() {
-                            println!("found decisive in thread {}", thread_num);
                             break;
                         }
                         thread_run_stats.samples += 1;
@@ -215,7 +213,6 @@ pub fn search_threaded_batch(
     new_root.children = new_children;
     new_root.set_outcome_from_children(batch_run_stats);
     sort_children_by_weight(&mut new_root.children, new_root.n, settings);
-    print_tree(&new_root, &settings);
     new_root
 }
 

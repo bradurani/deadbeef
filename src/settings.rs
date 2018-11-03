@@ -20,9 +20,9 @@ pub struct Settings {
 }
 
 impl Settings {
-    pub fn game_default() -> Settings {
+    pub fn parse_args(args: &Vec<String>) -> Settings {
         Settings {
-            starting_position: Chess::default(),
+            starting_position: parse_starting_position(),
             // TODO remove
             starting_move_num: 1.0,
             time_per_move_ms: 5000.0,
@@ -75,9 +75,9 @@ impl Settings {
             starting_position: Chess::default(),
             starting_move_num: 1.0,
             time_per_move_ms: -1.0,
-            n_samples: 2000,
+            n_samples: 4000,
             threads: 8,
-            c: 1.,
+            c: 0.5,
             starting_seed: seed,
             starting_iterations_per_ms: 0.5,
             search_type: SearchType::Steps,

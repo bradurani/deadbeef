@@ -1,3 +1,5 @@
+use shakmaty::fen::*;
+use shakmaty::*;
 use std::env;
 
 pub fn parse_max_tree_display_depth() -> u8 {
@@ -12,4 +14,13 @@ pub fn parse_print_tree() -> bool {
         .unwrap_or("false".to_string())
         .parse::<bool>()
         .unwrap()
+}
+
+pub fn parse_starting_position() -> Chess {
+    env::var("STARTING_POSITION")
+        .unwrap_or("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1".to_string())
+        .parse::<Fen>()
+        .expect("invalid fen")
+        .position()
+        .expect("invalid position")
 }

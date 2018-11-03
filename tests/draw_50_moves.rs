@@ -41,7 +41,7 @@ fn black_captures_to_prevent_draw() {
 
 #[test]
 fn black_captures_in_2_to_prevent_draw() {
-    assert_move("8/7r/8/4p3/2k1P3/8/8/1K6 b - - 98 150", "h7h4");
+    assert_move("8/7r/8/4p3/1k2P3/8/8/1K6 b - - 98 150", "h7h4");
 }
 
 #[test]
