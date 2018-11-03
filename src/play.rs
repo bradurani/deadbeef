@@ -1,6 +1,6 @@
 use display::*;
-use input::*;
 use game::*;
+use input::*;
 use mcts::TreeNode;
 use pgn;
 use search::*;
@@ -24,7 +24,7 @@ pub fn play_2_player_game(settings: &Settings) -> Vec<Move> {
         move_num += 0.5;
         move_history.push(action);
 
-        let mut root = TreeNode::new_root(&game, move_num);
+        let root = TreeNode::new_root(&game, move_num);
         let mut move_run_stats: RunStats = Default::default();
         let new_root = find_best_move(root, &game, &mut move_run_stats, settings);
 
@@ -35,7 +35,6 @@ pub fn play_2_player_game(settings: &Settings) -> Vec<Move> {
                 move_history.push(best_move);
                 game.make_move(&best_move);
                 println!("{:?}", game.board());
-                root = found_new_root;
             }
         }
         game_run_stats.add(&move_run_stats);

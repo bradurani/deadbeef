@@ -10,7 +10,7 @@ use std::ops::Not;
 // 3) value factor: (none)
 
 pub fn weight(child: &TreeNode, parent_n: f32, settings: &Settings) -> f32 {
-    let mut weight = (child.turn.not().coefficient() * child.q) / child.n
+    let weight = (child.turn.not().coefficient() * child.q) / child.n
         + settings.c * (parent_n.ln() / child.n).sqrt();
     // println!("raw weight {}", weight);
     // weight += 2. * child.normalized_color_relative_value(); // / child.n;

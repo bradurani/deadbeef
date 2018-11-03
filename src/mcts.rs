@@ -457,7 +457,7 @@ mod tests {
     #[test]
     fn test_delta_1_in_dominate_position() {
         let mut stats: RunStats = Default::default();
-        let mut game = parse_fen("8/8/8/8/8/p2k4/r7/3K4 b - - 0 1");
+        let mut game = parse_fen("2r1q2k/4p2n/4P3/8/3NK3/1p6/2p5/8 w - - 0 1");
         let mut node = TreeNode {
             outcome: None,
             action: None,
@@ -475,7 +475,8 @@ mod tests {
         let settings = Settings::lib_test_default();
         let seed = 2; // should NOT expand the winning Ra1#
         let delta = node.iteration(&mut game, &mut seeded_rng(seed), &mut stats, &settings);
-        assert_eq!(-1., delta);
+        print_tree(&node, &settings);
+        assert!(delta < -1.);
         assert_eq!(None, node.outcome);
         assert_eq!(Color::Black, node.turn);
         assert_eq!(NodeState::Expandable, node.state);
@@ -639,50 +640,6 @@ mod tests {
         let seed = 1;
         let mut delta = 0.;
         let n = 17.;
-        for _i in 0..n as u32 {
-            delta = node.iteration(
-                &mut game.clone(),
-                &mut seeded_rng(seed),
-                &mut stats,
-                &settings,
-            );
-            if node.outcome.is_some() {
-                break;
-            }
-        }
-        print_tree(&node, &settings);
-        assert_eq!(Some(Outcome::Draw), node.outcome);
-        // assert_eq!(-1., delta);
-        assert_eq!(n + 1., node.n);
-        assert_eq!(Color::White, node.turn);
-        assert_eq!(NodeState::LeafNode, node.state);
-        assert_eq!(Some(0), node.min_score);
-        assert_eq!(Some(0), node.max_score);
-    }
-
-    #[test]
-    fn test_response_to_c4() {
-        let mut stats: RunStats = Default::default();
-        let game = parse_fen("rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq d3 0 1");
-        let mut repetition_detector = RepetitionDetector::new();
-        let mut node = TreeNode {
-            outcome: None,
-            action: None,
-            children: vec![],
-            state: NodeState::Expandable,
-            turn: Color::White,
-            move_num: 12.,
-            value: Some(-100), //TODO make value not an option
-            repetition_detector: repetition_detector,
-            max_score: None,
-            min_score: None,
-            n: 1.,
-            q: 0.,
-        };
-        let settings = Settings::lib_test_default();
-        let seed = 1;
-        let mut delta = 0.;
-        let n = 9000.;
         for _i in 0..n as u32 {
             delta = node.iteration(
                 &mut game.clone(),

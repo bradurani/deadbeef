@@ -197,7 +197,7 @@ pub fn search_threaded_batch(
         })
         .collect();
 
-    let mut new_children: Vec<TreeNode> = thread_result_handles
+    let new_children: Vec<TreeNode> = thread_result_handles
         .into_iter()
         .map(|th| th.join().expect("panicked joining threads"))
         .map(|(safe_thread_child, new_n, new_q, thread_run_stats)| {
