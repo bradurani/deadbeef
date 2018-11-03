@@ -212,12 +212,10 @@ pub fn search_threaded_batch(
         })
         .collect();
 
-    // set the outcome based on the children. Needs refactor
-    println!("checking chidlers");
-    print_tree(&new_root, &settings);
     new_root.children = new_children;
-    new_root.set_outcome_based_on_all_children(batch_run_stats);
+    new_root.set_outcome_from_children(batch_run_stats);
     sort_children_by_weight(&mut new_root.children, new_root.n, settings);
+    print_tree(&new_root, &settings);
     new_root
 }
 

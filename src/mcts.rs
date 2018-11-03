@@ -248,74 +248,46 @@ impl TreeNode {
         candidate_actions
     }
 
-    pub fn set_outcome_based_on_child(
-        &mut self,
-        child_outcome: Option<Outcome>,
-        child_min_score: Option<u16>,
-        child_max_score: Option<u16>,
-        thread_run_stats: &mut RunStats,
-    ) {
-        match child_outcome {
-            Some(Outcome::Draw) => {
-                println!("searching draw {:?}", "");
-                self.set_best_outcome_from_child_draw_or_loss(child_outcome, thread_run_stats)
-            }
-            Some(Outcome::Decisive { winner }) if winner == self.turn.not() => {
-                println!("search win for {:?}", self.turn.not());
-                // one of the children is a win for opponent. Check if they all are and if so,
-                // we have no good move, so we've lost
-                self.set_best_outcome_from_child_draw_or_loss(child_outcome, thread_run_stats)
-            }
-            Some(Outcome::Decisive { winner }) if winner == self.turn => {
-                println!("found win for {:?}", self.turn);
-                // one of the children is a winning move for this parent, so this node is a one
-                self.outcome = Some(Outcome::Decisive { winner: self.turn });
-                self.state = NodeState::LeafNode;
-                thread_run_stats.leaf_nodes += 1;
-            }
-            _ => {}
+    pub fn set_outcome_from_children(&mut self, stats: &mut RunStats) {
+        if self
+            .children
+            .iter()
+            .any(|c| c.outcome == Some(Outcome::Decisive { winner: self.turn }))
+        {
+            // one of the children is a winning move for this parent, so this node is a winner
+            println!("found win for {:?}", self.turn);
+            self.outcome = Some(Outcome::Decisive { winner: self.turn });
+        } else if self.children.iter().all(|c| {
+            c.outcome == Some(Outcome::Decisive {
+                winner: self.turn.not(),
+            })
+        }) {
+            // if all children can force a win for opponent, this node is win for opponent
+            self.outcome = Some(Outcome::Decisive {
+                winner: self.turn.not(),
+            });
+        } else if self.children.iter().all(|c| {
+            c.outcome == Some(Outcome::Draw) || c.outcome == Some(Outcome::Decisive {
+                winner: self.turn.not(),
+            })
+        }) {
+            self.outcome = Some(Outcome::Draw);
+            self.max_score = Some(0);
+            self.min_score = Some(0);
+        } else if self.children.iter().any(|c| c.min_score == Some(0)) {
+            // one of my children allows me to force a draw, the move leading to this position is at
+            // best, a draw for my opponent
+            self.max_score = Some(0)
         }
-        match child_min_score {
-            Some(0) => self.max_score = Some(0), // if child can't lose, best parent can do is draw
-            _ => {}
-        }
-        match child_max_score {
-            Some(0) => {
-                if self.children.iter().all(|c| c.max_score == Some(0)) {
-                    self.min_score = Some(0);
-                }
-            }
-            _ => {}
-        }
-    }
-
-    fn set_best_outcome_from_child_draw_or_loss(
-        &mut self,
-        child_outcome: Option<Outcome>,
-        stats: &mut RunStats,
-    ) {
-        // a child is a win for opponent or draw. Check if they all are wins or wins and draws
-        self.outcome = child_outcome;
-        for child in self.children.iter() {
-            match child.outcome {
-                Some(Outcome::Decisive { winner }) if winner == self.turn.not() => {}
-                Some(Outcome::Draw) => self.outcome = Some(Outcome::Draw),
-                None => {
-                    self.outcome = None;
-                    break;
-                }
-                _ => {
-                    panic!("invalid child state");
-                }
-            }
+        // no else because I don't belive this is mutually exclusive to the above condition
+        if self.children.iter().all(|c| c.max_score == Some(0)) {
+            // all of my children allow opponent to force a draw, so the move leading to this is
+            // at worst a draw for my opponent
+            self.min_score = Some(0)
         }
         if self.outcome.is_some() {
             self.state = NodeState::LeafNode;
             stats.leaf_nodes += 1;
-            if self.outcome == Some(Outcome::Draw) {
-                self.max_score = Some(0);
-                self.min_score = Some(0);
-            }
         }
     }
 
@@ -331,19 +303,22 @@ impl TreeNode {
         // println!("{}", self);
         let delta = match self.state {
             NodeState::FullyExpanded => {
-                let (delta, child_outcome, child_max_score, child_min_score) = {
+                let (delta, child_changes_outcome) = {
                     let child = best_child(self, settings);
                     let mut child_game = game.clone(); //TODO don't clone if the move is reversible
                     child_game.make_move(&child.action.unwrap());
                     let delta = child.iteration(&mut child_game, rng, thread_run_stats, settings);
-                    (delta, child.outcome, child.max_score, child.min_score)
+                    (
+                        delta,
+                        child.outcome.is_some()
+                            || child.min_score.is_some()
+                            || child.max_score.is_some(),
+                    )
                 };
-                self.set_outcome_based_on_child(
-                    child_outcome,
-                    child_min_score,
-                    child_max_score,
-                    thread_run_stats,
-                );
+                if child_changes_outcome {
+                    // this calc gets repeated a lot unnecesarily and can be made more efficient
+                    self.set_outcome_from_children(thread_run_stats);
+                }
                 delta
             }
             NodeState::Expandable => {
@@ -413,13 +388,6 @@ impl TreeNode {
         self.n += 1.;
         self.q += delta;
         delta
-    }
-
-    pub fn set_outcome_based_on_all_children(&mut self, stats: &mut RunStats) {
-        for c in self.children.iter_mut() {
-            // this is inefficient because this method was designed to be used in iterate()
-            self.set_outcome_based_on_child(c.outcome, c.min_score, c.max_score, stats);
-        }
     }
 }
 
