@@ -1,4 +1,4 @@
-use shakmaty::Board;
+use shakmaty::*;
 use std::collections::HashMap;
 use std::hash::BuildHasherDefault;
 use twox_hash::XxHash;
@@ -6,28 +6,48 @@ use utils::*;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct RepetitionDetector {
-    map: HashMap<Board, u8, BuildHasherDefault<XxHash>>,
+    map: HashMap<RepetitionPosition, u8, BuildHasherDefault<XxHash>>,
+}
+
+// contains the elements of the position that matter for threefold repetition according to the
+// rules
+#[derive(Eq, Hash, PartialEq, Clone, Debug)]
+pub struct RepetitionPosition {
+    board: Board,
+    turn: Color,
+    castles: Bitboard,
+    ep_square: Option<Square>,
+}
+
+impl RepetitionPosition {
+    pub fn new(position: &Chess) -> RepetitionPosition {
+        RepetitionPosition {
+            board: position.board().clone(),
+            turn: position.turn(),
+            castles: position.castling_rights(),
+            ep_square: position.ep_square(),
+        }
+    }
 }
 
 impl RepetitionDetector {
-    pub fn new() -> RepetitionDetector {
-        RepetitionDetector {
+    pub fn new(starting_position: &Chess) -> RepetitionDetector {
+        let mut detector = RepetitionDetector {
             map: deterministic_hash_map(),
-        }
-    }
-
-    pub fn create_with_starting(starting_board: &Board) -> RepetitionDetector {
-        let mut detector = RepetitionDetector::new();
-        detector.record_and_check(starting_board);
+        };
+        detector.record_and_check(starting_position);
         detector
     }
 
-    pub fn starting() -> RepetitionDetector {
-        RepetitionDetector::create_with_starting(&Board::new())
+    pub fn default() -> RepetitionDetector {
+        RepetitionDetector::new(&Chess::default())
     }
 
-    pub fn record_and_check(&mut self, board: &Board) -> bool {
-        let entry = self.map.entry(board.clone()).or_insert(0);
+    pub fn record_and_check(&mut self, position: &Chess) -> bool {
+        let entry = self
+            .map
+            .entry(RepetitionPosition::new(position))
+            .or_insert(0);
         *entry += 1;
         debug_assert!(*entry < 4);
         *entry == 3
@@ -37,11 +57,32 @@ impl RepetitionDetector {
 #[cfg(test)]
 mod test {
     use super::*;
+    use game::Game;
+    use setup::*;
+    use shakmaty::*;
 
     #[test]
     fn test_increments_count() {
-        let mut rd = RepetitionDetector::starting();
-        assert_eq!(false, rd.record_and_check(&Board::new()));
-        assert_eq!(true, rd.record_and_check(&Board::new()));
+        let mut rd = RepetitionDetector::default();
+        assert_eq!(false, rd.record_and_check(&Chess::default()));
+        assert_eq!(true, rd.record_and_check(&Chess::default()));
+    }
+
+    #[test]
+    fn test_all_actions_are_draw_by_threefold() {
+        let position = parse_fen("q4rk1/5p2/8/6Q1/8/8/8/6K1 b - - 3 2");
+        let mut repetition_detector = RepetitionDetector::new(&position);
+        let drawing_position_1 = parse_fen("q4r1k/5p2/8/6Q1/8/8/8/6K1 w - - 4 3");
+        let drawing_position_2 = parse_fen("q4r2/5p1k/8/6Q1/8/8/8/6K1 w - - 4 3");
+        repetition_detector.record_and_check(&drawing_position_1);
+        repetition_detector.record_and_check(&drawing_position_1);
+        repetition_detector.record_and_check(&drawing_position_2);
+        repetition_detector.record_and_check(&drawing_position_2);
+        let allowed_actions = position.allowed_actions();
+        for action in allowed_actions {
+            let mut new_position = position.clone();
+            new_position.play_safe(&action);
+            assert!(repetition_detector.record_and_check(&new_position))
+        }
     }
 }

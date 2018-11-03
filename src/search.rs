@@ -1,4 +1,3 @@
-use display::*;
 use game::*;
 use mcts::*;
 use settings::*;

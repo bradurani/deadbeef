@@ -1,5 +1,4 @@
 // use display::*;
-use display::*;
 use eval::Value;
 use game::*;
 use playout::playout;
@@ -74,7 +73,7 @@ impl TreeNode {
             turn: game.turn(),  // So we switch to White for move 1
             move_num: move_num, //So we increment to 1 for move 1
             value: Some(game.board().value()),
-            repetition_detector: RepetitionDetector::create_with_starting(game.board()),
+            repetition_detector: RepetitionDetector::new(game),
             n: 0.,
             q: 0.,
             max_score: None,
@@ -91,7 +90,7 @@ impl TreeNode {
             turn: Color::White,
             move_num: 0.5,
             value: Some(Board::default().value()), //The starting position is not necessarily 0, so we calculate it
-            repetition_detector: RepetitionDetector::starting(),
+            repetition_detector: RepetitionDetector::default(),
             n: 0.,
             q: 0.,
             max_score: None,
@@ -319,7 +318,7 @@ impl TreeNode {
                 let (delta, outcome, min_score, node_state) = {
                     let mut child = self.expand(game, candidate_actions, rng, thread_run_stats);
                     if game.halfmove_clock() == MAX_HALFMOVE_CLOCK
-                        || child.repetition_detector.record_and_check(game.board())
+                        || child.repetition_detector.record_and_check(game)
                         || game.is_stalemate()
                         || game.is_insufficient_material()
                     {
@@ -385,6 +384,7 @@ impl MCTS {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use display::*;
     use repetition_detector::*;
     use setup::*;
 
@@ -417,7 +417,7 @@ mod tests {
             turn: Color::Black,
             move_num: 12.,
             value: Some(6), //TODO make value not an option
-            repetition_detector: RepetitionDetector::new(),
+            repetition_detector: RepetitionDetector::new(&game),
             max_score: None,
             min_score: None,
             n: 1.,
@@ -444,7 +444,7 @@ mod tests {
             turn: Color::Black,
             move_num: 12.,
             value: Some(6), //TODO make value not an option
-            repetition_detector: RepetitionDetector::new(),
+            repetition_detector: RepetitionDetector::new(&game),
             max_score: None,
             min_score: None,
             n: 1.,
@@ -464,10 +464,10 @@ mod tests {
     fn test_sets_min_score_if_child_is_draw() {
         let mut stats: RunStats = Default::default();
         let mut game = parse_fen("8/2kr4/8/8/8/3pK3/3Q4/8 b - - 0 1");
-        let mut repetition_detector = RepetitionDetector::new();
+        let mut repetition_detector = RepetitionDetector::new(&game);
         let drawing_position = parse_fen("8/2k1r3/8/8/8/3pK3/3Q4/8 w - - 0 1");
-        repetition_detector.record_and_check(drawing_position.board());
-        repetition_detector.record_and_check(drawing_position.board());
+        repetition_detector.record_and_check(&drawing_position);
+        repetition_detector.record_and_check(&drawing_position);
         let mut node = TreeNode {
             outcome: None,
             action: None,
@@ -499,13 +499,13 @@ mod tests {
     fn test_is_draw_if_all_children_are_draws() {
         let mut stats: RunStats = Default::default();
         let game = parse_fen("q4rk1/5p2/8/6Q1/8/8/8/6K1 b - - 3 2");
-        let mut repetition_detector = RepetitionDetector::new();
+        let mut repetition_detector = RepetitionDetector::new(&game);
         let drawing_position_1 = parse_fen("q4r1k/5p2/8/6Q1/8/8/8/6K1 w - - 4 3");
         let drawing_position_2 = parse_fen("q4r2/5p1k/8/6Q1/8/8/8/6K1 w - - 4 3");
-        repetition_detector.record_and_check(drawing_position_1.board());
-        repetition_detector.record_and_check(drawing_position_1.board());
-        repetition_detector.record_and_check(drawing_position_2.board());
-        repetition_detector.record_and_check(drawing_position_2.board());
+        repetition_detector.record_and_check(&drawing_position_1);
+        repetition_detector.record_and_check(&drawing_position_1);
+        repetition_detector.record_and_check(&drawing_position_2);
+        repetition_detector.record_and_check(&drawing_position_2);
         let mut node = TreeNode {
             outcome: None,
             action: None,
@@ -545,14 +545,15 @@ mod tests {
     }
 
     #[test]
-    fn test_sets_max_score_if_opponent_can_force_draw() {
+    fn test_sets_min_score_if_opponent_can_force_draw() {
         let mut stats: RunStats = Default::default();
         let game = parse_fen("q4rk1/5p2/8/6Q1/8/8/8/6K1 b - - 3 2");
-        let mut repetition_detector = RepetitionDetector::new();
+        let mut repetition_detector = RepetitionDetector::new(&game);
         let drawing_position_1 = parse_fen("q4r1k/5p2/8/6Q1/8/8/8/6K1 w - - 4 3");
         let drawing_position_2 = parse_fen("q4r2/5p1k/8/6Q1/8/8/8/6K1 w - - 4 3");
-        repetition_detector.record_and_check(drawing_position_1.board());
-        repetition_detector.record_and_check(drawing_position_2.board());
+        repetition_detector.record_and_check(&drawing_position_1);
+        repetition_detector.record_and_check(&drawing_position_1);
+        repetition_detector.record_and_check(&drawing_position_2);
         let mut node = TreeNode {
             outcome: None,
             action: None,
@@ -570,7 +571,7 @@ mod tests {
         let settings = Settings::lib_test_default();
         let seed = 6;
         let mut delta = 0.;
-        let n = 2000.;
+        let n = 20000.;
         for _i in 0..n as u32 {
             delta = node.iteration(
                 &mut game.clone(),
@@ -588,18 +589,18 @@ mod tests {
         assert_eq!(n + 1., node.n);
         assert_eq!(Color::Black, node.turn);
         assert_eq!(NodeState::FullyExpanded, node.state);
-        assert_eq!(Some(0), node.max_score);
-        assert_eq!(None, node.min_score);
+        assert_eq!(None, node.max_score);
+        assert_eq!(Some(0), node.min_score);
     }
 
     #[test]
     fn test_outcome_is_draw_if_lose_or_draw() {
         let mut stats: RunStats = Default::default();
         let game = parse_fen("1q3k2/8/8/8/8/8/r7/6K1 w - - 1 1");
-        let mut repetition_detector = RepetitionDetector::new();
+        let mut repetition_detector = RepetitionDetector::new(&game);
         let drawing_position = parse_fen("1q3k2/8/8/8/8/8/r7/5K2 b - - 2 1");
-        repetition_detector.record_and_check(drawing_position.board());
-        repetition_detector.record_and_check(drawing_position.board());
+        repetition_detector.record_and_check(&drawing_position);
+        repetition_detector.record_and_check(&drawing_position);
         let mut node = TreeNode {
             outcome: None,
             action: None,

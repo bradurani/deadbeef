@@ -1,4 +1,4 @@
-use shakmaty::fen::*;
+use setup::*;
 use shakmaty::*;
 use std::env;
 
@@ -17,10 +17,8 @@ pub fn parse_print_tree() -> bool {
 }
 
 pub fn parse_starting_position() -> Chess {
-    env::var("STARTING_POSITION")
-        .unwrap_or("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1".to_string())
-        .parse::<Fen>()
-        .expect("invalid fen")
-        .position()
-        .expect("invalid position")
+    parse_fen(
+        &env::var("STARTING_POSITION")
+            .unwrap_or("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1".to_string()),
+    )
 }
