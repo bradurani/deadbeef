@@ -11,11 +11,10 @@ use std::ops::Not;
 
 pub fn weight(child: &TreeNode, parent_n: f32, settings: &Settings) -> f32 {
     if child.outcome.is_some() {
-        // can skip this check during traversal
+        // for sorting by weight. Tiny optimization, can skip this check during traversal?
         return 0.;
-    }
-    let weight = (child.turn.not().coefficient() * child.q) / child.n
-        + settings.c * (parent_n.ln() / child.n).sqrt();
+    };
+    let weight = (child.adjusted_q() / child.n) + settings.c * (parent_n.ln() / child.n).sqrt();
     // println!("raw weight {}", weight);
     // weight += 2. * child.normalized_color_relative_value(); // / child.n;
     weight

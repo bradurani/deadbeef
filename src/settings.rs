@@ -20,7 +20,7 @@ pub struct Settings {
 }
 
 impl Settings {
-    pub fn parse_args(args: &Vec<String>) -> Settings {
+    pub fn parse_args(_args: &Vec<String>) -> Settings {
         Settings {
             starting_position: parse_starting_position(),
             // TODO remove
@@ -76,8 +76,8 @@ impl Settings {
             starting_move_num: 1.0,
             time_per_move_ms: -1.0,
             n_samples: 40000,
-            threads: 8,
-            c: 0.5,
+            threads: 1,
+            c: 0.2,
             starting_seed: seed,
             starting_iterations_per_ms: 0.5,
             search_type: SearchType::Steps,

@@ -89,7 +89,7 @@ impl<'a> fmt::Display for DisplayTreeNode<'a> {
                     node.move_num,
                     a.to_string().pad_to_width(7),
                     node.state,
-                    node.q.to_string().pad_to_width(12),
+                    node.adjusted_q().to_string().pad_to_width(12),
                     node.n.to_string().pad_to_width(7),
                     node.color_relative_score().to_string().pad_to_width(8),
                     node.normalized_color_relative_value()
@@ -105,7 +105,7 @@ impl<'a> fmt::Display for DisplayTreeNode<'a> {
                     "{}. Root {} q={} n={} s={} v={} {} {} {}",
                     node.move_num,
                     node.state,
-                    node.q.to_string().pad_to_width(12),
+                    node.adjusted_q().to_string().pad_to_width(12),
                     node.n.to_string().pad_to_width(7),
                     node.color_relative_score().to_string().pad_to_width(8),
                     node.normalized_color_relative_value()

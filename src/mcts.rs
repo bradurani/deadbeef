@@ -98,23 +98,6 @@ impl TreeNode {
         }
     }
 
-    pub fn clone_empty(&self) -> TreeNode {
-        TreeNode {
-            outcome: self.outcome,
-            action: self.action,
-            children: Vec::new(),
-            state: self.state,
-            turn: self.turn,
-            move_num: self.move_num,
-            value: self.value,
-            repetition_detector: self.repetition_detector.clone(),
-            n: 0.,
-            q: 0.,
-            max_score: None,
-            min_score: None,
-        }
-    }
-
     pub fn clone_childless(&self) -> TreeNode {
         TreeNode {
             outcome: self.outcome,
@@ -140,6 +123,18 @@ impl TreeNode {
             },
             Some(Outcome::Draw) => 0.,
             _ => (self.turn.not().coefficient() * self.n),
+        }
+    }
+
+    pub fn adjusted_q(&self) -> f32 {
+        let mut adjusted_q = self.turn.not().coefficient() * self.q;
+        let adjusted_q = match self.min_score {
+            Some(min) => adjusted_q.min(min as f32), // opponent can do no worse than min so we can do no better than min
+            None => adjusted_q,
+        };
+        match self.max_score {
+            Some(max) => adjusted_q.max(max as f32),
+            None => adjusted_q
         }
     }
 
