@@ -128,13 +128,13 @@ impl TreeNode {
 
     pub fn adjusted_q(&self) -> f32 {
         let mut adjusted_q = self.turn.not().coefficient() * self.q;
-        let adjusted_q = match self.min_score {
+        adjusted_q = match self.min_score {
             Some(min) => adjusted_q.min(min as f32), // opponent can do no worse than min so we can do no better than min
             None => adjusted_q,
         };
         match self.max_score {
             Some(max) => adjusted_q.max(max as f32),
-            None => adjusted_q
+            None => adjusted_q,
         }
     }
 
