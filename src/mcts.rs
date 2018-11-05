@@ -380,8 +380,10 @@ impl MCTS {
 mod tests {
     use super::*;
     use display::*;
+    use play;
     use repetition_detector::*;
     use setup::*;
+    use shakmaty::*;
 
     #[test]
     fn test_iteration_mate_in_1() {
@@ -633,6 +635,66 @@ mod tests {
         assert_eq!(NodeState::LeafNode, node.state);
         assert_eq!(Some(0), node.min_score);
         assert_eq!(Some(0), node.max_score);
+    }
+
+    #[test]
+    fn test_draws_intentionally_if_behind() {
+        // test that if there's a draw on the next move and we're way behind, we draw,
+        // even though exploration will rack up n for other nodes, so we can't just
+        // rely on n to choose best move
+        let mut stats: RunStats = Default::default();
+        let game = parse_fen("n1nqk3/b1ppp3/1p6/p7/5P2/4P1P1/4NK2/8 w - - 0 1");
+        let mut repetition_detector = RepetitionDetector::new(&game);
+        let drawing_position = parse_fen("n1nqk3/b1ppp3/1p6/p7/5P2/4P1P1/4N3/5K2 b - - 0 1");
+        repetition_detector.record_and_check(&drawing_position);
+        repetition_detector.record_and_check(&drawing_position);
+        let mut node = TreeNode {
+            outcome: None,
+            action: None,
+            children: vec![],
+            state: NodeState::Expandable,
+            turn: Color::White,
+            move_num: 12.,
+            value: Some(-100), //TODO make value not an option
+            repetition_detector: repetition_detector,
+            max_score: None,
+            min_score: None,
+            n: 1.,
+            q: 0.,
+        };
+        let settings = Settings::lib_test_default();
+        let seed = 1;
+        let mut delta = 0.;
+        let n = 50;
+        for _i in 0..n as u32 {
+            delta = node.iteration(
+                &mut game.clone(),
+                &mut seeded_rng(seed),
+                &mut stats,
+                &settings,
+            );
+            if node.outcome.is_some() {
+                break;
+            }
+        }
+        print_tree(&node, &settings);
+        assert_eq!(None, node.outcome);
+        assert_eq!(n as f32 + 1., node.n);
+        assert_eq!(Color::White, node.turn);
+        assert_eq!(NodeState::FullyExpanded, node.state);
+        assert_eq!(Some(0), node.min_score);
+        assert_eq!(None, node.max_score);
+        let best_move = play::find_best_move(node, &game, &mut stats, &settings).unwrap();
+        assert_eq!(
+            Move::Normal {
+                role: Role::King,
+                from: Square::F2,
+                capture: None,
+                to: Square::F1,
+                promotion: None
+            },
+            best_move.action.unwrap()
+        );
     }
 
     #[test]
