@@ -158,11 +158,11 @@ impl fmt::Display for Settings {
 
         writeln!(
             f,
-            "SETTINGS: {} THREADS: {} C: {} SEED: {}",
+            "SETTINGS: {} MAX_THREADS: {} C: {} SEED: {}",
             // self.starting_move_num,
             // self.starting_position.board(),
             search_params(self),
-            self.threads,
+            self.max_threads,
             self.c,
             self.starting_seed,
         )

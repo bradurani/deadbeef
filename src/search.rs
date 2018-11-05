@@ -19,12 +19,21 @@ pub fn search(
     move_run_stats: &mut RunStats,
     settings: &Settings,
 ) -> TreeNode {
-    println!("Starting {}", TreeStats::tree_stats(&root));
+    let n_threads = optimal_threads(root.children.len(), settings.max_threads);
+    println!(
+        "Starting {}Threads: {}",
+        TreeStats::tree_stats(&root),
+        n_threads
+    );
+    if root.has_outcome() {
+        println!("skipping saerch on node with outcome");
+        return root;
+    }
 
     let new_root = match &settings.search_type {
-        SearchType::Steps => search_samples(root, &game, move_run_stats, settings),
-        SearchType::Time => search_time(root, &game, move_run_stats, settings),
-        SearchType::Mate => search_to_outcome(root, &game, move_run_stats, settings),
+        SearchType::Steps => search_samples(root, &game, n_threads, move_run_stats, settings),
+        SearchType::Time => search_time(root, &game, n_threads, move_run_stats, settings),
+        SearchType::Mate => search_to_outcome(root, &game, n_threads, move_run_stats, settings),
     };
 
     // println!("\nnew_root\n{}", new_root);
@@ -36,6 +45,7 @@ pub fn search(
 pub fn search_time(
     root: TreeNode,
     game: &Chess,
+    n_threads: usize,
     move_run_stats: &mut RunStats,
     settings: &Settings,
 ) -> TreeNode {
@@ -51,12 +61,24 @@ pub fn search_time(
 
     let mut new_root = root;
     while n_samples >= settings.min_batch_size as usize {
+        if new_root.is_decisive() {
+            // println!("found decisive");
+            break;
+        }
+
         let batch_t0 = Instant::now();
 
         let mut batch_run_stats: RunStats = Default::default();
         batch_run_stats.sample_batches = 1;
 
-        new_root = search_threaded_batch(new_root, game, n_samples, &mut batch_run_stats, settings);
+        new_root = search_threaded_batch(
+            new_root,
+            game,
+            n_threads,
+            n_samples,
+            &mut batch_run_stats,
+            settings,
+        );
         samples_total += n_samples;
 
         let time_spent = t0.elapsed().as_millis() as f32;
@@ -71,10 +93,6 @@ pub fn search_time(
         batch_run_stats.total_time = batch_time_spent as u64;
         // println!("Batch: {}", batch_run_stats);
         move_run_stats.add(&batch_run_stats);
-        if new_root.is_decisive() {
-            // println!("found decisive");
-            break;
-        }
     }
 
     println!("iterations_per_ms: {}", mcts.iterations_per_ms);
@@ -84,11 +102,12 @@ pub fn search_time(
 pub fn search_to_outcome(
     root: TreeNode,
     game: &Chess,
+    n_threads: usize,
     move_run_stats: &mut RunStats,
     settings: &Settings,
 ) -> TreeNode {
     assert!(settings.n_samples >= 5000);
-    let new_root = search_samples(root, game, move_run_stats, settings);
+    let new_root = search_samples(root, game, n_threads, move_run_stats, settings);
     assert!(new_root.outcome.is_some());
     new_root
 }
@@ -96,6 +115,7 @@ pub fn search_to_outcome(
 pub fn search_samples(
     root: TreeNode,
     game: &Chess,
+    n_threads: usize,
     move_run_stats: &mut RunStats,
     settings: &Settings,
 ) -> TreeNode {
@@ -108,6 +128,9 @@ pub fn search_samples(
     );
     let mut new_root = root;
     for i in 0..batches {
+        if new_root.has_outcome() {
+            return new_root;
+        }
         print!(".");
         std::io::stdout().flush().unwrap();
         if i % 100 == 0 {
@@ -117,18 +140,22 @@ pub fn search_samples(
         new_root = search_threaded_batch(
             new_root,
             game,
+            n_threads,
             settings.max_batch_size,
             move_run_stats,
             settings,
         );
         move_run_stats.sample_batches += 1;
-        if new_root.has_outcome() {
-            return new_root;
-        }
     }
     if remainder as usize >= settings.min_batch_size {
-        new_root =
-            search_threaded_batch(new_root, game, remainder as usize, move_run_stats, settings)
+        new_root = search_threaded_batch(
+            new_root,
+            game,
+            n_threads,
+            remainder as usize,
+            move_run_stats,
+            settings,
+        )
     }
     new_root
 }
@@ -136,6 +163,7 @@ pub fn search_samples(
 pub fn search_threaded_batch(
     mut root: TreeNode,
     game: &Chess,
+    n_threads: usize,
     batch_n_samples: usize,
     batch_run_stats: &mut RunStats,
     settings: &Settings,
@@ -147,6 +175,11 @@ pub fn search_threaded_batch(
     let mut new_root = root.clone_childless();
     ensure_expanded(&mut root, game, batch_run_stats, settings); //for a new game where root has no children, expand them
     new_root.state = NodeState::FullyExpanded;
+
+    if new_root.children.len() == 1 {
+        // Only 1 move. no need to search
+        return new_root;
+    }
 
     let thread_result_handles: Vec<JoinHandle<(SafeTreeNode, f32, f32, RunStats)>> = root
         .children
@@ -164,7 +197,7 @@ pub fn search_threaded_batch(
                 let mut new_n = 0.;
                 let mut new_q = 0.;
 
-                if thread_num < thread_settings.threads {
+                if thread_num < n_threads {
                     // don't do work if we're over the thread count. Wastes spawing a thread :(
                     let t0 = Instant::now();
 
@@ -199,7 +232,7 @@ pub fn search_threaded_batch(
         .map(|th| th.join().expect("panicked joining threads"))
         .map(|(safe_thread_child, new_n, new_q, thread_run_stats)| {
             // add stats from the children here, so we have a reference to new_root again
-            batch_run_stats.add_thread_stats(&thread_run_stats, settings.threads);
+            batch_run_stats.add_thread_stats(&thread_run_stats, settings.max_threads);
             new_root.n += new_n;
             new_root.q += new_q;
             Arc::try_unwrap(safe_thread_child)
@@ -213,6 +246,10 @@ pub fn search_threaded_batch(
     new_root.set_outcome_from_children(batch_run_stats);
     sort_children_by_weight(&mut new_root.children, new_root.n, settings);
     new_root
+}
+
+fn optimal_threads(n_children: usize, max_threads: usize) -> usize {
+    (n_children / 2).min(max_threads).max(1)
 }
 
 fn ensure_expanded(root: &mut TreeNode, game: &Chess, stats: &mut RunStats, settings: &Settings) {
