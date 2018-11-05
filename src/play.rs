@@ -120,7 +120,7 @@ pub fn find_best_move(
     game: &Chess,
     move_run_stats: &mut RunStats,
     settings: &Settings,
-    ) -> Option<TreeNode> {
+) -> Option<TreeNode> {
     let t0 = Instant::now();
 
     println!(
@@ -157,7 +157,7 @@ fn best_child_node(root: TreeNode) -> TreeNode {
                 .partial_cmp(&n2.color_relative_score())
                 .unwrap()
         })
-    .unwrap()
+        .unwrap()
 }
 
 #[cfg(test)]
