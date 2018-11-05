@@ -8,30 +8,39 @@ mod helpers;
 
 #[test]
 fn stalemate_rook_king() {
-    let mut stats: RunStats = Default::default();
-    assert_draw("3k4/7r/3KP3/8/8/8/8/R7 b - - 0 1", &mut stats);
-    assert!(stats.nodes_created < 30);
+    // let mut stats: RunStats = Default::default();
+    assert_move("3k4/7r/3KP3/8/8/8/8/R7 b - - 0 1", "h7d7");
+    // assert!(stats.nodes_created < 30);
 }
 
 #[test]
 fn stalemate_down_a_pawn() {
-    let mut stats: RunStats = Default::default();
-    assert_draw("7k/5Kp1/5p1p/5P1P/8/8/8/8 w - - 0 1", &mut stats);
-    assert!(stats.nodes_created < 30);
+    // kpp vs kpp white draw with with g6
+    // let mut stats: RunStats = Default::default();
+    assert_move("7k/5Kp1/5p1p/5P1P/8/8/8/8 w - - 0 1", "f7g6");
+    // assert!(stats.nodes_created < 30);
 }
 
 #[test]
 fn stalemate_rook_sacrifice() {
-    let mut stats: RunStats = Default::default();
-    assert_draw("1q5k/5Rp1/6K1/4N2P/8/8/8/8 w - - 0 1", &mut stats);
-    assert!(stats.nodes_created < 30);
+    // very complex stalemate position with many lines
+    // let mut stats: RunStats = Default::default();
+    assert_move("1q5k/5Rp1/6K1/4N2P/8/8/8/8 w - - 0 1", "f7f8");
+    // assert!(stats.nodes_created < 30);
 }
 
 #[test]
 fn stalemate_queen_trade() {
-    let mut stats: RunStats = Default::default();
-    assert_draw("8/8/6Q1/2p5/1pk3nb/5q2/5R2/r1N1K3 w - - 0 1", &mut stats);
-    assert!(stats.nodes_created < 30);
+    // stalemate queen sacrfice with 2 pieces pinned
+    // let mut stats: RunStats = Default::default();
+    assert_move("8/8/6Q1/2p5/1pk3nb/5q2/5R2/r1N1K3 w - - 0 1", "g6d3");
+    // assert!(stats.nodes_created < 30);
 }
 
-// "3r3k/4KQ2/8/8/8/8/8/8 b - - 51 87"
+#[test]
+fn sacrifice_rook_skewer() {
+    // black rook can sacrifice or skewer queen
+    assert_move("3r3k/4KQ2/8/8/8/8/8/8 b - - 51 87", "d8d7");
+}
+
+// ""
