@@ -21,7 +21,13 @@ pub enum NodeState {
     Expandable,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+impl Default for NodeState {
+    fn default() -> NodeState {
+        NodeState::Expandable
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct TreeNode {
     pub outcome: Option<Outcome>,
     pub action: Option<Move>, // how did we get here
@@ -81,22 +87,22 @@ impl TreeNode {
         }
     }
 
-    pub fn starting() -> TreeNode {
-        TreeNode {
-            outcome: None,
-            action: None,
-            children: Vec::new(),
-            state: NodeState::Expandable,
-            turn: Color::White,
-            move_num: 0.5,
-            value: Some(Board::default().value()), //The starting position is not necessarily 0, so we calculate it
-            repetition_detector: RepetitionDetector::default(),
-            n: 0.,
-            q: 0.,
-            max_score: None,
-            min_score: None,
-        }
-    }
+    // pub fn starting() -> TreeNode {
+    //     TreeNode {
+    //         outcome: None,
+    //         action: None,
+    //         children: Vec::new(),
+    //         state: NodeState::Expandable,
+    //         turn: Color::White,
+    //         move_num: 0.5,
+    //         value: Some(Board::default().value()), //The starting position is not necessarily 0, so we calculate it
+    //         repetition_detector: RepetitionDetector::default(),
+    //         n: 0.,
+    //         q: 0.,
+    //         max_score: None,
+    //         min_score: None,
+    //     }
+    // }
 
     pub fn clone_childless(&self) -> TreeNode {
         TreeNode {

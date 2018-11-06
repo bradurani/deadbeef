@@ -255,7 +255,7 @@ pub fn ponder(
     waiting_for_player: Arc<AtomicBool>,
     settings: &Settings,
 ) -> TreeNode {
-    let mut ponder_run_stats = Default::default();
+    let mut ponder_run_stats: RunStats = Default::default();
     let mut new_root = root;
     while waiting_for_player.load(Ordering::Relaxed) {
         let n_threads = optimal_threads(new_root.children.len(), settings.max_threads);
@@ -269,8 +269,8 @@ pub fn ponder(
             settings.max_batch_size,
             &mut ponder_run_stats,
             &settings,
-        )
-        ponder_run_stats.batches += 1;
+        );
+        ponder_run_stats.sample_batches += 1;
     }
     println!("\nPonder stats:{}", ponder_run_stats);
     new_root

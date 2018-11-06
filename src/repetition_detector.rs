@@ -39,10 +39,6 @@ impl RepetitionDetector {
         detector
     }
 
-    pub fn default() -> RepetitionDetector {
-        RepetitionDetector::new(&Chess::default())
-    }
-
     pub fn record_and_check(&mut self, position: &Chess) -> bool {
         let entry = self
             .map
@@ -51,6 +47,12 @@ impl RepetitionDetector {
         *entry += 1;
         debug_assert!(*entry < 4);
         *entry == 3
+    }
+}
+
+impl Default for RepetitionDetector {
+    fn default() -> RepetitionDetector {
+        RepetitionDetector::new(&Chess::default())
     }
 }
 

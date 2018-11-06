@@ -1,4 +1,12 @@
-use shakmaty::{fen::Fen, uci::Uci, Chess, Move};
+use shakmaty::{fen::*, uci::Uci, Chess, Move, Position, PositionError};
+use std::error::Error;
+
+pub fn parse_fen_input(fen_str: &str) -> Result<Chess, String> {
+    fen_str
+        .parse()
+        .map_err(|e: FenError| e.to_string())
+        .and_then(|f: Fen| f.position().map_err(|e: PositionError| e.to_string()))
+}
 
 pub fn parse_fen(fen_str: &str) -> Chess {
     let setup: Fen = fen_str.parse().expect("invalid fen");

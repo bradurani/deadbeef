@@ -19,9 +19,10 @@ pub struct Settings {
     pub print_tree: bool,
 }
 
-impl Settings {
-    pub fn parse_args(_args: &Vec<String>) -> Settings {
+impl Default for Settings {
+    fn default() -> Settings {
         Settings {
+            // TODO remove
             starting_position: parse_starting_position(),
             // TODO remove
             starting_move_num: 1.0,
@@ -38,7 +39,9 @@ impl Settings {
             print_tree: parse_print_tree(),
         }
     }
+}
 
+impl Settings {
     //#[cfg(test)] //need to figure out how to not compile this outside tests
     pub fn test_default() -> Settings {
         Settings::test_default_with_seed(1)

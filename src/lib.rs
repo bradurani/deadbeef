@@ -24,6 +24,8 @@ pub mod repetition_detector;
 pub mod search;
 pub mod settings;
 pub mod setup;
+pub mod state;
 pub mod stats;
 pub mod uct;
 pub mod utils;
+pub mod xboard;
