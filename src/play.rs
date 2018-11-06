@@ -7,6 +7,9 @@ use search::*;
 use settings::*;
 use shakmaty::*;
 use stats::*;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use std::thread;
 use std::time::Instant;
 
 pub fn play_move(settings: &Settings) -> Vec<Move> {
@@ -29,7 +32,6 @@ pub fn play_move(settings: &Settings) -> Vec<Move> {
     let pgn = pgn::to_pgn(&settings.starting_position, &move_history); //TODO build incrementally
     println!("{}", pgn);
 
-    move_num += 0.5;
     let time_spent = t0.elapsed().as_millis();
     game_run_stats.total_time = time_spent as u64;
     println!("\nGame: {}", game_run_stats);
@@ -42,18 +44,40 @@ pub fn play_2_player_game(settings: &Settings) -> Vec<Move> {
     let mut game = settings.starting_position.clone();
     let mut game_run_stats: RunStats = Default::default();
     let mut move_num = settings.starting_move_num;
+    let mut root = TreeNode::new_root(&game, move_num);
 
     let t0 = Instant::now();
 
     loop {
+        let waiting_for_player = Arc::new(AtomicBool::new(true));
+        let ponder_handle = {
+            let mut ponder_game = game.clone();
+            let mut waiting_for_player_flag = waiting_for_player.clone();
+            let ponder_settings = settings.clone();
+            thread::spawn(move || {
+                ponder(
+                    root,
+                    &ponder_game,
+                    waiting_for_player_flag,
+                    &ponder_settings,
+                )
+            })
+        };
         let action = stdin(&game);
         game.play_safe(&action);
         move_num += 0.5;
         move_history.push(action);
+        waiting_for_player.store(false, Ordering::Relaxed);
+        let pondered_root = ponder_handle
+            .join()
+            .expect("panicked joining ponder handler");
+        println!("finding child action");
+        let after_player_move_root = find_child_action_node(pondered_root, &action)
+            .unwrap_or(TreeNode::new_root(&game, move_num)); // would only default to new if we hadn't expanded this far
 
-        let root = TreeNode::new_root(&game, move_num);
         let mut move_run_stats: RunStats = Default::default();
-        let new_root = find_best_move(root, &game, &mut move_run_stats, settings);
+        println!("finding best");
+        let new_root = find_best_move(after_player_move_root, &game, &mut move_run_stats, settings);
 
         match new_root {
             None => break,
@@ -62,6 +86,7 @@ pub fn play_2_player_game(settings: &Settings) -> Vec<Move> {
                 move_history.push(best_move);
                 game.make_move(&best_move);
                 println!("{:?}", game.board());
+                root = found_new_root;
             }
         }
         game_run_stats.add(&move_run_stats);
@@ -113,6 +138,16 @@ pub fn play_game(settings: &Settings) -> Vec<Move> {
     game_run_stats.total_time = time_spent as u64;
     println!("\nGame: {}", game_run_stats);
     move_history
+}
+
+pub fn find_child_action_node(root: TreeNode, action: &Move) -> Option<TreeNode> {
+    println!("finding......");
+    let found = root
+        .children
+        .into_iter()
+        .find(|c| c.action.unwrap() == *action);
+    println!("found");
+    found
 }
 
 pub fn find_best_move(

@@ -25,7 +25,7 @@ impl Settings {
             starting_position: parse_starting_position(),
             // TODO remove
             starting_move_num: 1.0,
-            time_per_move_ms: 1000.0,
+            time_per_move_ms: 5000.0,
             n_samples: -1,
             max_threads: 12,
             c: 0.5,

@@ -4,6 +4,7 @@ use settings::*;
 use shakmaty::*;
 use stats::*;
 use std::io::*;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::thread::JoinHandle;
@@ -26,7 +27,7 @@ pub fn search(
         n_threads
     );
     if root.has_outcome() {
-        println!("skipping saerch on node with outcome");
+        println!("skipping search on node with outcome");
         return root;
     }
 
@@ -176,7 +177,7 @@ pub fn search_threaded_batch(
     ensure_expanded(&mut root, game, batch_run_stats, settings); //for a new game where root has no children, expand them
     new_root.state = NodeState::FullyExpanded;
 
-    if new_root.children.len() == 1 {
+    if root.children.len() == 1 {
         // Only 1 move. no need to search
         return new_root;
     }
@@ -245,6 +246,33 @@ pub fn search_threaded_batch(
     new_root.children = new_children;
     new_root.set_outcome_from_children(batch_run_stats);
     sort_children_by_weight(&mut new_root.children, new_root.n, settings);
+    new_root
+}
+
+pub fn ponder(
+    root: TreeNode,
+    game: &Chess,
+    waiting_for_player: Arc<AtomicBool>,
+    settings: &Settings,
+) -> TreeNode {
+    let mut ponder_run_stats = Default::default();
+    let mut new_root = root;
+    while waiting_for_player.load(Ordering::Relaxed) {
+        let n_threads = optimal_threads(new_root.children.len(), settings.max_threads);
+        if new_root.has_outcome() {
+            break;
+        }
+        new_root = search_threaded_batch(
+            new_root,
+            &game,
+            n_threads,
+            settings.max_batch_size,
+            &mut ponder_run_stats,
+            &settings,
+        )
+        ponder_run_stats.batches += 1;
+    }
+    println!("\nPonder stats:{}", ponder_run_stats);
     new_root
 }
 
