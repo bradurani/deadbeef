@@ -1,7 +1,7 @@
 // use display::*;
 use eval::Value;
 use game::*;
-use playout::playout;
+// use playout::playout;
 use rand::rngs::SmallRng;
 use repetition_detector::RepetitionDetector;
 use settings::*;
@@ -366,19 +366,6 @@ impl TreeNode {
         self.n += 1.;
         self.q += delta;
         delta
-    }
-}
-
-#[derive(Debug)]
-pub struct MCTS {
-    pub iterations_per_ms: f32,
-}
-
-impl MCTS {
-    pub fn new(settings: &Settings) -> MCTS {
-        MCTS {
-            iterations_per_ms: settings.starting_iterations_per_ms,
-        }
     }
 }
 

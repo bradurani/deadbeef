@@ -1,6 +1,7 @@
 extern crate deadbeef;
 extern crate shakmaty;
 
+use deadbeef::engine::*;
 use deadbeef::pgn;
 use deadbeef::play;
 use deadbeef::settings::*;
@@ -10,7 +11,8 @@ use std::env::*;
 //TODO remove Copy from Move in Shakmaty
 
 pub fn main() {
-    let xboard = XBoard::start();
+    let mut engine: Engine = Default::default();
+    let xboard = XBoard::start(&mut engine);
     // println!("{}", xboard);
     // let args: Vec<String> = args().collect();
     // let settings = Settings::parse_args(&args);

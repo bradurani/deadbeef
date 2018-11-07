@@ -1,18 +1,19 @@
-use state::*;
+use engine::*;
+use shakmaty::uci::Uci;
 use std::io::{self, BufRead};
 
 #[derive(Default)]
 pub struct XBoard {
-    state: State,
     show_thinking: bool,
+    force: bool,
 }
 
 impl XBoard {
-    pub fn start() {
+    pub fn start(engine: &mut Engine) {
         let mut xboard: XBoard = Default::default();
+        let stdin = io::stdin();
 
         loop {
-            let stdin = io::stdin();
             let input = stdin.lock().lines().next().map(|r| r.unwrap());
             match input {
                 Some(cmd) => {
@@ -28,15 +29,22 @@ impl XBoard {
                         println!("feature variants=\"normal\"");
                         println!("feature done=1");
                     } else if cmd == "new" {
-                        xboard.state = Default::default();
+                        engine.reset();
                     } else if cmd.starts_with("setboard") {
                         match cmd.splitn(2, ' ').collect::<Vec<&str>>().as_slice() {
-                            [_, fen] => match State::from_fen(fen) {
-                                Ok(state) => xboard.state = state,
+                            [_, fen] => match engine.set_board(fen) {
+                                Ok(()) => {}
                                 Err(msg) => eprintln!("{}", msg),
                             },
                             _ => eprintln!("invalid setboard {}", cmd),
                         }
+                    } else if cmd == "force" {
+                        xboard.force = true;
+                    } else if cmd == "go" {
+                        xboard.force = false;
+                        let best_move = engine.make_move();
+                        let uci = Uci::from_move(&engine.state.position, &best_move);
+                        println!("move {}", uci.to_string());
                     } else {
                         eprintln!("Unknown cmd {}", cmd);
                     }

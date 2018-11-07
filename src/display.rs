@@ -148,20 +148,10 @@ impl<'a> fmt::Display for DisplayTreeNode<'a> {
 
 impl fmt::Display for Settings {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fn search_params(settings: &Settings) -> String {
-            match settings.search_type {
-                SearchType::Steps => format!("n_samples: {}", settings.n_samples),
-                SearchType::Time => format!("time_per_move: {}", settings.time_per_move_ms),
-                SearchType::Mate => "to mate".to_string(),
-            }
-        }
-
         writeln!(
             f,
             "SETTINGS: {} MAX_THREADS: {} C: {} SEED: {}",
-            // self.starting_move_num,
-            // self.starting_position.board(),
-            search_params(self),
+            format!("{:?}", self.search_type),
             self.max_threads,
             self.c,
             self.starting_seed,

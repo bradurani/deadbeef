@@ -1,5 +1,4 @@
-use shakmaty::{fen::*, uci::Uci, Chess, Move, Position, PositionError};
-use std::error::Error;
+use shakmaty::{fen::*, uci::Uci, Chess, Move, PositionError};
 
 pub fn parse_fen_input(fen_str: &str) -> Result<Chess, String> {
     fen_str
