@@ -5,7 +5,7 @@ use settings::*;
 use setup::*;
 use shakmaty::*;
 use stats::*;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use time_remaining::*;
 
 #[derive(Default)]
@@ -13,6 +13,7 @@ pub struct State {
     pub root: TreeNode,
     pub position: Chess,
     pub time_remaining: Option<TimeRemaining>,
+    pub opponent_time_remaining: Option<Duration>,
 }
 
 impl State {
@@ -31,6 +32,7 @@ impl State {
             root: search_with_strategy(self, stats, settings),
             position: position,
             time_remaining: time_remaining,
+            ..Default::default()
         }
     }
 
@@ -88,6 +90,13 @@ impl State {
     pub fn set_time_remaining(self, remaining: Duration) -> State {
         State {
             time_remaining: Some(TimeRemaining::start(remaining)),
+            ..self
+        }
+    }
+
+    pub fn set_opponent_time_remaining(self, remaining: Duration) -> State {
+        State {
+            opponent_time_remaining: Some(remaining),
             ..self
         }
     }

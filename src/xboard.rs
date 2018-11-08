@@ -4,16 +4,12 @@ use std::io::{self, BufRead};
 use std::process;
 
 pub struct XBoard {
-    show_thinking: bool,
     force: bool,
 }
 
 impl Default for XBoard {
     fn default() -> XBoard {
-        XBoard {
-            show_thinking: true,
-            force: false,
-        }
+        XBoard { force: false }
     }
 }
 
@@ -84,6 +80,23 @@ impl XBoard {
                 },
                 _ => eprintln!("invalid time {}", cmd),
             }
+        } else if cmd.starts_with("otim") {
+            match cmd.splitn(2, ' ').collect::<Vec<&str>>().as_slice() {
+                [_, time] => match time.parse::<u64>() {
+                    Ok(time_cs) => engine.set_opponent_time_remaining_cs(time_cs),
+                    Err(msg) => eprintln!("{}", msg),
+                },
+                _ => eprintln!("invalid time {}", cmd),
+            }
+        } else if cmd.starts_with("post") {
+            engine.set_show_thinking(true);
+        } else if cmd.starts_with("nopost") {
+            engine.set_show_thinking(false);
+        } else if vec!["xboard", "random", "hard", "accepted", "level"]
+            .iter()
+            .any(|c| cmd.starts_with(c))
+        {
+
         } else {
             eprintln!("Unknown cmd {}", cmd);
         }

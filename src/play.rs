@@ -62,47 +62,6 @@
 //     move_history
 // }
 
-// pub fn find_child_action_node(root: TreeNode, action: &Move) -> Option<TreeNode> {
-//     println!("finding......");
-//     let found = root
-//         .children
-//         .into_iter()
-//         .find(|c| c.action.unwrap() == *action);
-//     println!("found");
-//     found
-// }
-//
-// pub fn find_best_move(
-//     root: TreeNode,
-//     game: &Chess,
-//     move_run_stats: &mut RunStats,
-//     settings: &Settings,
-// ) -> Option<TreeNode> {
-//     let t0 = Instant::now();
-//
-//     println!(
-//         "\n-------------------------------------\n{}    {} / {}  s: {}",
-//         root.move_num,
-//         root.q,
-//         root.n,
-//         root.score()
-//     );
-//
-//     if root.is_game_over_or_drawn(game) {
-//         return None;
-//     }
-//
-//     let new_root = search(root, &game, move_run_stats, settings);
-//
-//     print_tree(&new_root, settings);
-//
-//     let best_child = best_child_node(new_root);
-//
-//     let time_spent = t0.elapsed().as_millis();
-//     move_run_stats.total_time = time_spent as u64;
-//     println!("{}", move_run_stats);
-//
-//     Some(best_child)
 // }
 //
 //

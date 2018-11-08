@@ -11,6 +11,7 @@ pub struct Settings {
     // TODO move out
     pub max_tree_display_depth: u8,
     pub print_tree: bool,
+    pub show_thinking: bool,
 }
 
 impl Default for Settings {
@@ -23,6 +24,7 @@ impl Default for Settings {
             batch_size: 100,
             max_tree_display_depth: parse_max_tree_display_depth(),
             print_tree: parse_print_tree(),
+            show_thinking: false,
         }
     }
 }
@@ -47,6 +49,7 @@ impl Settings {
         Settings {
             search_type: SearchType::Iterations(10000),
             max_threads: 1,
+            show_thinking: false,
             ..Default::default()
         }
     }

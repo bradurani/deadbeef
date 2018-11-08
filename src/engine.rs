@@ -50,6 +50,16 @@ impl Engine {
         self.state = old_state.set_time_remaining(remaining);
     }
 
+    pub fn set_opponent_time_remaining_cs(&mut self, remaining_cs: u64) {
+        let remaining = Duration::from_millis(remaining_cs * 10);
+        let old_state = mem::replace(&mut self.state, Default::default());
+        self.state = old_state.set_opponent_time_remaining(remaining);
+    }
+
+    pub fn set_show_thinking(&mut self, show_thinking: bool) {
+        self.settings.show_thinking = show_thinking;
+    }
+
     fn search(&mut self) {
         if self.state.has_outcome() {
             return;
