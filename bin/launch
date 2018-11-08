@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+LOG_FILE=/Users/bradurani/src/deadbeef/log/out.log
+ERROR_LOG_FILE=/Users/bradurani/src/deadbeef/log/error.log
+IN_LOG_FILE=/Users/bradurani/src/deadbeef/log/in.log
+
+touch $LOG_FILE
+touch $ERROR_LOG_FILE
+touch $IN_LOG_FILE
+
+tee $IN_LOG_FILE | /Users/bradurani/.cargo/bin/cargo run --release 2>$ERROR_LOG_FILE | tee $LOG_FILE
+# /Users/bradurani/.cargo/bin/cargo run --release | tee $LOG_FILE

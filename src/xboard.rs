@@ -3,6 +3,7 @@ use shakmaty::uci::Uci;
 use std::io::{self, BufRead};
 use std::process;
 
+#[derive(Debug)]
 pub struct XBoard {
     force: bool,
 }
@@ -53,7 +54,7 @@ impl XBoard {
         } else if cmd == "go" {
             self.force = false;
             let best_move = engine.make_engine_move();
-            let uci = Uci::from_move(&engine.position(), &best_move);
+            let uci = Uci::from_move(&engine.previous_position, &best_move);
             println!("move {}", uci.to_string());
         } else if cmd.starts_with("ping") {
             match cmd.splitn(2, ' ').collect::<Vec<&str>>().as_slice() {

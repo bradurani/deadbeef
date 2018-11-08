@@ -10,6 +10,7 @@ use std::time::Duration;
 #[derive(Default)]
 pub struct Engine {
     pub state: State,
+    pub previous_position: Chess, // we need to this after making a move so we can generate Uci
     pub game_stats: RunStats,
     pub settings: Settings,
 }
@@ -29,6 +30,7 @@ impl Engine {
     pub fn make_user_move(&mut self, uci_str: &str) -> Result<Move, String> {
         let action = parse_uci_input(uci_str, self.position())?;
         let old_state = mem::replace(&mut self.state, Default::default());
+        self.previous_position = old_state.position.clone();
         self.state = old_state.make_user_move(&action);
         Ok(action)
     }
@@ -36,6 +38,7 @@ impl Engine {
     pub fn make_engine_move(&mut self) -> Move {
         self.search();
         let old_state = mem::replace(&mut self.state, Default::default());
+        self.previous_position = old_state.position.clone();
         self.state = old_state.make_best_move();
         self.state.last_action()
     }
