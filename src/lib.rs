@@ -31,6 +31,7 @@ pub mod settings;
 pub mod setup;
 pub mod state;
 pub mod stats;
+pub mod time_remaining;
 pub mod uct;
 pub mod utils;
 pub mod xboard;

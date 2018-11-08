@@ -1,10 +1,20 @@
-use shakmaty::{fen::*, uci::Uci, Chess, Move, PositionError};
+use shakmaty::{fen::*, uci::*, Chess, IllegalMove, Move, PositionError};
 
 pub fn parse_fen_input(fen_str: &str) -> Result<Chess, String> {
     fen_str
         .parse()
         .map_err(|e: FenError| e.to_string())
         .and_then(|f: Fen| f.position().map_err(|e: PositionError| e.to_string()))
+}
+
+pub fn parse_uci_input(uci_str: &str, position: Chess) -> Result<Move, String> {
+    uci_str
+        .parse()
+        .map_err(|e: InvalidUci| e.to_string())
+        .and_then(|uci: Uci| {
+            let action = uci.to_move(&position);
+            action.map_err(|e: IllegalMove| e.to_string())
+        })
 }
 
 pub fn parse_fen(fen_str: &str) -> Chess {

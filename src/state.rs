@@ -5,11 +5,14 @@ use settings::*;
 use setup::*;
 use shakmaty::*;
 use stats::*;
+use std::time::{Duration, Instant};
+use time_remaining::*;
 
 #[derive(Default)]
 pub struct State {
     pub root: TreeNode,
     pub position: Chess,
+    pub time_remaining: Option<TimeRemaining>,
 }
 
 impl State {
@@ -23,10 +26,11 @@ impl State {
 
     pub fn search(self, stats: &mut RunStats, settings: &Settings) -> State {
         let position = self.position.clone();
-        let new_root = search_with_strategy(self, stats, settings);
+        let time_remaining = self.time_remaining.clone();
         State {
-            root: new_root,
+            root: search_with_strategy(self, stats, settings),
             position: position,
+            time_remaining: time_remaining,
         }
     }
 
@@ -55,6 +59,21 @@ impl State {
             .unwrap()
     }
 
+    pub fn make_user_move(self, action: &Move) -> State {
+        let mut new_position = self.position.clone();
+        new_position.make_move(action);
+        let prev_move_num = self.root.move_num;
+        let new_root = self.find_child_by_action(action);
+        State {
+            root: new_root.unwrap_or_else(|| {
+                // eprintln!("child by action not found");
+                TreeNode::new_root(&new_position, prev_move_num + 0.5)
+            }),
+            position: new_position,
+            ..Default::default()
+        }
+    }
+
     pub fn find_child_by_action(self, action: &Move) -> Option<TreeNode> {
         eprintln!("finding......");
         let found = self
@@ -64,6 +83,13 @@ impl State {
             .find(|c| c.action.unwrap() == *action);
         eprintln!("found");
         found
+    }
+
+    pub fn set_time_remaining(self, remaining: Duration) -> State {
+        State {
+            time_remaining: Some(TimeRemaining::start(remaining)),
+            ..self
+        }
     }
 
     pub fn has_outcome(&self) -> bool {

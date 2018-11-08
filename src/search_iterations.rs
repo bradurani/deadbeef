@@ -1,6 +1,5 @@
 use mcts::*;
 use search_strategy::*;
-use search_strategy::*;
 use search_threaded_batch::*;
 use settings::*;
 use state::*;
@@ -17,7 +16,7 @@ impl SearchStrategy for SearchIterations {
         let batches = self.n_iterations / settings.batch_size;
 
         let mut new_root = state.root;
-        for i in 0..batches {
+        for _i in 0..batches {
             if new_root.has_outcome() {
                 return new_root;
             }
