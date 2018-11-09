@@ -1,6 +1,6 @@
 [package]
-name = "deadbeef" # the name of the package
-version = "0.1.0"    # the current version, obeying semver
+name = "deadbeef" 
+version = "0.1.0"
 authors = ["Brad Urani <bradurani@gmail.com>"]
 
 [dependencies]
@@ -10,6 +10,8 @@ itertools = "0.7.8"
 twox-hash="1.1.1"
 separator = "0.3.1"
 pad = "0.1"
+log = "0.4"
+env_logger = "0.5.13"
 [dependencies.shakmaty]
 path = "../shakmaty"
 

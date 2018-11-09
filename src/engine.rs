@@ -15,6 +15,13 @@ pub struct Engine {
     pub settings: Settings,
 }
 
+pub fn new(settings: Settings) -> Engine {
+    Engine {
+        settings: settings,
+        ..Default::default()
+    }
+}
+
 impl Engine {
     pub fn reset(&mut self) {
         self.set_board(Fen::STARTING_POSITION).unwrap();

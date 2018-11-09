@@ -4,8 +4,10 @@
 #[cfg(test)]
 #[macro_use]
 extern crate pretty_assertions;
-
+#[macro_use]
+extern crate log;
 extern crate core;
+extern crate env_logger;
 extern crate pad;
 extern crate rand;
 extern crate separator;
@@ -17,6 +19,7 @@ pub mod engine;
 pub mod eval;
 pub mod game;
 pub mod input;
+pub mod logger;
 pub mod mcts;
 pub mod pgn;
 pub mod play;
