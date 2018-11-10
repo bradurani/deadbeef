@@ -1,6 +1,7 @@
 use settings::*;
 use setup::*;
 use shakmaty::fen::*;
+use shakmaty::Color::*;
 use shakmaty::*;
 use state::*;
 use stats::*;
@@ -10,43 +11,42 @@ use std::time::Duration;
 #[derive(Default)]
 pub struct Engine {
     pub state: State,
-    pub previous_position: Chess, // we need to this after making a move so we can generate Uci
+    pub color: Option<Color>,
+    pub previous_position: Chess, // we need this after making a move so we can generate Uci
     pub game_stats: RunStats,
     pub settings: Settings,
 }
 
-pub fn new(settings: Settings) -> Engine {
-    Engine {
-        settings: settings,
-        ..Default::default()
-    }
-}
-
 impl Engine {
+    pub fn new(settings: Settings) -> Engine {
+        Engine {
+            settings: settings,
+            ..Default::default()
+        }
+    }
+
     pub fn reset(&mut self) {
         self.set_board(Fen::STARTING_POSITION).unwrap();
     }
 
     pub fn set_board(&mut self, fen_str: &str) -> Result<(), String> {
-        State::from_fen(fen_str).map(|state| {
-            self.state = state;
+        parse_fen_input(fen_str).map(|position| {
+            self.state = State::from_position(position);
             self.game_stats = Default::default();
+            info!("{}", self);
         })
     }
 
     pub fn make_user_move(&mut self, uci_str: &str) -> Result<Move, String> {
         let action = parse_uci_input(uci_str, self.position())?;
-        let old_state = mem::replace(&mut self.state, Default::default());
-        self.previous_position = old_state.position.clone();
-        self.state = old_state.make_user_move(&action);
+        self.change_state(|s| s.make_user_move(&action));
         Ok(action)
     }
 
     pub fn make_engine_move(&mut self) -> Move {
+        // self.color = self.state.turn();
         self.search();
-        let old_state = mem::replace(&mut self.state, Default::default());
-        self.previous_position = old_state.position.clone();
-        self.state = old_state.make_best_move();
+        self.change_state(|s| s.make_best_move());
         self.state.last_action()
     }
 
@@ -56,18 +56,20 @@ impl Engine {
 
     pub fn set_time_remaining_cs(&mut self, remaining_cs: u64) {
         let remaining = Duration::from_millis(remaining_cs * 10);
-        let old_state = mem::replace(&mut self.state, Default::default());
-        self.state = old_state.set_time_remaining(remaining);
+        self.change_state(|s| s.set_time_remaining(remaining))
     }
 
     pub fn set_opponent_time_remaining_cs(&mut self, remaining_cs: u64) {
         let remaining = Duration::from_millis(remaining_cs * 10);
-        let old_state = mem::replace(&mut self.state, Default::default());
-        self.state = old_state.set_opponent_time_remaining(remaining);
+        self.change_state(|s| s.set_opponent_time_remaining(remaining));
     }
 
     pub fn set_show_thinking(&mut self, show_thinking: bool) {
         self.settings.show_thinking = show_thinking;
+    }
+
+    pub fn set_color(&mut self, color: Color) {
+        self.color = Some(color);
     }
 
     fn search(&mut self) {
@@ -75,8 +77,15 @@ impl Engine {
             return;
         }
         let mut move_run_stats: RunStats = Default::default();
-        let old_state = mem::replace(&mut self.state, Default::default());
-        self.state = old_state.search(&mut move_run_stats, &self.settings);
+        let settings = self.settings.clone();
+        self.change_state(|s| s.search(&mut move_run_stats, &settings));
         self.game_stats.add(&move_run_stats);
+    }
+
+    fn change_state<F: FnMut(State) -> State>(&mut self, mut f: F) {
+        let prev_state = mem::replace(&mut self.state, Default::default());
+        self.previous_position = prev_state.position.clone();
+        self.state = f(prev_state);
+        info!("{}", self);
     }
 }

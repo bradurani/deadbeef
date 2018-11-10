@@ -10,5 +10,4 @@ touch $LOG_FILE
 touch $ERROR_LOG_FILE
 touch $IN_LOG_FILE
 
-tee $IN_LOG_FILE | /Users/bradurani/.cargo/bin/cargo run --release 2>$ERROR_LOG_FILE | tee $LOG_FILE
-# /Users/bradurani/.cargo/bin/cargo run --release | tee $LOG_FILE
+tee $IN_LOG_FILE | RUST_LOG=info /Users/bradurani/.cargo/bin/cargo run --release 2>$ERROR_LOG_FILE | tee $LOG_FILE

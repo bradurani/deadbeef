@@ -1,3 +1,4 @@
+use log::*;
 use mcts::*;
 use settings::*;
 use std::cmp::Ordering::*;
@@ -13,15 +14,13 @@ pub fn weight(child: &TreeNode, parent_n: f32, settings: &Settings) -> f32 {
         return 0.;
     };
     let weight = (child.adjusted_q() / child.n) + settings.c * (parent_n.ln() / child.n).sqrt();
-    // println!("raw weight {}", weight);
-    // weight += 2. * child.normalized_color_relative_value(); // / child.n;
     weight
 }
 
 pub fn sort_children_by_weight(children: &mut Vec<TreeNode>, parent_n: f32, settings: &Settings) {
     if cfg!(debug_assertions) {
         if !children.iter().any(|c| c.state != NodeState::LeafNode) {
-            println!("found no best children \n");
+            error!("found no best children \n");
         }
     }
 

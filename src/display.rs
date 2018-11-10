@@ -1,11 +1,30 @@
+use engine::*;
+use log::*;
 use mcts::*;
 use pad::PadStr;
 use separator::Separatable;
 use settings::*;
 use shakmaty::*;
+use state::*;
 use stats::*;
 use std::fmt;
 use uct::*;
+
+impl fmt::Display for Engine {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(f, "{}", self.state)
+    }
+}
+
+impl fmt::Display for State {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(
+            f,
+            "\n{}. \nTIME:  {}\nOTIME: {}",
+            self.ply_num, self.time_remaining, self.opponent_time_remaining
+        )
+    }
+}
 
 impl fmt::Display for RunStats {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -69,9 +88,7 @@ impl<'a> DisplayTreeNode<'a> {
 }
 
 impl<'a> fmt::Display for DisplayTreeNode<'a> {
-    /// Output a nicely indented tree
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        // Nested definition for recursive formatting
         fn fmt_subtree(
             f: &mut fmt::Formatter,
             node: &TreeNode,
@@ -146,19 +163,6 @@ impl<'a> fmt::Display for DisplayTreeNode<'a> {
     }
 }
 
-impl fmt::Display for Settings {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(
-            f,
-            "SETTINGS: {} MAX_THREADS: {} C: {} SEED: {}",
-            format!("{:?}", self.search_type),
-            self.max_threads,
-            self.c,
-            self.starting_seed,
-        )
-    }
-}
-
 impl fmt::Display for TreeStats {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(
@@ -172,6 +176,6 @@ impl fmt::Display for TreeStats {
 // TODO should be a macro
 pub fn print_tree(node: &TreeNode, settings: &Settings) {
     if settings.print_tree {
-        println!("{}", DisplayTreeNode::new(node, settings));
+        trace!("{}", DisplayTreeNode::new(node, settings));
     }
 }

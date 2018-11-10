@@ -194,8 +194,6 @@ impl TreeNode {
         rng: &mut SmallRng,
         thread_run_stats: &mut RunStats,
     ) -> &mut TreeNode {
-        // println!("Candidate Action: {:?}", &candidate_actions);
-
         let action = *choose_random(rng, &candidate_actions);
         game.make_move(&action);
         let new_rep = self.repetition_detector.clone();
@@ -282,7 +280,6 @@ impl TreeNode {
     ) -> f32 {
         thread_run_stats.iterations += 1;
         debug_assert!(game.halfmove_clock() <= MAX_HALFMOVE_CLOCK);
-        // println!("{}", self);
         let delta = match self.state {
             NodeState::FullyExpanded => {
                 let (delta, child_changes_outcome) = {
@@ -329,8 +326,6 @@ impl TreeNode {
                         child.n += 1.;
                         (0., None, Some(0), new_state)
                     } else if game.is_checkmate() {
-                        // println!("FOUND OUTCOME");
-                        // println!("{:?}", game.board());
                         child.state = NodeState::LeafNode;
                         child.outcome = game.outcome();
                         thread_run_stats.leaf_nodes += 1;

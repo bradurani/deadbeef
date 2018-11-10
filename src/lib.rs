@@ -18,7 +18,6 @@ pub mod display;
 pub mod engine;
 pub mod eval;
 pub mod game;
-pub mod input;
 pub mod logger;
 pub mod mcts;
 pub mod pgn;

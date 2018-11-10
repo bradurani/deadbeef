@@ -1,8 +1,8 @@
 use game::*;
+use log::*;
 use mcts::*;
 use search_strategy::*;
 use settings::*;
-use setup::*;
 use shakmaty::*;
 use stats::*;
 use std::time::Duration;
@@ -18,11 +18,11 @@ pub struct State {
 
 impl State {
     // TODO starting position needs to be registered with repetition detector
-    pub fn from_fen(fen_str: &str) -> Result<State, String> {
-        parse_fen_input(fen_str).map(|f| State {
-            position: f,
+    pub fn from_position(position: Chess) -> State {
+        State {
+            position: position,
             ..Default::default()
-        })
+        }
     }
 
     pub fn search(self, stats: &mut RunStats, settings: &Settings) -> State {
@@ -68,7 +68,7 @@ impl State {
         let new_root = self.find_child_by_action(action);
         State {
             root: new_root.unwrap_or_else(|| {
-                // eprintln!("child by action not found");
+                error!("child by action not found");
                 TreeNode::new_root(&new_position, prev_move_num + 0.5)
             }),
             position: new_position,
@@ -77,13 +77,11 @@ impl State {
     }
 
     pub fn find_child_by_action(self, action: &Move) -> Option<TreeNode> {
-        eprintln!("finding......");
         let found = self
             .root
             .children
             .into_iter()
             .find(|c| c.action.unwrap() == *action);
-        eprintln!("found");
         found
     }
 
@@ -107,6 +105,18 @@ impl State {
 
     pub fn last_action(&self) -> Move {
         self.root.action.unwrap()
+    }
+
+    pub fn turn(&self) -> Color {
+        self.position.turn()
+    }
+
+    pub fn q(&self) -> f32 {
+        self.root.q
+    }
+
+    pub fn ply_num() -> u32 {
+        position.ply
     }
 }
 
