@@ -41,6 +41,7 @@ impl Game for Chess {
 pub trait IsOutcome {
     fn is_decisive(&self) -> bool;
     fn is_draw(&self) -> bool;
+    fn reward(&self) -> f32;
 }
 
 impl IsOutcome for Outcome {
@@ -57,13 +58,7 @@ impl IsOutcome for Outcome {
             _ => false,
         }
     }
-}
 
-pub trait Reward {
-    fn reward(&self) -> f32;
-}
-
-impl Reward for Outcome {
     fn reward(&self) -> f32 {
         match self {
             Outcome::Decisive {

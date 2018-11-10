@@ -1,7 +1,6 @@
 use game::*;
 use settings::*;
 use setup::*;
-use shakmaty::Color::*;
 use shakmaty::*;
 use state::*;
 use stats::*;

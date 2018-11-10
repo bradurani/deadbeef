@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+RUST_BACKTRACE=1 LOG_LEVEL=info /Users/bradurani/.cargo/bin/cargo run 2>&1

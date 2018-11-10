@@ -1,3 +1,4 @@
+use emojify::DisplayEmojify;
 use engine::*;
 use log::*;
 use mcts::*;
@@ -12,7 +13,18 @@ use uct::*;
 
 impl fmt::Display for Engine {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(f, "{}", self.state)
+        writeln!(f, "{}", self.state)?;
+        if self.settings.print_tree {
+            writeln!(
+                f,
+                "{}",
+                DisplayTreeNode {
+                    node: &self.state.root,
+                    settings: &self.settings
+                }
+            )?
+        }
+        self.state.position.board().clone().write_emoji(f)
     }
 }
 
@@ -20,7 +32,7 @@ impl fmt::Display for State {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(
             f,
-            "\n\n{}. \nTIME:  {}\nOTIME: {}\n{}",
+            "\n{}. \nTIME:  {}\nOTIME: {}",
             self.ply_num(),
             match self.time_remaining {
                 Some(ref t) => t.to_string(),
@@ -29,8 +41,7 @@ impl fmt::Display for State {
             match self.opponent_time_remaining {
                 Some(duration) => format!("{:?}", duration),
                 None => "".to_string(),
-            },
-            self.root
+            }
         )
     }
 }

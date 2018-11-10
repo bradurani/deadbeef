@@ -13,7 +13,7 @@ pub fn main() {
     logger::init();
 
     let settings: Settings = Default::default();
-    info!("{:?}", settings);
+    info!("\n{:?}", settings);
 
     let mut engine: Engine = Engine::new(settings);
     let mut xboard: XBoard = Default::default();

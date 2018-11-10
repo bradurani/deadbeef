@@ -31,7 +31,7 @@ impl Default for NodeState {
 pub struct TreeNode {
     pub outcome: Option<Outcome>,
     pub action: Option<Move>, // how did we get here
-    pub value: Option<i16>,
+    pub value: i16,
     pub state: NodeState, // is this a leaf node? fully expanded?
     //TODO don't need turn
     pub turn: Color, //which player made this move
@@ -51,7 +51,7 @@ impl TreeNode {
         action: Option<Move>,
         turn: Color,
         move_num: f32,
-        value: Option<i16>,
+        value: i16,
         rd: RepetitionDetector,
     ) -> TreeNode {
         TreeNode {
@@ -78,7 +78,7 @@ impl TreeNode {
             state: NodeState::Expandable,
             turn: game.turn(),  // So we switch to White for move 1
             move_num: move_num, //So we increment to 1 for move 1
-            value: Some(game.board().value()),
+            value: game.board().value(),
             repetition_detector: RepetitionDetector::new(game),
             n: 0.,
             q: 0.,
@@ -149,15 +149,15 @@ impl TreeNode {
     }
 
     pub fn color_relative_value(&self) -> f32 {
-        self.value.unwrap() as f32 * self.turn.not().coefficient()
+        self.value as f32 * self.turn.not().coefficient()
     }
 
     pub fn normalized_value(&self) -> f32 {
-        (self.value.unwrap() as f32 / MAX_VALUE)
+        (self.value as f32 / MAX_VALUE)
     }
 
     pub fn normalized_color_relative_value(&self) -> f32 {
-        (self.value.unwrap() as f32 / MAX_VALUE) * self.turn.not().coefficient()
+        (self.value as f32 / MAX_VALUE) * self.turn.not().coefficient()
     }
 
     pub fn is_decisive(&self) -> bool {
@@ -201,7 +201,7 @@ impl TreeNode {
             Some(action.clone()),
             self.turn.not(),
             self.move_num + 0.5,
-            Some(game.board().value()),
+            game.board().value(),
             new_rep,
         );
         self.children.push(new_node);
