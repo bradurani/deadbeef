@@ -107,7 +107,7 @@ impl TreeNode {
     pub fn clone_childless(&self) -> TreeNode {
         TreeNode {
             outcome: self.outcome,
-            action: self.action,
+            action: self.action.clone(),
             children: Vec::new(),
             state: self.state,
             turn: self.turn,
@@ -179,7 +179,7 @@ impl TreeNode {
     }
 
     pub fn is_game_over_or_drawn(&self, game: &Chess) -> bool {
-        game.is_game_over() || game.halfmove_clock() >= MAX_HALFMOVE_CLOCK
+        game.is_game_over() || game.halfmoves() >= MAX_HALFMOVES
     }
 
     pub fn winner(&self) -> Option<Color> {
@@ -194,11 +194,11 @@ impl TreeNode {
         rng: &mut SmallRng,
         thread_run_stats: &mut RunStats,
     ) -> &mut TreeNode {
-        let action = *choose_random(rng, &candidate_actions);
-        game.make_move(&action);
+        let action = choose_random(rng, &candidate_actions);
+        game.make_move(action);
         let new_rep = self.repetition_detector.clone();
         let new_node = TreeNode::new(
-            Some(action),
+            Some(action.clone()),
             self.turn.not(),
             self.move_num + 0.5,
             Some(game.board().value()),
@@ -216,14 +216,14 @@ impl TreeNode {
         // Get a list with all the actions we tried alreday
         let mut child_actions: Vec<Move> = Vec::new();
         for child in &self.children {
-            child_actions.push(child.action.expect("Child node without action"));
+            child_actions.push(child.action.clone().expect("Child node without action"));
         }
 
         // Find untried actions
         let mut candidate_actions: Vec<Move> = Vec::new();
         for action in &allowed_actions {
             if !child_actions.contains(action) {
-                candidate_actions.push(*action);
+                candidate_actions.push(action.clone());
             }
         }
         candidate_actions
@@ -279,13 +279,13 @@ impl TreeNode {
         settings: &Settings,
     ) -> f32 {
         thread_run_stats.iterations += 1;
-        debug_assert!(game.halfmove_clock() <= MAX_HALFMOVE_CLOCK);
+        debug_assert!(game.halfmoves() <= MAX_HALFMOVES);
         let delta = match self.state {
             NodeState::FullyExpanded => {
                 let (delta, child_changes_outcome) = {
                     let child = best_child(self, settings);
                     let mut child_game = game.clone(); //TODO don't clone if the move is reversible
-                    child_game.make_move(&child.action.unwrap());
+                    child_game.make_move(&child.action.clone().unwrap());
                     let delta = child.iteration(&mut child_game, rng, thread_run_stats, settings);
                     (
                         delta,
@@ -315,7 +315,7 @@ impl TreeNode {
                 //advances game to position after action
                 let (delta, outcome, min_score, node_state) = {
                     let mut child = self.expand(game, candidate_actions, rng, thread_run_stats);
-                    if game.halfmove_clock() == MAX_HALFMOVE_CLOCK
+                    if game.halfmoves() == MAX_HALFMOVES
                         || child.repetition_detector.record_and_check(game)
                         || game.is_stalemate()
                         || game.is_insufficient_material()

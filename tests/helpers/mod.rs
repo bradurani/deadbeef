@@ -50,7 +50,7 @@ pub fn assert_contains_mate_move(fen_str: &'static str, uci_strs: Vec<&'static s
 pub fn assert_draw(fen_str: &'static str, stats: &mut RunStats) {
     let settings = Settings::test_mate_default();
     let position = parse_fen(fen_str);
-    println!("halfmove clock: {}", position.halfmove_clock());
+    println!("halfmove clock: {}", position.halfmoves());
     let root = TreeNode::new_root(&position, 100.);
 
     println!("{}", settings);

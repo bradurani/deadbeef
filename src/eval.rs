@@ -108,14 +108,17 @@ impl Value for Board {
                 Color::Black => square,
             };
             let raw_value = match piece.role {
-                Role::Pawn => PAWN_VALUES[color_square.index() as usize],
-                Role::Knight => KNIGHT_VALUES[color_square.index() as usize],
-                Role::Bishop => BISHOP_VALUES[color_square.index() as usize],
-                Role::Queen => QUEEN_VALUES[color_square.index() as usize],
-                Role::Rook => ROOK_VALUES[color_square.index() as usize],
-                Role::King => KING_VALUES[color_square.index() as usize],
+                Role::Pawn => PAWN_VALUES[index(color_square)],
+                Role::Knight => KNIGHT_VALUES[index(color_square)],
+                Role::Bishop => BISHOP_VALUES[index(color_square)],
+                Role::Queen => QUEEN_VALUES[index(color_square)],
+                Role::Rook => ROOK_VALUES[index(color_square)],
+                Role::King => KING_VALUES[index(color_square)],
             };
             piece.color.coefficient() as i16 * raw_value
+        }
+        fn index(square: Square) -> usize {
+            square as usize
         }
         self.pieces().into_iter().fold(0, |value, (square, piece)| {
             value + piece.value() + positional_value(square, &piece)

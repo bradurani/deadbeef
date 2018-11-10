@@ -47,7 +47,7 @@ pub fn search_threaded(
                     let t0 = Instant::now();
 
                     let mut thread_child = safe_thread_child.lock().unwrap();
-                    thread_game.make_move(&thread_child.action.unwrap());
+                    thread_game.make_move(&thread_child.action.clone().unwrap());
 
                     for _n in 0..thread_settings.batch_size {
                         if thread_child.has_outcome() {

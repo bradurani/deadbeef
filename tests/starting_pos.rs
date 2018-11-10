@@ -1,6 +1,7 @@
 extern crate deadbeef;
 extern crate shakmaty;
 
+use game::Game;
 use helpers::*;
 use shakmaty::fen::*;
 
@@ -8,5 +9,5 @@ mod helpers;
 
 #[test]
 fn opening_move() {
-    assert_move(Fen::STARTING_POSITION, "e2e4");
+    assert_move(STARTING_POSITION, "e2e4");
 }

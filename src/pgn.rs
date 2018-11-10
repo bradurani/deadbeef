@@ -1,3 +1,4 @@
+use game::Game;
 use shakmaty::san::SanPlus;
 use shakmaty::*;
 

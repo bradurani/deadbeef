@@ -40,7 +40,7 @@ impl State {
         let mut new_position = self.position.clone();
         let new_root = self.best_child_node();
 
-        new_position.make_move(&new_root.action.unwrap());
+        new_position.make_move(&new_root.action.clone().unwrap());
         State {
             root: new_root,
             position: new_position,
@@ -81,7 +81,7 @@ impl State {
             .root
             .children
             .into_iter()
-            .find(|c| c.action.unwrap() == *action);
+            .find(|c| c.action.clone().unwrap() == *action);
         found
     }
 
@@ -104,7 +104,7 @@ impl State {
     }
 
     pub fn last_action(&self) -> Move {
-        self.root.action.unwrap()
+        self.root.action.clone().unwrap()
     }
 
     pub fn turn(&self) -> Color {
@@ -115,8 +115,8 @@ impl State {
         self.root.q
     }
 
-    pub fn ply_num() -> u32 {
-        position.ply
+    pub fn ply_num(&self) -> u32 {
+        self.position.halfmoves()
     }
 }
 

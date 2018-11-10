@@ -20,8 +20,17 @@ impl fmt::Display for State {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(
             f,
-            "\n{}. \nTIME:  {}\nOTIME: {}",
-            self.ply_num, self.time_remaining, self.opponent_time_remaining
+            "\n\n{}. \nTIME:  {}\nOTIME: {}\n{}",
+            self.ply_num(),
+            match self.time_remaining {
+                Some(ref t) => t.to_string(),
+                None => "".to_string(),
+            },
+            match self.opponent_time_remaining {
+                Some(duration) => format!("{:?}", duration),
+                None => "".to_string(),
+            },
+            self.root
         )
     }
 }
@@ -97,9 +106,9 @@ impl<'a> fmt::Display for DisplayTreeNode<'a> {
             indent_level: u8,
         ) -> fmt::Result {
             for _ in 0..indent_level {
-                f.write_str("    ")?;
+                f.write_str("    ")?
             }
-            match node.action {
+            match node.action.clone() {
                 Some(a) => writeln!(
                     f,
                     "{}. {} {} q={} n={} s={} v={} w={} {} {} {}",

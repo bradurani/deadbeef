@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct TimeRemaining {
     start: Instant,
     remaining: Duration,
@@ -14,3 +14,10 @@ impl TimeRemaining {
         }
     }
 }
+
+impl ToString for TimeRemaining {
+    fn to_string(&self) -> String {
+        format!("{:?}", self)
+    }
+}
+

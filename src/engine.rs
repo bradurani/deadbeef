@@ -1,6 +1,6 @@
+use game::*;
 use settings::*;
 use setup::*;
-use shakmaty::fen::*;
 use shakmaty::Color::*;
 use shakmaty::*;
 use state::*;
@@ -26,7 +26,7 @@ impl Engine {
     }
 
     pub fn reset(&mut self) {
-        self.set_board(Fen::STARTING_POSITION).unwrap();
+        self.set_board(STARTING_POSITION).unwrap();
     }
 
     pub fn set_board(&mut self, fen_str: &str) -> Result<(), String> {
