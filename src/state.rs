@@ -125,8 +125,8 @@ impl State {
         self.root.q
     }
 
-    pub fn ply_num(&self) -> u32 {
-        self.position.halfmoves()
+    pub fn ply(&self) -> f32 {
+        self.position.fullmoves() as f32 / 2.
     }
 
     pub fn game_over(&self) -> bool {

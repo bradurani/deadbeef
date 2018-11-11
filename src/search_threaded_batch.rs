@@ -2,7 +2,10 @@ use game::*;
 use mcts::*;
 use settings::*;
 use shakmaty::*;
+use show_thinking::*;
 use stats::*;
+use std::io;
+use std::io::Write;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::thread::JoinHandle;
@@ -86,6 +89,11 @@ pub fn search_threaded(
     new_root.children = new_children;
     new_root.set_outcome_from_children(stats);
     sort_children_by_weight(&mut new_root.children, new_root.n, settings);
+    eprint!(".");
+    io::stderr().flush().expect("Could not flush stderr");
+
+    stats.batches += 1;
+    show_thinking(game.fullmoves(), new_root.score(), &stats, &settings);
     new_root
 }
 

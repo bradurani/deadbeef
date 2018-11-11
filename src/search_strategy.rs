@@ -21,7 +21,8 @@ pub trait SearchStrategy {
 }
 
 pub fn search_with_strategy(state: State, stats: &mut RunStats, settings: &Settings) -> TreeNode {
-    match settings.search_type.clone() {
+    stats.start_timer();
+    let new_root = match settings.search_type.clone() {
         SearchType::Iterations(n_iterations) => {
             let strategy = SearchIterations { n_iterations };
             strategy.search(state, stats, &settings)
@@ -36,5 +37,7 @@ pub fn search_with_strategy(state: State, stats: &mut RunStats, settings: &Setti
             };
             strategy.search(state, stats, &settings)
         }
-    }
+    };
+    stats.stop_timer();
+    new_root
 }

@@ -7,9 +7,12 @@ pub trait Game: Clone {
     fn allowed_actions(&self) -> Vec<Move>;
     fn make_move(&mut self, action: &Move);
     fn play_safe(&mut self, &Move);
+    fn ply(&self) -> f32;
 }
 
 impl Game for Chess {
+    // TODO this would probably be faster if didn't create the whoe list up front,
+    // but rather iterated through it
     fn allowed_actions(&self) -> Vec<Move> {
         match &self.is_game_over() {
             true => Vec::new(),
@@ -35,6 +38,10 @@ impl Game for Chess {
         } else {
             panic!("Illegal Move Play\n{}", m);
         }
+    }
+
+    fn ply(&self) -> f32 {
+        self.fullmoves() as f32 / 2.
     }
 }
 

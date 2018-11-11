@@ -33,7 +33,7 @@ impl fmt::Display for State {
         writeln!(
             f,
             "\n{}. \nTIME:  {}\nOTIME: {}",
-            self.ply_num(),
+            self.ply(),
             match self.time_remaining {
                 Some(ref t) => t.to_string(),
                 None => "".to_string(),
