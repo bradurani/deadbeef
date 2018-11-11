@@ -28,23 +28,30 @@ impl State {
     pub fn search(self, stats: &mut RunStats, settings: &Settings) -> State {
         let position = self.position.clone();
         let time_remaining = self.time_remaining.clone();
+        let opponent_time_remaining = self.opponent_time_remaining.clone();
         State {
             root: search_with_strategy(self, stats, settings),
             position: position,
             time_remaining: time_remaining,
-            ..Default::default()
+            opponent_time_remaining: opponent_time_remaining,
         }
     }
 
     pub fn make_best_move(self) -> State {
         let mut new_position = self.position.clone();
+        let opponent_time_remaining = self.opponent_time_remaining.clone();
+        println!("{:?}", opponent_time_remaining);
+        let time_remaining = self
+            .time_remaining
+            .clone()
+            .map(|t| t.recalculate_from_now());
         let new_root = self.best_child_node();
-
         new_position.make_move(&new_root.action.clone().unwrap());
         State {
             root: new_root,
             position: new_position,
-            ..Default::default()
+            opponent_time_remaining: opponent_time_remaining,
+            time_remaining: time_remaining,
         }
     }
 
@@ -65,6 +72,8 @@ impl State {
         let mut new_position = self.position.clone();
         new_position.make_move(action);
         let prev_move_num = self.root.move_num;
+        let time_remaining = self.time_remaining.clone();
+        let opponent_time_remaining = self.opponent_time_remaining.clone();
         let new_root = self.find_child_by_action(action);
         State {
             root: new_root.unwrap_or_else(|| {
@@ -72,6 +81,8 @@ impl State {
                 TreeNode::new_root(&new_position, prev_move_num + 0.5)
             }),
             position: new_position,
+            time_remaining: time_remaining,
+            opponent_time_remaining: opponent_time_remaining,
             ..Default::default()
         }
     }
@@ -122,8 +133,8 @@ impl State {
     pub fn game_over(&self) -> bool {
         self.position.is_game_over()
     }
-}
 
-pub struct StateSnapshot {
-    stats: RunStats,
+    pub fn score(&self) -> f32 {
+        self.root.score()
+    }
 }

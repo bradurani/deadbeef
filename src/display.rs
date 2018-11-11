@@ -51,30 +51,13 @@ impl fmt::Display for RunStats {
         write!(
             f,
             "\n\
-             PLAYOUTS:    moves {}, total: {} (avg: {})  maxouts: {}\n\
-             NODES:       nodes {}, iterations: {}, leafs: {}\n\
-             SAMPLES:     samples: {}, batches: {}\n\
-             TIME:        playouts: {} ({:.*}%), other: {}({:.*}%), total: {}\n",
-            self.playout_moves.separated_string(),
-            self.playouts.separated_string(),
-            if self.playouts == 0 {
-                0
-            } else {
-                self.playout_moves / self.playouts
-            },
-            self.maxouts.separated_string(),
+             NODES:   nodes {}, iterations: {}, leafs: {}\n\
+             TIME:    batches: {}  elapsed {:?}\n",
             self.nodes_created.separated_string(),
             self.iterations.separated_string(),
             self.leaf_nodes.separated_string(),
-            self.samples.separated_string(),
-            self.sample_batches.separated_string(),
-            self.playout_time.separated_string(),
-            1,
-            self.playout_time_pct(),
-            self.other_time().separated_string(),
-            1,
-            self.other_time_pct(),
-            self.total_time
+            self.batches.separated_string(),
+            self.elapsed()
         )
     }
 }

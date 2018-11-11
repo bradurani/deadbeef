@@ -6,7 +6,6 @@ use stats::*;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::thread::JoinHandle;
-use std::time::Instant;
 use uct::*;
 use utils::*;
 
@@ -44,7 +43,7 @@ pub fn search_threaded(
 
                 if thread_num < n_threads {
                     // don't do work if we're over the thread count. Wastes spawing a thread :(
-                    let t0 = Instant::now();
+                    thread_run_stats.start_timer();
 
                     let mut thread_child = safe_thread_child.lock().unwrap();
                     thread_game.make_move(&thread_child.action.clone().unwrap());
@@ -53,7 +52,7 @@ pub fn search_threaded(
                         if thread_child.has_outcome() {
                             break;
                         }
-                        thread_run_stats.samples += 1;
+                        thread_run_stats.nodes_created += 1;
                         new_q += thread_child.iteration(
                             &mut thread_game.clone(),
                             &mut rng,
@@ -62,10 +61,7 @@ pub fn search_threaded(
                         );
                         new_n += 1.;
                     }
-                    let time_spent = t0.elapsed().as_millis();
-                    thread_run_stats.total_time = time_spent as u64;
-                    // println!("thread: {}", thread_run_stats);
-                    // println!("thread child: {:?}\n", thread_child);
+                    thread_run_stats.stop_timer();
                 }
                 (safe_thread_child.clone(), new_n, new_q, thread_run_stats) // only Arc reference is cloned
             })
@@ -77,7 +73,7 @@ pub fn search_threaded(
         .map(|th| th.join().expect("panicked joining threads"))
         .map(|(safe_thread_child, new_n, new_q, thread_run_stats)| {
             // add stats from the children here, so we have a reference to new_root again
-            stats.add_thread_stats(&thread_run_stats, settings.max_threads);
+            stats.add(&thread_run_stats);
             new_root.n += new_n;
             new_root.q += new_q;
             Arc::try_unwrap(safe_thread_child)
@@ -86,7 +82,6 @@ pub fn search_threaded(
                 .expect("unwrapping mutex")
         })
         .collect();
-    stats.sample_batches += 1;
 
     new_root.children = new_children;
     new_root.set_outcome_from_children(stats);

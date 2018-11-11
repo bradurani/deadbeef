@@ -7,11 +7,12 @@ use state::*;
 use stats::*;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+use std::time::Duration;
 
 #[derive(Clone, Debug)]
 pub enum SearchType {
     Iterations(u32),
-    Time(u32),
+    Time(Duration),
     Ponder(Arc<AtomicBool>),
 }
 

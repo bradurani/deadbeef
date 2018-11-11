@@ -32,6 +32,7 @@ pub mod search_threaded_batch;
 pub mod search_time;
 pub mod settings;
 pub mod setup;
+pub mod show_thinking;
 pub mod state;
 pub mod stats;
 pub mod time_remaining;
