@@ -55,9 +55,7 @@ impl XBoard {
             self.force = true;
         } else if cmd == "go" {
             self.force = false;
-            let best_move = engine.make_engine_move();
-            let uci = Uci::from_move(&engine.previous_position, &best_move);
-            send(&format!("move {}", uci.to_string()));
+            go(engine)
         } else if cmd.starts_with("ping") {
             match cmd.splitn(2, ' ').collect::<Vec<&str>>().as_slice() {
                 [_, n] => send(&format!("pong {}", n)),
@@ -67,8 +65,8 @@ impl XBoard {
             match cmd.splitn(2, ' ').collect::<Vec<&str>>().as_slice() {
                 [_, action] => match engine.make_user_move(action) {
                     Ok(_action) => {
-                        if !self.force {
-                            self.run_command(engine, "go")
+                        if !self.force && !engine.has_outcome() {
+                            go(engine)
                         }
                     }
                     Err(msg) => error!("{}", msg),
@@ -108,6 +106,12 @@ impl XBoard {
             error!("Unknown cmd {}", cmd);
         }
     }
+}
+
+fn go(engine: &mut Engine) {
+    let best_move = engine.make_engine_move();
+    let uci = Uci::from_move(&engine.previous_position, &best_move);
+    send(&format!("move {}", uci.to_string()));
 }
 
 fn send(msg: &str) {
