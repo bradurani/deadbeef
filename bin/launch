@@ -10,4 +10,10 @@ touch $LOG_FILE
 touch $ERROR_LOG_FILE
 touch $IN_LOG_FILE
 
+export LOG_LEVEL=info
+export PRINT_TREE=true
+export MAX_TREE_DISPLAY_DEPTH=3
+export MAX_TREE_DISPLAY_LENGTH=3
+
+
 tee $IN_LOG_FILE | LOG_LEVEL=info /Users/bradurani/.cargo/bin/cargo run --release 2>$ERROR_LOG_FILE | tee $LOG_FILE

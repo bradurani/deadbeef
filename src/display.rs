@@ -154,7 +154,7 @@ impl<'a> fmt::Display for DisplayTreeNode<'a> {
                 )?,
             }
             match settings.max_tree_display_depth {
-                Some(max_depth) if indent_level >= max_depth => {}
+                Some(max_depth) if indent_level >= max_depth - 1 => {}
                 _ => {
                     for child in node
                         .children
