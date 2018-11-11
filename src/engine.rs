@@ -45,6 +45,7 @@ impl Engine {
     pub fn make_engine_move(&mut self) -> Move {
         self.search();
         self.change_state(|s| s.make_best_move());
+        info!("{}", self);
         self.state.last_action()
     }
 
@@ -70,11 +71,14 @@ impl Engine {
         self.color = Some(color);
     }
 
-    pub fn has_outcome(&self) -> bool {
-        return self.state.has_outcome();
+    pub fn game_over(&self) -> bool {
+        return self.state.game_over();
     }
 
     fn search(&mut self) {
+        if self.state.has_outcome() {
+            return;
+        }
         let mut move_run_stats: RunStats = Default::default();
         let settings = self.settings.clone();
         self.change_state(|s| s.search(&mut move_run_stats, &settings));
@@ -85,6 +89,5 @@ impl Engine {
         let prev_state = mem::replace(&mut self.state, Default::default());
         self.previous_position = prev_state.position.clone();
         self.state = f(prev_state);
-        info!("{}", self);
     }
 }

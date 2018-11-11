@@ -4,6 +4,8 @@ use search_threaded_batch::*;
 use settings::*;
 use state::*;
 use stats::*;
+use std::io;
+use std::io::prelude::*;
 use std::time::Instant;
 
 pub struct SearchTime {
@@ -23,11 +25,12 @@ impl SearchStrategy for SearchTime {
 
             let batch_stats: RunStats = Default::default();
             new_root = search_threaded(new_root, &state.position, stats, settings);
+            eprint!(".");
+            io::stderr().flush().expect("Could not flush stderr");
 
             let move_time_spent = move_start_time.elapsed().as_millis() as u32;
 
-            let time_left = self.ms - move_time_spent;
-            if time_left < 50 {
+            if move_time_spent >= self.ms {
                 break;
             }
 

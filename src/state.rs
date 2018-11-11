@@ -118,6 +118,10 @@ impl State {
     pub fn ply_num(&self) -> u32 {
         self.position.halfmoves()
     }
+
+    pub fn game_over(&self) -> bool {
+        self.position.is_game_over()
+    }
 }
 
 pub struct StateSnapshot {
