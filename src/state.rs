@@ -54,6 +54,7 @@ impl State {
         }
     }
 
+
     pub fn best_child_node(self) -> TreeNode {
         // TODO try the equation from the MCTS-Solver paper
         self.root
@@ -66,7 +67,6 @@ impl State {
             })
             .unwrap()
     }
-
     pub fn make_user_move(self, action: &Move) -> State {
         let mut new_position = self.position.clone();
         new_position.make_move(action);

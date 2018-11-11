@@ -16,7 +16,7 @@ type SafeTreeNode = Arc<Mutex<TreeNode>>;
 
 pub fn search_threaded(
     mut root: TreeNode,
-    game: &Chess,
+    position: &Chess,
     stats: &mut RunStats,
     settings: &Settings,
 ) -> TreeNode {
@@ -25,7 +25,7 @@ pub fn search_threaded(
     let n_threads = optimal_threads(root.children.len(), settings.max_threads);
 
     let mut new_root = root.clone_childless();
-    ensure_expanded(&mut root, game, stats, &settings); //for a new game where root has no children, expand them
+    ensure_expanded(&mut root, position, stats, &settings); //for a new game where root has no children, expand them
     new_root.state = NodeState::FullyExpanded;
 
     let thread_result_handles: Vec<JoinHandle<(SafeTreeNode, f32, f32, RunStats)>> = root
@@ -35,7 +35,7 @@ pub fn search_threaded(
         .map(|child| Arc::new(Mutex::new(child)))
         .enumerate()
         .map(|(thread_num, safe_thread_child)| {
-            let mut thread_game = game.clone();
+            let mut thread_position = position.clone();
             let mut rng = seeded_rng(settings.starting_seed + thread_num as u8);
             let mut thread_run_stats: RunStats = Default::default();
             let thread_settings = settings.clone();
@@ -49,7 +49,7 @@ pub fn search_threaded(
                     thread_run_stats.start_timer();
 
                     let mut thread_child = safe_thread_child.lock().unwrap();
-                    thread_game.make_move(&thread_child.action.clone().unwrap());
+                    thread_position.make_move(&thread_child.action.clone().unwrap());
 
                     for _n in 0..thread_settings.batch_size {
                         if thread_child.has_outcome() {
@@ -57,7 +57,7 @@ pub fn search_threaded(
                         }
                         thread_run_stats.nodes_created += 1;
                         new_q += thread_child.iteration(
-                            &mut thread_game.clone(),
+                            &mut thread_position.clone(),
                             &mut rng,
                             &mut thread_run_stats,
                             &thread_settings,
@@ -93,7 +93,7 @@ pub fn search_threaded(
     io::stderr().flush().expect("Could not flush stderr");
 
     stats.batches += 1;
-    show_thinking(game.fullmoves(), new_root.score(), &stats, &settings);
+    show_thinking(&new_root, &mut position.clone(), &stats, &settings);
     new_root
 }
 
@@ -101,9 +101,14 @@ fn optimal_threads(n_children: usize, max_threads: u16) -> usize {
     (n_children / 2).min(max_threads as usize).max(1)
 }
 
-fn ensure_expanded(root: &mut TreeNode, game: &Chess, stats: &mut RunStats, settings: &Settings) {
+fn ensure_expanded(
+    root: &mut TreeNode,
+    position: &Chess,
+    stats: &mut RunStats,
+    settings: &Settings,
+) {
     let mut rng = seeded_rng(settings.starting_seed);
     while ![NodeState::FullyExpanded, NodeState::LeafNode].contains(&root.state) {
-        root.iteration(&mut game.clone(), &mut rng, stats, settings);
+        root.iteration(&mut position.clone(), &mut rng, stats, settings);
     }
 }
