@@ -153,9 +153,16 @@ impl<'a> fmt::Display for DisplayTreeNode<'a> {
                     format_outcome(node.outcome)
                 )?,
             }
-            if indent_level < settings.max_tree_display_depth {
-                for child in &node.children {
-                    fmt_subtree(f, child, settings, node.n, indent_level + 1)?;
+            match settings.max_tree_display_depth {
+                Some(max_depth) if indent_level >= max_depth => {}
+                _ => {
+                    for child in node
+                        .children
+                        .iter()
+                        .take(settings.max_tree_display_length.unwrap_or(u8::max_value()) as usize)
+                    {
+                        fmt_subtree(f, child, settings, node.n, indent_level + 1)?;
+                    }
                 }
             }
             fn format_max(max_score: Option<u16>) -> String {

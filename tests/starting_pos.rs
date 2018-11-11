@@ -1,7 +1,7 @@
 extern crate deadbeef;
 extern crate shakmaty;
 
-use game::Game;
+use deadbeef::game::Game;
 use helpers::*;
 use shakmaty::fen::*;
 

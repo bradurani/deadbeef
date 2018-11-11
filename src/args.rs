@@ -2,11 +2,16 @@ use setup::*;
 use shakmaty::*;
 use std::env;
 
-pub fn parse_max_tree_display_depth() -> u8 {
+pub fn parse_max_tree_display_depth() -> Option<u8> {
     env::var("MAX_TREE_DISPLAY_DEPTH")
-        .unwrap_or("3".to_string())
-        .parse::<u8>()
-        .unwrap()
+        .map(|l| l.parse::<u8>().expect("invalid TREE_DEPTH"))
+        .ok()
+}
+
+pub fn parse_max_tree_display_length() -> Option<u8> {
+    env::var("MAX_TREE_DISPLAY_LENGTH")
+        .map(|l| l.parse::<u8>().expect("invalid TREE_LENGTH"))
+        .ok()
 }
 
 pub fn parse_print_tree() -> bool {
