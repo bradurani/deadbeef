@@ -40,7 +40,6 @@ impl State {
     pub fn make_best_move(self) -> State {
         let mut new_position = self.position.clone();
         let opponent_time_remaining = self.opponent_time_remaining.clone();
-        println!("{:?}", opponent_time_remaining);
         let time_remaining = self
             .time_remaining
             .clone()

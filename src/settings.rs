@@ -27,7 +27,7 @@ impl Default for Settings {
             max_tree_display_depth: parse_max_tree_display_depth(),
             max_tree_display_length: parse_max_tree_display_length(),
             print_tree: parse_print_tree(),
-            show_thinking: false,
+            show_thinking: true,
         }
     }
 }
