@@ -17,7 +17,6 @@ impl SearchStrategy for SearchIterations {
 
         let mut new_root = state.root;
 
-        stats.start_timer();
         for _i in 0..batches {
             if new_root.has_outcome() {
                 return new_root;

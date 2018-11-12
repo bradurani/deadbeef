@@ -54,7 +54,6 @@ impl State {
         }
     }
 
-
     pub fn best_child_node(self) -> TreeNode {
         // TODO try the equation from the MCTS-Solver paper
         self.root

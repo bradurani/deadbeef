@@ -73,4 +73,8 @@ impl RunStats {
     pub fn elapsed(&self) -> Duration {
         self.end_time.unwrap_or(Instant::now()) - self.start_time.unwrap()
     }
+
+    pub fn nodes_per_second(&self) -> u128 {
+        (self.nodes_created as u128 * 1000000000) / self.elapsed().as_nanos();
+    }
 }

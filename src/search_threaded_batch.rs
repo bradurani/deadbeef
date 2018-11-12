@@ -31,7 +31,6 @@ pub fn search_threaded(
     let thread_result_handles: Vec<JoinHandle<(SafeTreeNode, f32, f32, RunStats)>> = root
         .children
         .into_iter()
-        // .take(settings.threads) // these are sorted by weight, so this favors most interesting nodes
         .map(|child| Arc::new(Mutex::new(child)))
         .enumerate()
         .map(|(thread_num, safe_thread_child)| {
