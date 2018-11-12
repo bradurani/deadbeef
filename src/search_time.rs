@@ -25,7 +25,6 @@ impl SearchStrategy for SearchTime {
                 break;
             }
         }
-
         new_root
     }
 }

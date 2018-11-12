@@ -14,6 +14,7 @@ pub struct Settings {
     pub max_tree_display_length: Option<u8>,
     pub print_tree: bool,
     pub show_thinking: bool,
+    pub show_thinking_freq: u64,
 }
 
 impl Default for Settings {
@@ -28,6 +29,7 @@ impl Default for Settings {
             max_tree_display_length: parse_max_tree_display_length(),
             print_tree: parse_print_tree(),
             show_thinking: true,
+            show_thinking_freq: 40,
         }
     }
 }

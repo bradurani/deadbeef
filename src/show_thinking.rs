@@ -3,17 +3,14 @@ use mcts::*;
 use settings::*;
 use shakmaty::san::*;
 use shakmaty::Chess;
-use shakmaty::Move;
-use shakmaty::Position;
 use stats::*;
 use std::fmt;
-use std::fmt::Write;
 
 pub fn show_thinking(root: &TreeNode, position: &mut Chess, stats: &RunStats, settings: &Settings) {
     let elapsed_cs = stats.elapsed().as_millis() / 10;
     let best_path = iterate_best_path(root, position);
     let depth = best_path.path.len();
-    if settings.show_thinking && stats.batches % 10 == 0 {
+    if settings.show_thinking && stats.batches % settings.show_thinking_freq == 0 {
         println!(
             "{} {} {} {} {}",
             depth,
@@ -44,7 +41,9 @@ fn iterate_best_path(root: &TreeNode, position: &mut Chess) -> BestPath {
             })
             .unwrap();
         let action = head.action.clone().unwrap();
-        best_path.path.push(SanPlus::from_move(position.clone(), &action));
+        best_path
+            .path
+            .push(SanPlus::from_move(position.clone(), &action));
         position.make_move(&action);
     }
     best_path

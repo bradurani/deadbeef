@@ -19,7 +19,10 @@ impl TimeRemaining {
         let time_spent = now - self.start;
         TimeRemaining {
             start: now,
-            remaining: self.remaining - time_spent,
+            remaining: self
+                .remaining
+                .checked_sub(time_spent)
+                .unwrap_or(Duration::from_millis(0)),
         }
     }
 }
