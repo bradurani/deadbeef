@@ -1,5 +1,6 @@
 use shakmaty::*;
 use std::fmt;
+use std::fmt::Display;
 use std::fmt::Write;
 
 pub trait Emojify {
@@ -34,4 +35,18 @@ impl Emojify for Piece {
             Role::Rook => self.color.fold('♜', '♖'),
         }
     }
+}
+
+struct BoardEmojifier<'a> {
+    pub board: &'a Board,
+}
+
+impl<'a> Display for BoardEmojifier<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.board.write_emoji(f)
+    }
+}
+
+pub fn print_emojified(board: &Board) {
+    println!("\n{}", BoardEmojifier { board: board });
 }

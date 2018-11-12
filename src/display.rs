@@ -186,6 +186,6 @@ impl fmt::Display for TreeStats {
 // TODO should be a macro
 pub fn print_tree(node: &TreeNode, settings: &Settings) {
     if settings.print_tree {
-        trace!("{}", DisplayTreeNode::new(node, settings));
+        debug!("{}", DisplayTreeNode::new(node, settings));
     }
 }

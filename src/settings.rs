@@ -23,7 +23,7 @@ impl Default for Settings {
             max_threads: 12,
             c: 0.5,
             starting_seed: 1,
-            search_type: SearchType::Time(Duration::from_millis(5000)),
+            search_type: SearchType::Time(Duration::from_millis(60000)),
             batch_size: 100,
             max_tree_display_depth: parse_max_tree_display_depth(),
             max_tree_display_length: parse_max_tree_display_length(),
@@ -46,6 +46,15 @@ impl Settings {
     pub fn test_outcome_default() -> Settings {
         Settings {
             search_type: SearchType::Iterations(5000000),
+            ..Default::default()
+        }
+    }
+
+    pub fn test_iteration_default() -> Settings {
+        Settings {
+            search_type: SearchType::Iterations(1000000),
+            max_threads: 0,
+            show_thinking: false,
             ..Default::default()
         }
     }
