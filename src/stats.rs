@@ -75,6 +75,6 @@ impl RunStats {
     }
 
     pub fn nodes_per_second(&self) -> u128 {
-        (self.nodes_created as u128 * 1000000000) / self.elapsed().as_nanos();
+        (self.nodes_created as u128 * 1000000000) / self.elapsed().as_nanos()
     }
 }

@@ -29,7 +29,7 @@ impl Default for Settings {
             max_tree_display_length: parse_max_tree_display_length(),
             print_tree: parse_print_tree(),
             show_thinking: true,
-            show_thinking_freq: 40,
+            show_thinking_freq: 150,
         }
     }
 }
