@@ -99,12 +99,10 @@ impl<'a> fmt::Display for DisplayTreeNode<'a> {
                     node.move_num,
                     a.to_string().pad_to_width(7),
                     node.state,
-                    node.adjusted_q().to_string().pad_to_width(12),
+                    node.q.to_string().pad_to_width(12),
                     node.n.to_string().pad_to_width(7),
-                    node.color_relative_score().to_string().pad_to_width(8),
-                    node.normalized_color_relative_value()
-                        .to_string()
-                        .pad_to_width(15),
+                    node.score().to_string().pad_to_width(8),
+                    node.value.to_string().pad_to_width(15),
                     weight(node, parent_n, settings),
                     format_max(node.max_score),
                     format_min(node.min_score),
@@ -115,12 +113,10 @@ impl<'a> fmt::Display for DisplayTreeNode<'a> {
                     "{}. Root {} q={} n={} s={} v={} {} {} {}",
                     node.move_num,
                     node.state,
-                    node.adjusted_q().to_string().pad_to_width(12),
+                    node.q.to_string().pad_to_width(12),
                     node.n.to_string().pad_to_width(7),
-                    node.color_relative_score().to_string().pad_to_width(8),
-                    node.normalized_color_relative_value()
-                        .to_string()
-                        .pad_to_width(15),
+                    node.score().to_string().pad_to_width(8),
+                    node.value.to_string().pad_to_width(15),
                     format_max(node.max_score),
                     format_min(node.min_score),
                     format_outcome(node.outcome)

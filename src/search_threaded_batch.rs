@@ -87,6 +87,7 @@ pub fn search_threaded(
 
     new_root.children = new_children;
     new_root.set_outcome_from_children(stats);
+    new_root.set_q_based_on_children();
     sort_children_by_weight(&mut new_root.children, new_root.n, settings);
     eprint!(".");
     io::stderr().flush().expect("Could not flush stderr");

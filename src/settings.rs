@@ -13,6 +13,7 @@ pub struct Settings {
     pub max_tree_display_depth: Option<u8>,
     pub max_tree_display_length: Option<u8>,
     pub print_tree: bool,
+    pub log_level: String,
     pub show_thinking: bool,
     pub show_thinking_freq: u64,
 }
@@ -20,14 +21,15 @@ pub struct Settings {
 impl Default for Settings {
     fn default() -> Settings {
         Settings {
-            max_threads: 12,
+            max_threads: 4,
             c: 0.5,
             starting_seed: 1,
-            search_type: SearchType::Time(Duration::from_millis(60000)),
+            search_type: SearchType::Time(Duration::from_millis(20000)),
             batch_size: 100,
             max_tree_display_depth: parse_max_tree_display_depth(),
             max_tree_display_length: parse_max_tree_display_length(),
             print_tree: parse_print_tree(),
+            log_level: parse_log_level(),
             show_thinking: true,
             show_thinking_freq: 150,
         }

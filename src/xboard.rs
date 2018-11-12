@@ -102,6 +102,17 @@ impl XBoard {
             .any(|c| cmd.starts_with(c))
         {
 
+        } else if cmd == "search" {
+            // 0xDEADBEEF extensions. Not part of xboard
+            engine.search();
+        } else if cmd.starts_with("printtree") {
+            match cmd.splitn(2, ' ').collect::<Vec<&str>>().as_slice() {
+                [_, action] => match engine.print_tree_from_child(action) {
+                    Ok(()) => {}
+                    Err(msg) => error!("{}", msg),
+                },
+                _ => engine.print_tree(),
+            }
         } else {
             error!("Unknown cmd {}", cmd);
         }

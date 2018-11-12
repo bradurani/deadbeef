@@ -27,3 +27,7 @@ pub fn parse_starting_position() -> Chess {
             .unwrap_or("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1".to_string()),
     )
 }
+
+pub fn parse_log_level() -> String {
+    env::var("LOG_LEVEL").unwrap_or("info".to_string())
+}

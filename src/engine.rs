@@ -73,11 +73,28 @@ impl Engine {
         self.color = Some(color);
     }
 
+    pub fn print_tree_from_child(&mut self, uci_str: &str) -> Result<(), String> {
+        let action = parse_uci_input(uci_str, self.state.position.clone())?;
+        let child = &self
+            .state
+            .root
+            .children
+            .iter()
+            .find(|c| c.action.clone().unwrap() == action)
+            .ok_or("could not find child")?;
+        print_tree(child, &self.settings);
+        Ok(())
+    }
+
+    pub fn print_tree(&self) {
+        print_tree(&self.state.root, &self.settings);
+    }
+
     pub fn game_over(&self) -> bool {
         return self.state.game_over();
     }
 
-    fn search(&mut self) {
+    pub fn search(&mut self) {
         if self.state.has_outcome() {
             return;
         }

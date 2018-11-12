@@ -12,8 +12,6 @@ use std::ops::Not;
 use uct::*;
 use utils::*;
 
-const MAX_VALUE: f32 = 900.;
-
 #[derive(Debug, Copy, Clone, PartialEq, PartialOrd)]
 pub enum NodeState {
     LeafNode,
@@ -98,7 +96,7 @@ impl TreeNode {
                 Color::Black => f32::NEG_INFINITY,
             },
             Some(Outcome::Draw) => 0.,
-            _ => (self.turn.not().coefficient() * self.n),
+            _ => self.q,
         }
     }
 
@@ -118,17 +116,9 @@ impl TreeNode {
         self.score() * self.turn.not().coefficient()
     }
 
-    pub fn color_relative_value(&self) -> f32 {
-        self.value as f32 * self.turn.not().coefficient()
-    }
-
-    pub fn normalized_value(&self) -> f32 {
-        (self.value as f32 / MAX_VALUE)
-    }
-
-    pub fn normalized_color_relative_value(&self) -> f32 {
-        (self.value as f32 / MAX_VALUE) * self.turn.not().coefficient()
-    }
+    // pub fn color_relative_value(&self) -> f32 {
+    //     self.value as f32 * self.turn.not().coefficient()
+    // }
 
     pub fn is_decisive(&self) -> bool {
         self.outcome.map(|o| o.is_decisive()).unwrap_or(false)
@@ -298,14 +288,14 @@ impl TreeNode {
                         thread_run_stats.leaf_nodes += 1;
                         let delta = child.outcome.unwrap().reward();
                         child.n += 1.;
-                        child.q += delta;
+                        child.q = delta;
                         (delta, child.outcome, None, NodeState::LeafNode)
                     } else {
                         // let played_game = playout(rng, game, thread_run_stats);
                         // let delta = played_game.outcome().map_or(0., |o| o.reward());
                         child.n += 1.;
-                        let delta = child.normalized_value(); //delta + child.normalized_value();
-                        child.q += delta;
+                        let delta = child.value as f32; //delta + child.normalized_value();
+                        child.q = delta;
                         (delta, None, None, new_state)
                     }
                 };
@@ -326,7 +316,20 @@ impl TreeNode {
             }
         };
         self.n += 1.;
-        self.q += delta;
+        self.set_q_based_on_children();
         delta
+    }
+
+    pub fn set_q_based_on_children(&mut self) {
+        self.q = self
+            .children
+            .iter()
+            .map(|c| c.q)
+            .max_by(|q1, q2| {
+                let color_relative_q1 = q1 * self.turn.coefficient();
+                let color_relative_q2 = q2 * self.turn.coefficient();
+                color_relative_q1.partial_cmp(&color_relative_q2).unwrap()
+            })
+            .unwrap();
     }
 }

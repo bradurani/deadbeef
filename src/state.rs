@@ -20,7 +20,8 @@ impl State {
     // TODO starting position needs to be registered with repetition detector
     pub fn from_position(position: Chess) -> State {
         State {
-            position: position,
+            position: position.clone(),
+            root: TreeNode::new_root(&position, 0.5),
             ..Default::default()
         }
     }
