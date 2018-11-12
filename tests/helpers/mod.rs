@@ -1,5 +1,15 @@
+extern crate deadbeef;
+
+use deadbeef::logger;
 use std::sync::Once;
 
+static INIT: Once = Once::new();
+
+pub fn setup() {
+    INIT.call_once(|| {
+        logger::init();
+    });
+}
 
 // #![allow(dead_code)]
 //

@@ -1,3 +1,4 @@
+use display::*;
 use game::*;
 use settings::*;
 use setup::*;
@@ -44,6 +45,7 @@ impl Engine {
 
     pub fn make_engine_move(&mut self) -> Move {
         self.search();
+        print_tree(&self.state.root, &self.settings);
         self.change_state(|s| s.make_best_move());
         info!("{}", self);
         self.state.last_action()

@@ -2,10 +2,10 @@
 
 set -euo pipefail
 
-export RUST_BACKTRACE=1
-export LOG_LEVEL=info
-export PRINT_TREE=true
-export MAX_TREE_DISPLAY_DEPTH=3
-export MAX_TREE_DISPLAY_LENGTH=3
+export RUST_BACKTRACE=${RUST_BACKTRACE:-1}
+export LOG_LEVEL=${LOG_LEVEL:-debug}
+export PRINT_TREE=${PRINT_TREE:-true}
+export MAX_TREE_DISPLAY_DEPTH=${MAX_TREE_DISPLAY_DEPTH:-3}
+export MAX_TREE_DISPLAY_LENGTH=${MAX_TREE_DISPLAY_LENGTH:=3}
 
 /Users/bradurani/.cargo/bin/cargo run 2>&1

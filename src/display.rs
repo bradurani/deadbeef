@@ -13,18 +13,7 @@ use uct::*;
 
 impl fmt::Display for Engine {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(f, "{}", self.state)?;
-        if self.settings.print_tree {
-            writeln!(
-                f,
-                "{}",
-                DisplayTreeNode {
-                    node: &self.state.root,
-                    settings: &self.settings
-                }
-            )?
-        }
-        self.state.position.board().clone().write_emoji(f)
+        writeln!(f, "{}", self.state)
     }
 }
 
@@ -32,7 +21,7 @@ impl fmt::Display for State {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(
             f,
-            "\n{}. \nTIME:  {}\nOTIME: {}",
+            "\n{}. \nTIME:  {}\nOTIME: {}\n",
             self.ply(),
             match self.time_remaining {
                 Some(ref t) => t.to_string(),
@@ -42,7 +31,8 @@ impl fmt::Display for State {
                 Some(duration) => format!("{:?}", duration),
                 None => "".to_string(),
             }
-        )
+        );
+        self.position.board().clone().write_emoji(f)
     }
 }
 
@@ -169,7 +159,10 @@ impl<'a> fmt::Display for DisplayTreeNode<'a> {
             write!(f, "")
         }
 
-        fmt_subtree(f, &self.node, self.settings, 0., 0)
+        if self.settings.print_tree {
+            fmt_subtree(f, &self.node, self.settings, 0., 0)?;
+        }
+        Ok(())
     }
 }
 
@@ -185,7 +178,5 @@ impl fmt::Display for TreeStats {
 
 // TODO should be a macro
 pub fn print_tree(node: &TreeNode, settings: &Settings) {
-    if settings.print_tree {
-        debug!("{}", DisplayTreeNode::new(node, settings));
-    }
+    debug!("\n{}", DisplayTreeNode::new(node, settings));
 }

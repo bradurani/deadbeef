@@ -18,8 +18,6 @@ use deadbeef::utils::*;
 use shakmaty::Color::*;
 use shakmaty::*;
 
-static START: Once = Once::new();
-
 #[test]
 fn test_iteration_mate_in_1() {
     let mut stats: RunStats = Default::default();
@@ -326,9 +324,6 @@ fn test_single_iteration_with_repetitions(
     repetitions: Vec<&'static str>,
     stats: &mut RunStats,
 ) -> (TreeNode, f32) {
-    START.call_once(|| {
-        logger::init();
-    });
     let settings = Settings::test_iteration_default();
     let position = parse_fen(fen_str);
     print_emojified(&position.board());
