@@ -13,8 +13,8 @@ pub fn weight(child: &TreeNode, parent_n: f32, settings: &Settings) -> f32 {
         // for sorting by weight. Tiny optimization, can skip this check during traversal?
         return 0.;
     };
-    let weight =
-        ((child.adjusted_q() / 100.) / child.n) + settings.c * (parent_n.ln() / child.n).sqrt();
+    let weight = ((child.adjusted_q() / 100.) / child.n)
+        + settings.c * (100. * parent_n.ln() / child.n).sqrt();
     weight
 }
 

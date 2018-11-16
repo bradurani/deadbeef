@@ -9,12 +9,12 @@ pub fn parse_fen_input(fen_str: &str) -> Result<Chess, String> {
         .and_then(|f: Fen| f.position().map_err(|e: PositionError| e.to_string()))
 }
 
-pub fn parse_uci_input(uci_str: &str, position: Chess) -> Result<Move, String> {
+pub fn parse_uci_input(uci_str: &str, position: &Chess) -> Result<Move, String> {
     uci_str
         .parse()
         .map_err(|e: ParseUciError| e.to_string())
         .and_then(|uci: Uci| {
-            let action = uci.to_move(&position);
+            let action = uci.to_move(position);
             action.map_err(|e: IllegalMoveError| e.to_string())
         })
 }

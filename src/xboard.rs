@@ -1,3 +1,5 @@
+#![feature(slice_patterns)]
+
 use engine::*;
 use log::*;
 use shakmaty::uci::Uci;
@@ -106,12 +108,11 @@ impl XBoard {
             // 0xDEADBEEF extensions. Not part of xboard
             engine.search();
         } else if cmd.starts_with("printtree") {
-            match cmd.splitn(2, ' ').collect::<Vec<&str>>().as_slice() {
-                [_, action] => match engine.print_tree_from_child(action) {
-                    Ok(()) => {}
-                    Err(msg) => error!("{}", msg),
-                },
-                _ => engine.print_tree(),
+            let args: Vec<&str> = cmd.split(' ').collect();
+            let uci_strs: Vec<&str> = args.into_iter().skip(1).collect();
+            match engine.print_subtree(uci_strs) {
+                Ok(_) => {}
+                Err(msg) => error!("{}", msg),
             }
         } else {
             error!("Unknown cmd {}", cmd);

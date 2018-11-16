@@ -1,4 +1,5 @@
 #![feature(duration_as_u128)]
+#![feature(slice_patterns)]
 // #![feature(tool_attributes)] // for rustfmt directives
 
 #[cfg(test)]

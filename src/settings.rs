@@ -22,9 +22,9 @@ impl Default for Settings {
     fn default() -> Settings {
         Settings {
             max_threads: 4,
-            c: 0.5,
-            starting_seed: 1,
-            search_type: SearchType::Time(Duration::from_millis(20000)),
+            c: 10.,
+            starting_seed: 2,
+            search_type: SearchType::Time(Duration::from_millis(5500)),
             batch_size: 100,
             max_tree_display_depth: parse_max_tree_display_depth(),
             max_tree_display_length: parse_max_tree_display_length(),

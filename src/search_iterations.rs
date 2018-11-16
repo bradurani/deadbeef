@@ -24,6 +24,7 @@ impl SearchStrategy for SearchIterations {
 
             new_root = search_threaded(new_root, &state.position, stats, settings);
         }
+        println!("");
         new_root
     }
 }

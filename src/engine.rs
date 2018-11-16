@@ -38,7 +38,7 @@ impl Engine {
     }
 
     pub fn make_user_move(&mut self, uci_str: &str) -> Result<Move, String> {
-        let action = parse_uci_input(uci_str, self.position())?;
+        let action = parse_uci_input(uci_str, &self.position())?;
         self.change_state(|s| s.make_user_move(&action));
         Ok(action)
     }
@@ -73,21 +73,21 @@ impl Engine {
         self.color = Some(color);
     }
 
-    pub fn print_tree_from_child(&mut self, uci_str: &str) -> Result<(), String> {
-        let action = parse_uci_input(uci_str, self.state.position.clone())?;
-        let child = &self
-            .state
-            .root
-            .children
-            .iter()
-            .find(|c| c.action.clone().unwrap() == action)
-            .ok_or("could not find child")?;
-        print_tree(child, &self.settings);
+    pub fn print_subtree(&self, action_uci_strs: Vec<&str>) -> Result<(), String> {
+        let mut root = &self.state.root;
+        let mut position = self.state.position.clone();
+        eprintln!("{:?}", action_uci_strs);
+        for uci_str in action_uci_strs {
+            let action = parse_uci_input(uci_str, &position)?;
+            root = root
+                .children
+                .iter()
+                .find(|c| c.action.clone().unwrap() == action)
+                .ok_or("could not find child")?;
+            position = position.play(&action).map_err(|e| e.to_string())?;
+        }
+        print_tree(&root, &self.settings);
         Ok(())
-    }
-
-    pub fn print_tree(&self) {
-        print_tree(&self.state.root, &self.settings);
     }
 
     pub fn game_over(&self) -> bool {
