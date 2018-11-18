@@ -47,6 +47,6 @@ impl<'a> Display for BoardEmojifier<'a> {
     }
 }
 
-pub fn print_emojified(board: &Board) {
-    println!("\n{}", BoardEmojifier { board: board });
+pub fn info_emojified(board: &Board) {
+    info!("\n{}", BoardEmojifier { board: board });
 }

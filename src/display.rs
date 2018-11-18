@@ -113,7 +113,7 @@ impl<'a> fmt::Display for DisplayTreeNode<'a> {
                 )?,
                 None => writeln!(
                     f,
-                    "{}. Root {} q={} n={} s={} v={} {} {} {}",
+                    "{}. Root {} q={} n={} m={} v={} {} {} {}",
                     node.move_num,
                     node.state,
                     node.q.to_string().pad_to_width(16),

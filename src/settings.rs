@@ -23,17 +23,17 @@ impl Default for Settings {
     fn default() -> Settings {
         Settings {
             max_threads: 4,
-            c: 10.,
-            starting_seed: 2,
+            c: 0.001,
+            starting_seed: 1,
             search_type: SearchType::Time(Duration::from_millis(5000)),
             batch_size: 1,
-            playout_depth: 4,
+            playout_depth: 2,
             max_tree_display_depth: parse_max_tree_display_depth(),
             max_tree_display_length: parse_max_tree_display_length(),
             print_tree: parse_print_tree(),
             log_level: parse_log_level(),
             show_thinking: true,
-            show_thinking_freq: 150,
+            show_thinking_freq: 50,
         }
     }
 }

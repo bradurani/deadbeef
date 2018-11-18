@@ -1,3 +1,4 @@
+use emojify::*;
 use shakmaty::fen::*;
 use shakmaty::uci::*;
 use shakmaty::*;
@@ -20,8 +21,11 @@ pub fn parse_uci_input(uci_str: &str, position: &Chess) -> Result<Move, String> 
 }
 
 pub fn parse_fen(fen_str: &str) -> Chess {
+    info!("parsing position:\n{}", fen_str);
     let setup: Fen = fen_str.parse().expect("invalid fen");
-    setup.position().expect("invalid position")
+    let position: Chess = setup.position().expect("invalid position");
+    info_emojified(&position.board());
+    position
 }
 
 pub fn parse_uci(uci_str: &str, position: &Chess) -> Move {
