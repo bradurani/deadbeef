@@ -53,6 +53,7 @@ pub struct RunStats {
     pub start_time: Option<Instant>,
     pub end_time: Option<Instant>,
     pub leaf_nodes: u64,
+    pub evals: u64,
 }
 
 impl RunStats {
@@ -60,6 +61,7 @@ impl RunStats {
         self.nodes_created += run_stats.nodes_created;
         self.iterations += run_stats.iterations;
         self.leaf_nodes += run_stats.leaf_nodes;
+        self.evals += run_stats.evals;
     }
 
     pub fn start_timer(&mut self) {
@@ -74,7 +76,7 @@ impl RunStats {
         self.end_time.unwrap_or(Instant::now()) - self.start_time.unwrap()
     }
 
-    pub fn nodes_per_second(&self) -> u128 {
-        (self.nodes_created as u128 * 1000000000) / self.elapsed().as_nanos()
+    pub fn evals_per_second(&self) -> u128 {
+        (self.evals as u128 * 1000000000) / self.elapsed().as_nanos()
     }
 }

@@ -41,13 +41,15 @@ impl fmt::Display for RunStats {
         write!(
             f,
             "\n\
-             NODES:   nodes {}, iterations: {}, leafs: {}\n\
-             TIME:    batches: {}  elapsed {:?}\n",
+             MCTS:    nodes {}, iterations: {}, leafs: {}\n\
+             TIME:    batches: {}  elapsed {:?}\n\
+             PLAYOUT: evals: {}\n",
             self.nodes_created.separated_string(),
             self.iterations.separated_string(),
             self.leaf_nodes.separated_string(),
             self.batches.separated_string(),
-            self.elapsed()
+            self.elapsed(),
+            self.evals
         )
     }
 }
@@ -95,14 +97,15 @@ impl<'a> fmt::Display for DisplayTreeNode<'a> {
             match node.action.clone() {
                 Some(a) => writeln!(
                     f,
-                    "{}. {} {} q={} n={} s={} v={} w={} {} {} {}",
+                    "{}. {} {} q={} n={} m={} v={} w={} {} {} {}",
                     node.move_num,
                     a.to_string().pad_to_width(7),
                     node.state,
-                    node.q.to_string().pad_to_width(12),
-                    node.n.to_string().pad_to_width(7),
-                    node.score().to_string().pad_to_width(8),
-                    node.value.to_string().pad_to_width(15),
+                    node.q.to_string().pad_to_width(16),
+                    node.n.to_string().pad_to_width(5),
+                    // node.score().to_string().pad_to_width(8),
+                    node.minimax.to_string().pad_to_width(6),
+                    node.value.to_string().pad_to_width(6),
                     weight(node, parent_n, settings),
                     format_max(node.max_score),
                     format_min(node.min_score),
@@ -113,10 +116,11 @@ impl<'a> fmt::Display for DisplayTreeNode<'a> {
                     "{}. Root {} q={} n={} s={} v={} {} {} {}",
                     node.move_num,
                     node.state,
-                    node.q.to_string().pad_to_width(12),
-                    node.n.to_string().pad_to_width(7),
-                    node.score().to_string().pad_to_width(8),
-                    node.value.to_string().pad_to_width(15),
+                    node.q.to_string().pad_to_width(16),
+                    node.n.to_string().pad_to_width(5),
+                    // node.score().to_string().pad_to_width(8),
+                    node.minimax.to_string().pad_to_width(6),
+                    node.value.to_string().pad_to_width(6),
                     format_max(node.max_score),
                     format_min(node.min_score),
                     format_outcome(node.outcome)
@@ -155,9 +159,7 @@ impl<'a> fmt::Display for DisplayTreeNode<'a> {
             write!(f, "")
         }
 
-        if self.settings.print_tree {
-            fmt_subtree(f, &self.node, self.settings, 0., 0)?;
-        }
+        fmt_subtree(f, &self.node, self.settings, 0., 0)?;
         Ok(())
     }
 }
@@ -173,6 +175,12 @@ impl fmt::Display for TreeStats {
 }
 
 // TODO should be a macro
-pub fn print_tree(node: &TreeNode, settings: &Settings) {
-    debug!("\n{}", DisplayTreeNode::new(node, settings));
+pub fn info_print_tree(node: &TreeNode, settings: &Settings) {
+    info!("\n{}", DisplayTreeNode::new(node, settings));
+}
+
+pub fn debug_print_tree(node: &TreeNode, settings: &Settings) {
+    if settings.print_tree {
+        debug!("\n{}", DisplayTreeNode::new(node, settings));
+    }
 }

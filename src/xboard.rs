@@ -1,5 +1,3 @@
-#![feature(slice_patterns)]
-
 use engine::*;
 use log::*;
 use shakmaty::uci::Uci;

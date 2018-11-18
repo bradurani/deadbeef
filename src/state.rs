@@ -133,7 +133,7 @@ impl State {
         self.position.is_game_over()
     }
 
-    pub fn score(&self) -> f32 {
+    pub fn score(&self) -> i16 {
         self.root.score()
     }
 }

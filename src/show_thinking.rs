@@ -11,15 +11,15 @@ pub fn show_thinking(root: &TreeNode, position: &mut Chess, stats: &RunStats, se
     let best_path = iterate_best_path(root, position);
     let depth = best_path.path.len();
     let selective_depth = depth;
-    let speed = stats.nodes_per_second();
+    let speed = stats.evals_per_second();
     let tablebase_hits = 0;
     if settings.show_thinking && stats.batches % settings.show_thinking_freq == 0 {
         println!(
             "{} {} {} {} {} {} {} \t{}",
             depth,
-            root.score(),
+            root.minimax,
             elapsed_cs,
-            stats.nodes_created,
+            stats.evals,
             selective_depth,
             speed,
             tablebase_hits,

@@ -1,13 +1,12 @@
-// use display::*;
-use eval::Value;
 use game::*;
-// use playout::playout;
+use playout::*;
 use rand::rngs::SmallRng;
 use repetition_detector::RepetitionDetector;
 use settings::*;
 use shakmaty::*;
 use stats::*;
 use std::f32;
+use std::i16;
 use std::ops::Not;
 use uct::*;
 use utils::*;
@@ -25,11 +24,12 @@ impl Default for NodeState {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TreeNode {
     pub outcome: Option<Outcome>,
     pub action: Option<Move>, // how did we get here
-    pub value: i16,
+    pub value: Reward,
+    pub minimax: Reward,
     pub state: NodeState, // is this a leaf node? fully expanded?
     //TODO don't need turn
     pub turn: Color, //which player made this move
@@ -43,20 +43,38 @@ pub struct TreeNode {
     pub min_score: Option<u16>,
 }
 
+impl Default for TreeNode {
+    fn default() -> TreeNode {
+        TreeNode {
+            move_num: 0.5,
+            outcome: None,
+            action: None,
+            value: 0,
+            minimax: 0,
+            state: NodeState::Expandable,
+            turn: Color::White,
+            repetition_detector: RepetitionDetector::default(),
+            n: 0.0,
+            q: 0.0,
+            children: vec![],
+            max_score: None,
+            min_score: None,
+        }
+    }
+}
+
 //TODO, make all contructors take a game, and never allow manual setting of value
 impl TreeNode {
     pub fn new(
         action: Option<Move>,
         turn: Color,
         move_num: f32,
-        value: i16,
         rd: RepetitionDetector,
     ) -> TreeNode {
         TreeNode {
             action: action,
             turn: turn,
             move_num: move_num,
-            value: value,
             repetition_detector: rd,
             ..Default::default()
         }
@@ -66,7 +84,6 @@ impl TreeNode {
         TreeNode {
             turn: game.turn(),  // So we switch to White for move 1
             move_num: move_num, //So we increment to 1 for move 1
-            value: game.board().value(),
             repetition_detector: RepetitionDetector::new(game),
             ..Default::default()
         }
@@ -81,6 +98,7 @@ impl TreeNode {
             turn: self.turn,
             move_num: self.move_num,
             value: self.value,
+            minimax: self.minimax,
             repetition_detector: self.repetition_detector.clone(),
             n: self.n,
             q: self.q,
@@ -89,19 +107,19 @@ impl TreeNode {
         }
     }
 
-    pub fn score(&self) -> f32 {
+    pub fn score(&self) -> i16 {
         match self.outcome {
             Some(Outcome::Decisive { winner }) => match winner {
-                Color::White => f32::INFINITY,
-                Color::Black => f32::NEG_INFINITY,
+                Color::White => i16::MAX,
+                Color::Black => i16::MIN,
             },
-            Some(Outcome::Draw) => 0.,
-            _ => self.q,
+            Some(Outcome::Draw) => 0,
+            _ => self.color_relative_minimax(),
         }
     }
 
     pub fn adjusted_q(&self) -> f32 {
-        let mut adjusted_q = self.turn.not().coefficient() * self.q;
+        let mut adjusted_q = self.turn.not().coefficient() as f32 * self.q;
         adjusted_q = match self.min_score {
             Some(min) => adjusted_q.min(min as f32), // opponent can do no worse than min so we can do no better than min
             None => adjusted_q,
@@ -112,13 +130,13 @@ impl TreeNode {
         }
     }
 
-    pub fn color_relative_score(&self) -> f32 {
-        self.score() * self.turn.not().coefficient()
+    pub fn color_relative_score(&self) -> i16 {
+        self.score() * self.turn.not().coefficient() as i16
     }
 
-    // pub fn color_relative_value(&self) -> f32 {
-    //     self.value as f32 * self.turn.not().coefficient()
-    // }
+    pub fn color_relative_minimax(&self) -> i16 {
+        self.minimax * self.turn.not().coefficient() as i16
+    }
 
     pub fn is_decisive(&self) -> bool {
         self.outcome.map(|o| o.is_decisive()).unwrap_or(false)
@@ -158,7 +176,6 @@ impl TreeNode {
             Some(action.clone()),
             self.turn.not(),
             self.move_num + 0.5,
-            game.board().value(),
             new_rep,
         );
         self.children.push(new_node);
@@ -195,18 +212,21 @@ impl TreeNode {
             // one of the children is a winning move for this parent, so this node is a winner
             self.outcome = Some(Outcome::Decisive { winner: self.turn });
         } else if self.children.iter().all(|c| {
-            c.outcome == Some(Outcome::Decisive {
-                winner: self.turn.not(),
-            })
+            c.outcome
+                == Some(Outcome::Decisive {
+                    winner: self.turn.not(),
+                })
         }) {
             // if all children can force a win for opponent, this node is win for opponent
             self.outcome = Some(Outcome::Decisive {
                 winner: self.turn.not(),
             });
         } else if self.children.iter().all(|c| {
-            c.outcome == Some(Outcome::Draw) || c.outcome == Some(Outcome::Decisive {
-                winner: self.turn.not(),
-            })
+            c.outcome == Some(Outcome::Draw)
+                || c.outcome
+                    == Some(Outcome::Decisive {
+                        winner: self.turn.not(),
+                    })
         }) {
             self.outcome = Some(Outcome::Draw);
             self.max_score = Some(0);
@@ -237,15 +257,16 @@ impl TreeNode {
     ) -> f32 {
         thread_run_stats.iterations += 1;
         debug_assert!(game.halfmoves() <= MAX_HALFMOVES);
-        let delta = match self.state {
+        let normalized_value = match self.state {
             NodeState::FullyExpanded => {
-                let (delta, child_changes_outcome) = {
+                let (normalized_value, child_changes_outcome) = {
                     let child = best_child(self, settings);
                     let mut child_game = game.clone(); //TODO don't clone if the move is reversible
                     child_game.make_move(&child.action.clone().unwrap());
-                    let delta = child.iteration(&mut child_game, rng, thread_run_stats, settings);
+                    let normalized_value =
+                        child.iteration(&mut child_game, rng, thread_run_stats, settings);
                     (
-                        delta,
+                        normalized_value,
                         child.outcome.is_some()
                             || child.min_score.is_some()
                             || child.max_score.is_some(),
@@ -255,7 +276,7 @@ impl TreeNode {
                     // this calc gets repeated a lot unnecesarily and can be made more efficient
                     self.set_outcome_from_children(thread_run_stats);
                 }
-                delta
+                normalized_value
             }
             NodeState::Expandable => {
                 let allowed_actions = game.allowed_actions();
@@ -270,7 +291,7 @@ impl TreeNode {
                 }
 
                 //advances game to position after action
-                let (delta, outcome, min_score, node_state) = {
+                let (normalized_value, outcome, min_score, node_state) = {
                     let mut child = self.expand(game, candidate_actions, rng, thread_run_stats);
                     if game.halfmoves() == MAX_HALFMOVES
                         || child.repetition_detector.record_and_check(game)
@@ -286,17 +307,22 @@ impl TreeNode {
                         child.state = NodeState::LeafNode;
                         child.outcome = game.outcome();
                         thread_run_stats.leaf_nodes += 1;
-                        let delta = child.outcome.unwrap().reward();
+                        child.value = child.outcome.unwrap().reward();
+                        child.minimax = child.value;
                         child.n += 1.;
-                        child.q = delta;
-                        (delta, child.outcome, None, NodeState::LeafNode)
+                        child.q += child.normalized_value();
+                        (
+                            child.normalized_value(),
+                            child.outcome,
+                            None,
+                            NodeState::LeafNode,
+                        )
                     } else {
-                        // let played_game = playout(rng, game, thread_run_stats);
-                        // let delta = played_game.outcome().map_or(0., |o| o.reward());
+                        child.value = playout(game.clone(), thread_run_stats, settings);
+                        child.minimax = child.value;
                         child.n += 1.;
-                        let delta = child.value as f32; //delta + child.normalized_value();
-                        child.q = delta;
-                        (delta, None, None, new_state)
+                        child.q += child.normalized_value(); //TODO do I really want this?
+                        (child.normalized_value(), None, None, new_state)
                     }
                 };
                 if self.min_score == None {
@@ -309,27 +335,32 @@ impl TreeNode {
                 if last_child_expansion {
                     self.set_outcome_from_children(thread_run_stats)
                 }
-                delta
+                normalized_value
             }
             _ => {
                 panic!("IMPOSSIBLE ITERATION");
             }
         };
         self.n += 1.;
-        self.set_q_based_on_children();
-        delta
+        self.set_minimax_based_on_children();
+        normalized_value
     }
 
-    pub fn set_q_based_on_children(&mut self) {
-        self.q = self
+    fn normalized_value(&self) -> f32 {
+        (self.value as f32 / 9590.).min(1.) // (8 * 929) + (2 * 479) + (2 * 320) + (2 * 280)
+                                            // TODO test 8 queen positions and other extremes
+    }
+
+    pub fn set_minimax_based_on_children(&mut self) {
+        self.minimax = self
             .children
             .iter()
-            .map(|c| c.q)
-            .max_by(|q1, q2| {
-                let color_relative_q1 = q1 * self.turn.coefficient();
-                let color_relative_q2 = q2 * self.turn.coefficient();
-                color_relative_q1.partial_cmp(&color_relative_q2).unwrap()
+            .map(|c| c.minimax)
+            .max_by(|v1, v2| {
+                let relative_v1 = v1 * self.turn.coefficient();
+                let relative_v2 = v2 * self.turn.coefficient();
+                relative_v1.cmp(&relative_v2)
             })
-            .unwrap();
+            .unwrap()
     }
 }

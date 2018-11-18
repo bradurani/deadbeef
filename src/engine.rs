@@ -45,7 +45,6 @@ impl Engine {
 
     pub fn make_engine_move(&mut self) -> Move {
         self.search();
-        print_tree(&self.state.root, &self.settings);
         self.change_state(|s| s.make_best_move());
         info!("{}", self);
         self.state.last_action()
@@ -76,7 +75,7 @@ impl Engine {
     pub fn print_subtree(&self, action_uci_strs: Vec<&str>) -> Result<(), String> {
         let mut root = &self.state.root;
         let mut position = self.state.position.clone();
-        eprintln!("{:?}", action_uci_strs);
+        // eprintln!("{:?}", action_uci_strs);
         for uci_str in action_uci_strs {
             let action = parse_uci_input(uci_str, &position)?;
             root = root
@@ -86,7 +85,7 @@ impl Engine {
                 .ok_or("could not find child")?;
             position = position.play(&action).map_err(|e| e.to_string())?;
         }
-        print_tree(&root, &self.settings);
+        info_print_tree(&root, &self.settings);
         Ok(())
     }
 
@@ -101,6 +100,8 @@ impl Engine {
         let mut move_run_stats: RunStats = Default::default();
         let settings = self.settings.clone();
         self.change_state(|s| s.search(&mut move_run_stats, &settings));
+        debug_print_tree(&self.state.root, &self.settings);
+        println!("{}", move_run_stats);
         self.game_stats.add(&move_run_stats);
     }
 
