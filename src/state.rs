@@ -5,6 +5,7 @@ use search_strategy::*;
 use settings::*;
 use shakmaty::*;
 use stats::*;
+use std::cmp::Ordering;
 use std::time::Duration;
 use time_remaining::*;
 
@@ -61,8 +62,15 @@ impl State {
             .children
             .into_iter()
             .max_by(|c1, c2| {
-                c1.color_relative_minimax()
-                    .cmp(&c2.color_relative_minimax())
+                // unexpanded nodes can miss horrible replies and blunder us into mate-in-1
+                if c1.state == NodeState::Expandable && c2.state != NodeState::Expandable {
+                    Ordering::Less
+                } else if c1.state != NodeState::Expandable && c2.state == NodeState::Expandable {
+                    Ordering::Greater
+                } else {
+                    c1.color_relative_minimax()
+                        .cmp(&c2.color_relative_minimax())
+                }
             })
             .unwrap()
     }
