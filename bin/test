@@ -10,4 +10,4 @@ export MAX_TREE_DISPLAY_LENGTH=${MAX_TREE_DISPLAY_LENGTH:-200}
 test_name=${2:-}
 
 clear
-cargo test --test $1 $test_name --release -- --test-threads=1 --nocapture
+cargo test --test $1 $test_name --release -- --test-threads=1 --nocapture 2>&1

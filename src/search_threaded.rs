@@ -4,8 +4,6 @@ use settings::*;
 use shakmaty::*;
 use show_thinking::*;
 use stats::*;
-use std::io;
-use std::io::Write;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::thread::JoinHandle;
@@ -50,19 +48,15 @@ pub fn search_threaded(
                     let mut thread_child = safe_thread_child.lock().unwrap();
                     thread_position.make_move(&thread_child.action.clone().unwrap());
 
-                    for _n in 0..thread_settings.batch_size {
-                        if thread_child.has_outcome() {
-                            break;
-                        }
-                        thread_run_stats.nodes_created += 1;
-                        new_q += thread_child.iteration(
-                            &mut thread_position.clone(),
-                            &mut rng,
-                            &mut thread_run_stats,
-                            &thread_settings,
-                        );
-                        new_n += 1.;
-                    }
+                    thread_run_stats.nodes_created += 1;
+                    new_q += thread_child.iteration(
+                        &mut thread_position.clone(),
+                        &mut rng,
+                        &mut thread_run_stats,
+                        &thread_settings,
+                    );
+                    new_n += 1.;
+
                     thread_run_stats.stop_timer();
                 }
                 (safe_thread_child.clone(), new_n, new_q, thread_run_stats) // only Arc reference is cloned
@@ -89,10 +83,7 @@ pub fn search_threaded(
     new_root.set_outcome_from_children(stats);
     new_root.set_minimax_based_on_children();
     sort_children_by_weight(&mut new_root.children, new_root.n, settings);
-    eprint!(".");
-    io::stderr().flush().expect("Could not flush stderr");
 
-    stats.batches += 1;
     show_thinking(&new_root, &mut position.clone(), &stats, &settings);
     new_root
 }

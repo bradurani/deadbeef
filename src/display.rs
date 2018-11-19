@@ -42,13 +42,13 @@ impl fmt::Display for RunStats {
             f,
             "\n\
              MCTS:    nodes {}, iterations: {}, leafs: {}\n\
-             TIME:    batches: {}  elapsed {:?}\n\
-             PLAYOUT: evals: {}\n",
+             TIME:    elapsed {:?}\n\
+             PLAYOUT: evals: {}, {} e/s\n",
             self.nodes_created.separated_string(),
             self.iterations.separated_string(),
             self.leaf_nodes.separated_string(),
-            self.batches.separated_string(),
             self.elapsed(),
+            self.evals_per_second(),
             self.evals
         )
     }

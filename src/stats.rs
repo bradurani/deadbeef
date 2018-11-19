@@ -49,7 +49,6 @@ impl TreeStats {
 pub struct RunStats {
     pub nodes_created: u64,
     pub iterations: u64,
-    pub batches: u64,
     pub start_time: Option<Instant>,
     pub end_time: Option<Instant>,
     pub leaf_nodes: u64,

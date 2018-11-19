@@ -1,6 +1,6 @@
 use mcts::*;
 use search_strategy::*;
-use search_threaded_batch::*;
+use search_threaded::*;
 use settings::*;
 use state::*;
 use stats::*;
@@ -11,13 +11,9 @@ pub struct SearchIterations {
 
 impl SearchStrategy for SearchIterations {
     fn search(&self, state: State, stats: &mut RunStats, settings: &Settings) -> TreeNode {
-        debug_assert!(self.n_iterations > settings.batch_size);
-
-        let batches = self.n_iterations / settings.batch_size;
-
         let mut new_root = state.root;
 
-        for _i in 0..batches {
+        for _i in 0..self.n_iterations {
             if new_root.has_outcome() {
                 return new_root;
             }

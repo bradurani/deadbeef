@@ -29,7 +29,7 @@ pub mod repetition_detector;
 pub mod search_iterations;
 pub mod search_ponder;
 pub mod search_strategy;
-pub mod search_threaded_batch;
+pub mod search_threaded;
 pub mod search_time;
 pub mod settings;
 pub mod setup;

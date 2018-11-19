@@ -8,7 +8,6 @@ pub struct Settings {
     pub c: f32,
     pub starting_seed: u8,
     pub search_type: SearchType,
-    pub batch_size: u32,
     pub playout_depth: usize,
     // TODO move out
     pub max_tree_display_depth: Option<u8>,
@@ -26,7 +25,6 @@ impl Default for Settings {
             c: 0.005,
             starting_seed: 1,
             search_type: SearchType::Time(Duration::from_millis(5000)),
-            batch_size: 1,
             playout_depth: 4,
             max_tree_display_depth: parse_max_tree_display_depth(),
             max_tree_display_length: parse_max_tree_display_length(),

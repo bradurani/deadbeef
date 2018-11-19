@@ -1,4 +1,3 @@
-use eval::*;
 use shakmaty::*;
 use std::i16;
 

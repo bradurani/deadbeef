@@ -1,6 +1,6 @@
 use mcts::*;
 use search_strategy::*;
-use search_threaded_batch::*;
+use search_threaded::*;
 use settings::*;
 use state::*;
 use stats::*;
