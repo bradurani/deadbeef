@@ -36,16 +36,16 @@ fn capture_bishop_and_save_queen() {
 
 #[test]
 fn do_not_blunder_knight() {
-    assert_move(
+    assert_contains_move(
         "rnbqkbnr/ppp1pppp/8/8/3Pp3/8/PPP2PPP/RNBQKBNR w KQkq - 0 3",
-        "c1f4",
+        vec!["c1f4", "b1c3"],
     );
 }
 
 #[test]
 fn do_not_blunder_bishop() {
-    assert_move(
+    assert_contains_move(
         "rnbqkbnr/pppp1ppp/4p3/8/3P4/8/PPP1PPPP/RNBQKBNR w KQkq - 0 2",
-        "c1g5",
+        vec!["c1f4", "c1g5"],
     );
 }

@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+export RUST_BACKTRACE=${RUST_BACKTRACE:-0}
+export LOG_LEVEL=${LOG_LEVEL:-debug}
+export PRINT_TREE=${PRINT_TREE:-true}
+export MAX_TREE_DISPLAY_DEPTH=${MAX_TREE_DISPLAY_DEPTH:-3}
+export MAX_TREE_DISPLAY_LENGTH=${MAX_TREE_DISPLAY_LENGTH:-200}
+test_name=${2:-}
+
+clear
+cargo test --test $1 $test_name --release -- --test-threads=1 --nocapture

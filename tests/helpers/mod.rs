@@ -18,18 +18,14 @@ pub fn setup() {
     });
 }
 
-//
-// use deadbeef::display::*;
-// use deadbeef::mcts::TreeNode;
-// use deadbeef::play;
-// use deadbeef::settings::*;
-// use deadbeef::setup::*;
-// use deadbeef::stats::*;
-// use shakmaty::*;
-//
 pub fn assert_move(fen_str: &'static str, uci_str: &'static str) {
     let settings = Settings::test_default();
-    assert_contains_move(fen_str, vec![uci_str], settings, false);
+    run_move_test(fen_str, vec![uci_str], settings, false);
+}
+
+pub fn assert_contains_move(fen_str: &'static str, uci_strs: Vec<&'static str>) {
+    let settings = Settings::test_default();
+    run_move_test(fen_str, uci_strs, settings, false);
 }
 //
 // pub fn assert_mate_move(fen_str: &'static str, uci_str: &'static str) {
@@ -69,7 +65,7 @@ pub fn assert_move(fen_str: &'static str, uci_str: &'static str) {
 //     assert!(new_root.map_or(false, |o| o.is_draw()));
 // }
 //
-pub fn assert_contains_move(
+fn run_move_test(
     fen_str: &'static str,
     uci_strs: Vec<&'static str>,
     settings: Settings,

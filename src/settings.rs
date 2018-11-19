@@ -33,7 +33,7 @@ impl Default for Settings {
             print_tree: parse_print_tree(),
             log_level: parse_log_level(),
             show_thinking: true,
-            show_thinking_freq: 100000, // evals
+            show_thinking_freq: 10, // evals
         }
     }
 }
@@ -42,7 +42,7 @@ impl Settings {
     //#[cfg(test)] //need to figure out how to not compile this outside tests
     pub fn test_default() -> Settings {
         Settings {
-            search_type: SearchType::Iterations(1000),
+            search_type: SearchType::Iterations(100),
             ..Default::default()
         }
     }
