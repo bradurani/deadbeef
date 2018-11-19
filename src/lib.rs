@@ -25,6 +25,7 @@ pub mod mcts;
 pub mod pgn;
 pub mod play;
 pub mod playout;
+pub mod q_search;
 pub mod repetition_detector;
 pub mod search_iterations;
 pub mod search_ponder;

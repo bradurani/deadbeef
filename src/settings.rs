@@ -14,6 +14,7 @@ pub struct Settings {
     pub max_tree_display_length: Option<u8>,
     pub print_tree: bool,
     pub log_level: String,
+    pub q_search: bool,
     pub show_thinking: bool,
     pub show_thinking_freq: u64,
 }
@@ -30,6 +31,7 @@ impl Default for Settings {
             max_tree_display_length: parse_max_tree_display_length(),
             print_tree: parse_print_tree(),
             log_level: parse_log_level(),
+            q_search: true,
             show_thinking: true,
             show_thinking_freq: 50, // evals
         }
@@ -66,6 +68,14 @@ impl Settings {
             search_type: SearchType::Iterations(10000),
             max_threads: 1,
             show_thinking: false,
+            ..Default::default()
+        }
+    }
+
+    pub fn playout_test(depth: usize, q_search: bool) -> Settings {
+        Settings {
+            playout_depth: depth,
+            q_search: q_search,
             ..Default::default()
         }
     }
