@@ -31,7 +31,7 @@ impl fmt::Display for State {
                 Some(duration) => format!("{:?}", duration),
                 None => "".to_string(),
             }
-        );
+        )?;
         self.position.board().clone().write_emoji(f)
     }
 }

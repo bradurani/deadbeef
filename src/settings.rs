@@ -22,10 +22,10 @@ impl Default for Settings {
     fn default() -> Settings {
         Settings {
             max_threads: 4,
-            c: 0.005,
+            c: 0.002,
             starting_seed: 1,
             search_type: SearchType::Time(Duration::from_millis(5000)),
-            playout_depth: 4,
+            playout_depth: 3,
             max_tree_display_depth: parse_max_tree_display_depth(),
             max_tree_display_length: parse_max_tree_display_length(),
             print_tree: parse_print_tree(),
@@ -40,7 +40,7 @@ impl Settings {
     //#[cfg(test)] //need to figure out how to not compile this outside tests
     pub fn test_default() -> Settings {
         Settings {
-            search_type: SearchType::Iterations(100),
+            search_type: SearchType::Iterations(2000),
             ..Default::default()
         }
     }

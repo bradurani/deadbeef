@@ -35,7 +35,7 @@ pub fn playout(starting_position: Chess, stats: &mut RunStats, settings: &Settin
                 -coefficient,
                 stats,
             );
-            print_value(child_move, negamax, depth);
+            // print_value(child_move, negamax, depth);
             value = value.max(negamax);
             alpha = alpha.max(value);
             if alpha >= beta {
@@ -56,8 +56,9 @@ pub fn playout(starting_position: Chess, stats: &mut RunStats, settings: &Settin
     ) * starting_coefficient
 }
 
-fn print_value(child_move: Move, value: Reward, depth: usize) {
-    if depth > 3 {
-        info!("{} {}", child_move, value);
-    }
-}
+// fn print_value(child_move: Move, value: Reward, depth: usize) {
+// if depth > 2 {
+//     let spaces = (0..(10 * (10 - depth))).map(|_| " ").collect::<String>();
+//     info!("{} {} {}", spaces, child_move, value);
+// }
+// }

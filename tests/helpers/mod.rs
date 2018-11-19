@@ -115,7 +115,7 @@ fn run_move_test(
 fn setup_engine(fen_str: &str, settings: Settings) -> Engine {
     setup();
     let mut engine = Engine::new(settings);
-    engine.set_board(fen_str);
+    engine.set_board(fen_str).unwrap();
     engine
 }
 

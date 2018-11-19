@@ -30,7 +30,7 @@ fn black_saves_its_queen() {
 fn capture_bishop_and_save_queen() {
     assert_move(
         "3qkbnr/p1Bppp1p/b1r3p1/8/3PP3/2N2N2/PPP2PPP/R2Q1RK1 b k - 0 9",
-        "c6c7",
+        vec!["c6c7", "d8c7"],
     );
 }
 

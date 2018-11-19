@@ -17,6 +17,6 @@ fn do_not_sacrifice_knight() {
 fn do_not_sacrifice_knight_2() {
     assert_not_move(
         "r1bk1b1r/ppp2ppp/2n1qn2/1N2p3/8/4PQ2/PP1P1PPP/R1B1KBNR w KQ - 8 8",
-        "d5c7",
+        "b5c7",
     )
 }
