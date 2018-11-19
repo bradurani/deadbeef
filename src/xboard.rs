@@ -65,7 +65,7 @@ impl XBoard {
             match cmd.splitn(2, ' ').collect::<Vec<&str>>().as_slice() {
                 [_, action] => match engine.make_user_move(action) {
                     Ok(_action) => {
-                        if !engine.game_over() {
+                        if !engine.state.game_over() {
                             go(engine);
                         }
                     }

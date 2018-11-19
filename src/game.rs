@@ -1,10 +1,13 @@
 use eval::*;
 use shakmaty::*;
+use std::i16;
 
 pub const MAX_HALFMOVES: u32 = 101;
 pub const STARTING_POSITION: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 pub type Reward = i16;
+pub const MAX_REWARD: Reward = i16::MAX;
+pub const MIN_REWARD: Reward = i16::MIN + 1; // for some reason, min is -32768 but max is 32767. The + 1 prevents overflows when we flip signs
 
 pub trait Game: Clone {
     fn allowed_actions(&self) -> Vec<Move>;
@@ -78,10 +81,10 @@ impl IsOutcome for Outcome {
         match self {
             Outcome::Decisive {
                 winner: Color::Black,
-            } => i16::min_value(),
+            } => MIN_REWARD,
             Outcome::Decisive {
                 winner: Color::White,
-            } => i16::max_value(),
+            } => MAX_REWARD,
             Outcome::Draw => 0,
         }
     }

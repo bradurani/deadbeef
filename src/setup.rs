@@ -4,6 +4,7 @@ use shakmaty::uci::*;
 use shakmaty::*;
 
 pub fn parse_fen_input(fen_str: &str) -> Result<Chess, String> {
+    info!("parsing input position:\n{}", fen_str);
     fen_str
         .parse()
         .map_err(|e: ParseFenError| e.to_string())

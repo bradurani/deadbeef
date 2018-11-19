@@ -13,9 +13,9 @@ pub fn main() {
     logger::init();
 
     let settings: Settings = Default::default();
-    info!("\n{:?}", settings);
 
     let mut engine: Engine = Engine::new(settings);
     let mut xboard: XBoard = Default::default();
     xboard.start(&mut engine);
+    warn!("exiting!");
 }

@@ -14,6 +14,7 @@ pub fn parse_max_tree_display_length() -> Option<u8> {
         .ok()
 }
 
+// TODO change from true to 1
 pub fn parse_print_tree() -> bool {
     env::var("PRINT_TREE")
         .unwrap_or("false".to_string())

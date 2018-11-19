@@ -7,13 +7,13 @@ use stats::*;
 use std::fmt;
 
 pub fn show_thinking(root: &TreeNode, position: &mut Chess, stats: &RunStats, settings: &Settings) {
-    let elapsed_cs = stats.elapsed().as_millis() / 10;
-    let best_path = iterate_best_path(root, position);
-    let depth = best_path.path.len();
-    let selective_depth = depth;
-    let speed = stats.evals_per_second();
-    let tablebase_hits = 0;
-    if settings.show_thinking && stats.batches % settings.show_thinking_freq == 0 {
+    if settings.show_thinking && stats.evals % settings.show_thinking_freq == 0 {
+        let elapsed_cs = stats.elapsed().as_millis() / 10;
+        let best_path = iterate_best_path(root, position);
+        let depth = best_path.path.len();
+        let selective_depth = depth;
+        let speed = stats.evals_per_second();
+        let tablebase_hits = 0;
         println!(
             "{} {} {} {} {} {} {} \t{}",
             depth,

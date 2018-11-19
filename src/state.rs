@@ -60,10 +60,9 @@ impl State {
         self.root
             .children
             .into_iter()
-            .max_by(|n1, n2| {
-                n1.color_relative_score()
-                    .partial_cmp(&n2.color_relative_score())
-                    .unwrap()
+            .max_by(|c1, c2| {
+                c1.color_relative_minimax()
+                    .cmp(&c2.color_relative_minimax())
             })
             .unwrap()
     }
@@ -111,6 +110,10 @@ impl State {
 
     pub fn has_outcome(&self) -> bool {
         self.root.has_outcome()
+    }
+
+    pub fn is_decisive(&self) -> bool {
+        self.root.is_decisive()
     }
 
     pub fn last_action(&self) -> Move {

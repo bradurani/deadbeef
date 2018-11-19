@@ -19,6 +19,7 @@ pub struct Engine {
 
 impl Engine {
     pub fn new(settings: Settings) -> Engine {
+        info!("\n{:?}", settings);
         Engine {
             settings: settings,
             ..Default::default()
@@ -87,10 +88,6 @@ impl Engine {
         }
         info_print_tree(&root, &self.settings);
         Ok(())
-    }
-
-    pub fn game_over(&self) -> bool {
-        return self.state.game_over();
     }
 
     pub fn search(&mut self) {
