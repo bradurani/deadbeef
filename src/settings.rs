@@ -23,7 +23,7 @@ impl Default for Settings {
     fn default() -> Settings {
         Settings {
             max_threads: 4,
-            c: 0.01,
+            c: 0.005,
             starting_seed: 1,
             search_type: SearchType::Time(Duration::from_millis(5000)),
             batch_size: 1,
