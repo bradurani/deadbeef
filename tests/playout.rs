@@ -40,6 +40,29 @@ fn is_negative_in_2_rook_vs_1_rook_endgame_for_black_black_to_play() {
     assert!(reward < 0);
 }
 
+fn black_mate_in_1() {
+    let reward = reward_test("8/p7/P7/6p1/4p2p/2pk4/5p2/2K5 b - - 1 44");
+    assert!(reward == MIN_REWARD);
+}
+
+#[test]
+fn white_mate_in_1() {
+    let reward = reward_test("rn3r2/pbppq1p1/1p2pN2/8/3P2NP/6P1/PPP1BP1R/R3K1k1 w Q - 5 18");
+    assert!(reward == MAX_REWARD);
+}
+
+#[test]
+fn white_mate_in_1_and_half() {
+    let reward = reward_test("r4b1r/pppbkBpp/q1n3n1/5pB1/2NPp3/1QP5/PP3PPP/RN3RK1 b - - 1 1");
+    assert!(reward == MAX_REWARD);
+}
+
+#[test]
+fn white_mate_in_2() {
+    let reward = reward_test("rn3r2/pbppq1p1/1p2pN2/8/3P2NP/6P1/PPP1BPk1/R3K2R w KQ - 3 17");
+    assert!(reward == MAX_REWARD);
+}
+
 fn reward_test(fen_str: &'static str) -> Reward {
     setup();
     let position = parse_fen(fen_str);

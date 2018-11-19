@@ -22,7 +22,7 @@ impl Default for Settings {
     fn default() -> Settings {
         Settings {
             max_threads: 4,
-            c: 0.002,
+            c: 0.004,
             starting_seed: 1,
             search_type: SearchType::Time(Duration::from_millis(5000)),
             playout_depth: 3,
@@ -31,7 +31,7 @@ impl Default for Settings {
             print_tree: parse_print_tree(),
             log_level: parse_log_level(),
             show_thinking: true,
-            show_thinking_freq: 20, // evals
+            show_thinking_freq: 50, // evals
         }
     }
 }

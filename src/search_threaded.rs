@@ -17,7 +17,7 @@ pub fn search_threaded(
     position: &Chess,
     stats: &mut RunStats,
     settings: &Settings,
-) -> TreeNode {
+    ) -> TreeNode {
     debug_assert!(root.state != NodeState::LeafNode);
 
     let n_threads = optimal_threads(root.children.len(), settings.max_threads);
@@ -48,21 +48,23 @@ pub fn search_threaded(
                     let mut thread_child = safe_thread_child.lock().unwrap();
                     thread_position.make_move(&thread_child.action.clone().unwrap());
 
-                    thread_run_stats.nodes_created += 1;
-                    new_q += thread_child.iteration(
-                        &mut thread_position.clone(),
-                        &mut rng,
-                        &mut thread_run_stats,
-                        &thread_settings,
-                    );
-                    new_n += 1.;
+                    if !thread_child.has_outcome() {
+                        new_q += thread_child.iteration(
+                            &mut thread_position.clone(),
+                            &mut rng,
+                            &mut thread_run_stats,
+                            &thread_settings,
+                            );
+                        thread_run_stats.nodes_created += 1;
+                        new_n += 1.;
+                    }
 
                     thread_run_stats.stop_timer();
                 }
                 (safe_thread_child.clone(), new_n, new_q, thread_run_stats) // only Arc reference is cloned
             })
         })
-        .collect();
+    .collect();
 
     let new_children: Vec<TreeNode> = thread_result_handles
         .into_iter()
@@ -77,7 +79,7 @@ pub fn search_threaded(
                 .into_inner()
                 .expect("unwrapping mutex")
         })
-        .collect();
+    .collect();
 
     new_root.children = new_children;
     new_root.set_outcome_from_children(stats);
@@ -97,7 +99,7 @@ fn ensure_expanded(
     position: &Chess,
     stats: &mut RunStats,
     settings: &Settings,
-) {
+    ) {
     let mut rng = seeded_rng(settings.starting_seed);
     while ![NodeState::FullyExpanded, NodeState::LeafNode].contains(&root.state) {
         root.iteration(&mut position.clone(), &mut rng, stats, settings);

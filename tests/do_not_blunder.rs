@@ -36,3 +36,11 @@ fn do_not_open_position_with_pawn_push() {
         "d3d4",
     )
 }
+
+#[test]
+fn does_not_allow_bishop_fork() {
+    assert_move(
+        "4rrk1/pp1b1ppp/q2p1n2/2p1p1N1/1nP1P3/1Q1P3P/PP1B1PP1/3RKB1R w K - 9 14",
+        "b3c3",
+    )
+}

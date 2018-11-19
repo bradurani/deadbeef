@@ -110,8 +110,8 @@ impl TreeNode {
     pub fn score(&self) -> i16 {
         match self.outcome {
             Some(Outcome::Decisive { winner }) => match winner {
-                Color::White => i16::MAX,
-                Color::Black => i16::MIN,
+                Color::White => MAX_REWARD,
+                Color::Black => MIN_REWARD,
             },
             Some(Outcome::Draw) => 0,
             _ => self.color_relative_minimax(),
@@ -337,8 +337,8 @@ impl TreeNode {
                 }
                 normalized_value
             }
-            _ => {
-                panic!("IMPOSSIBLE ITERATION");
+            NodeState::LeafNode => {
+                panic!("IMPOSSIBLE LeafNode");
             }
         };
         self.n += 1.;

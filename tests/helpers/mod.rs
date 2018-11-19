@@ -28,6 +28,16 @@ pub fn assert_contains_move(fen_str: &'static str, uci_strs: Vec<&'static str>) 
     run_move_test(fen_str, uci_strs, settings, false);
 }
 
+pub fn assert_mate_move(fen_str: &'static str, uci_str: &'static str) {
+    let settings = Settings::test_default();
+    run_move_test(fen_str, vec![uci_str], settings, true);
+}
+
+pub fn assert_contains_mate_move(fen_str: &'static str, uci_strs: Vec<&'static str>) {
+    let settings = Settings::test_default();
+    run_move_test(fen_str, uci_strs, settings, true);
+}
+
 pub fn assert_not_move(fen_str: &'static str, uci_str: &'static str) {
     let settings = Settings::test_default();
     run_not_move_test(fen_str, vec![uci_str], settings);
