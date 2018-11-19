@@ -28,3 +28,11 @@ fn takes_knight_preventing_mate_in_1() {
         vec!["e2d4", "e2c1"],
     )
 }
+
+#[test]
+fn do_not_open_position_with_pawn_push() {
+    assert_not_move(
+        "r3r1k1/bppq1ppp/p1npbn2/4p3/1PP1P3/P1NP1PP1/3BN2P/R2QKB1R w KQ - 3 13",
+        "d3d4",
+    )
+}

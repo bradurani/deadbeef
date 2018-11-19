@@ -31,7 +31,7 @@ impl Default for Settings {
             print_tree: parse_print_tree(),
             log_level: parse_log_level(),
             show_thinking: true,
-            show_thinking_freq: 10, // evals
+            show_thinking_freq: 20, // evals
         }
     }
 }
