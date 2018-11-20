@@ -1,7 +1,5 @@
-use emojify::*;
 use eval::*;
 use game::*;
-use settings::Settings;
 use shakmaty::{Chess, Move, MoveList, Position, Setup};
 use stats::RunStats;
 use std::cmp::max;

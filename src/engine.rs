@@ -1,4 +1,5 @@
 use display::*;
+use emojify::*;
 use game::*;
 use settings::*;
 use setup::*;
@@ -41,6 +42,8 @@ impl Engine {
     pub fn make_user_move(&mut self, uci_str: &str) -> Result<Move, String> {
         let action = parse_uci_input(uci_str, &self.position())?;
         self.change_state(|s| s.make_user_move(&action));
+        info_emojified(&self.state.position.board());
+        info!("===========================");
         Ok(action)
     }
 
@@ -48,6 +51,7 @@ impl Engine {
         self.search();
         self.change_state(|s| s.make_best_move());
         info!("{}", self);
+        info!("+++++++++++++++++++++++++++");
         self.state.last_action()
     }
 

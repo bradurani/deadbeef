@@ -71,7 +71,7 @@ fn mate_in_2_white_complex() {
         let reward = reward_test(
             "rn3r2/pbppq1p1/1p2pN2/8/3P2NP/6P1/PPP1BPk1/R3K2R w KQ -",
             depth,
-        );
+            );
         assert!(reward == MAX_REWARD);
     }
 }
@@ -100,12 +100,6 @@ fn mate_in_2_and_half_black() {
     }
 }
 
-// #[test]
-// fn saves_bishop() {
-//     let reward = reward_test("rnbqkbnr/pp3ppp/2p5/1B1pp3/8/P3P3/1PPP1PPP/RNBQK1NR w KQkq - 0 4");
-//     assert!(reward > -200);
-// }
-//
 #[test]
 fn is_positive_in_2_rook_vs_1_rook_endgame_for_white_white_to_play() {
     for depth in 0..4 {
@@ -173,6 +167,21 @@ fn is_negative_in_2_rook_vs_1_rook_endgame_for_black_white_to_play_deep_with_q()
         assert!(reward < 0);
     }
 }
+
+// RANDOM BLUNDER TESTS
+
+#[test]
+fn saves_bishop() {
+    for depth in 0..5 {
+        let reward = reward_test(
+            "rnbqkbnr/pp3ppp/2p5/1B1pp3/8/P3P3/1PPP1PPP/RNBQK1NR w KQkq - 0 4",
+            depth,
+            );
+        assert!(reward > -200);
+    }
+}
+
+// TEST HELPERS
 
 fn reward_test_with_q(fen_str: &'static str, depth: usize) -> Reward {
     playout_test(fen_str, depth, true)
