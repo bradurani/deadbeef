@@ -15,11 +15,11 @@ impl SearchStrategy for SearchTime {
         let mut new_root = state.root;
 
         loop {
-            if new_root.has_outcome() {
+            if new_root.is_decisive() {
                 break;
             }
 
-            new_root = search_threaded(new_root, &state.position, stats, settings);
+            new_root = search_threaded(new_root, stats, settings);
 
             if stats.elapsed() >= self.ms {
                 break;

@@ -16,7 +16,7 @@ pub fn playout(starting_position: Chess, stats: &mut RunStats, settings: &Settin
         stats: &mut RunStats,
         settings: &Settings,
     ) -> Reward {
-        if position.has_outcome() {
+        if position.is_game_over() {
             return coefficient * position.outcome().unwrap().reward();
         };
         if depth <= 0 {

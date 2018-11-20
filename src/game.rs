@@ -12,8 +12,7 @@ pub trait Game: Clone {
     fn allowed_actions(&self) -> Vec<Move>;
     fn make_move(&mut self, action: &Move);
     fn play_safe(&mut self, &Move);
-    fn ply(&self) -> f32;
-    fn has_outcome(&self) -> bool;
+    fn move_num(&self) -> f32;
 }
 
 impl Game for Chess {
@@ -46,36 +45,16 @@ impl Game for Chess {
         }
     }
 
-    fn ply(&self) -> f32 {
+    fn move_num(&self) -> f32 {
         self.fullmoves() as f32 / 2.
-    }
-
-    fn has_outcome(&self) -> bool {
-        self.outcome().is_some()
     }
 }
 
-pub trait IsOutcome {
-    fn is_decisive(&self) -> bool;
-    fn is_draw(&self) -> bool;
+pub trait HasReward {
     fn reward(&self) -> Reward;
 }
 
-impl IsOutcome for Outcome {
-    fn is_decisive(&self) -> bool {
-        match self {
-            Outcome::Decisive { winner: _ } => true,
-            _ => false,
-        }
-    }
-
-    fn is_draw(&self) -> bool {
-        match self {
-            Outcome::Draw => true,
-            _ => false,
-        }
-    }
-
+impl HasReward for Outcome {
     fn reward(&self) -> Reward {
         match self {
             Outcome::Decisive {

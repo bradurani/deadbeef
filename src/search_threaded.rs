@@ -12,96 +12,67 @@ use utils::*;
 
 type SafeTreeNode = Arc<Mutex<TreeNode>>;
 
-pub fn search_threaded(
-    mut root: TreeNode,
-    position: &Chess,
-    stats: &mut RunStats,
-    settings: &Settings,
-    ) -> TreeNode {
+pub fn search_threaded(mut root: TreeNode, stats: &mut RunStats, settings: &Settings) -> TreeNode {
     debug_assert!(root.state != NodeState::LeafNode);
 
     let n_threads = optimal_threads(root.children.len(), settings.max_threads);
 
     let mut new_root = root.clone_childless();
-    ensure_expanded(&mut root, position, stats, &settings); //for a new game where root has no children, expand them
-    new_root.state = NodeState::FullyExpanded;
+    root.generate_missing_children();
+    sort_children_by_weight(&mut root.children, new_root.n, settings);
 
-    let thread_result_handles: Vec<JoinHandle<(SafeTreeNode, f32, f32, RunStats)>> = root
+    let thread_result_handles: Vec<JoinHandle<(SafeTreeNode, Option<f32>, RunStats)>> = root
         .children
         .into_iter()
         .map(|child| Arc::new(Mutex::new(child)))
         .enumerate()
         .map(|(thread_num, safe_thread_child)| {
-            let mut thread_position = position.clone();
             let mut rng = seeded_rng(settings.starting_seed + thread_num as u8);
-            let mut thread_run_stats: RunStats = Default::default();
+            let mut thread_stats: RunStats = Default::default();
             let thread_settings = settings.clone();
 
             thread::spawn(move || {
-                let mut new_n = 0.;
-                let mut new_q = 0.;
-
+                let mut normalized_value = None;
                 if thread_num < n_threads {
                     // don't do work if we're over the thread count. Wastes spawing a thread :(
-                    thread_run_stats.start_timer();
-
+                    thread_stats.start_timer();
                     let mut thread_child = safe_thread_child.lock().unwrap();
-                    thread_position.make_move(&thread_child.action.clone().unwrap());
-
-                    if !thread_child.has_outcome() {
-                        new_q += thread_child.iteration(
-                            &mut thread_position.clone(),
+                    if !thread_child.is_decisive() {
+                        normalized_value = Some(thread_child.iteration(
                             &mut rng,
-                            &mut thread_run_stats,
+                            &mut thread_stats,
                             &thread_settings,
-                            );
-                        thread_run_stats.nodes_created += 1;
-                        new_n += 1.;
+                        ));
                     }
-
-                    thread_run_stats.stop_timer();
+                    thread_stats.stop_timer();
                 }
-                (safe_thread_child.clone(), new_n, new_q, thread_run_stats) // only Arc reference is cloned
+                (safe_thread_child.clone(), normalized_value, thread_stats) // only Arc reference is cloned
             })
         })
-    .collect();
+        .collect();
 
     let new_children: Vec<TreeNode> = thread_result_handles
         .into_iter()
         .map(|th| th.join().expect("panicked joining threads"))
-        .map(|(safe_thread_child, new_n, new_q, thread_run_stats)| {
+        .map(|(safe_thread_child, normalized_value, thread_stats)| {
             // add stats from the children here, so we have a reference to new_root again
-            stats.add(&thread_run_stats);
-            new_root.n += new_n;
-            new_root.q += new_q;
+            if normalized_value.is_some() {
+                stats.add(&thread_stats);
+                new_root.n += 1;
+                new_root.q += normalized_value.unwrap();
+            }
             Arc::try_unwrap(safe_thread_child)
                 .expect("unwraping arc")
                 .into_inner()
                 .expect("unwrapping mutex")
         })
-    .collect();
-
+        .collect();
+    new_root.check_fully_expanded();
     new_root.children = new_children;
-    new_root.set_outcome_from_children(stats);
-    new_root.set_minimax_based_on_children();
-    sort_children_by_weight(&mut new_root.children, new_root.n, settings);
-
-    show_thinking(&new_root, &mut position.clone(), &stats, &settings);
+    show_thinking(&new_root, &stats, &settings);
     new_root
 }
 
 fn optimal_threads(n_children: usize, max_threads: u16) -> usize {
     (n_children / 2).min(max_threads as usize).max(1)
-}
-
-fn ensure_expanded(
-    root: &mut TreeNode,
-    position: &Chess,
-    stats: &mut RunStats,
-    settings: &Settings,
-    ) {
-    let mut rng = seeded_rng(settings.starting_seed);
-    while ![NodeState::FullyExpanded, NodeState::LeafNode].contains(&root.state) {
-        root.iteration(&mut position.clone(), &mut rng, stats, settings);
-    }
 }

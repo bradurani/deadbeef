@@ -12,7 +12,7 @@ pub fn q_search(
     coefficient: Reward,
     stats: &mut RunStats,
 ) -> Reward {
-    if position.has_outcome() {
+    if position.is_game_over() {
         return coefficient * position.outcome().unwrap().reward();
     };
     let mut value = coefficient * position.board().value(); // is this a NULL move?

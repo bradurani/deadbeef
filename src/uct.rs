@@ -8,18 +8,22 @@ use std::f32;
 // 2) exploitation factor:
 // 3) value factor: (none)
 
-pub fn weight(child: &TreeNode, parent_n: f32, settings: &Settings) -> f32 {
-    if child.outcome.is_some() {
-        // for sorting by weight. Tiny optimization, can skip this check during traversal?
-        return 0.;
-    };
-
-    let weight = (child.adjusted_q() / child.n) + settings.c * (parent_n.ln() / child.n).sqrt();
-
+pub fn weight(child: &TreeNode, parent_n: u32, settings: &Settings) -> f32 {
+    if child.state == NodeState::LeafNode {
+        // for sorting by weight
+        return f32::MIN;
+    } else if child.state == NodeState::Empty {
+        // weight these above everything, sorted by board value
+        // ensure they get expanded first so all roots's children get expanded,
+        // and if we run out of time, the best nodes are first
+        return child.color_relative_board_value() as f32 + 5000.;
+    }
+    let weight = (child.color_relative_q() as f32 / child.n as f32)
+        + settings.c * ((parent_n as f32).ln() / child.n as f32).sqrt();
     weight
 }
 
-pub fn sort_children_by_weight(children: &mut Vec<TreeNode>, parent_n: f32, settings: &Settings) {
+pub fn sort_children_by_weight(children: &mut Vec<TreeNode>, parent_n: u32, settings: &Settings) {
     if cfg!(debug_assertions) {
         if !children.iter().any(|c| c.state != NodeState::LeafNode) {
             error!("found no best children \n");

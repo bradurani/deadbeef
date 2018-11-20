@@ -22,7 +22,7 @@ impl fmt::Display for State {
         writeln!(
             f,
             "\n{}. \nTIME:  {}\nOTIME: {}\n",
-            self.ply(),
+            self.move_num(),
             match self.time_remaining {
                 Some(ref t) => t.to_string(),
                 None => "".to_string(),
@@ -32,7 +32,7 @@ impl fmt::Display for State {
                 None => "".to_string(),
             }
         )?;
-        self.position.board().clone().write_emoji(f)
+        self.position().board().clone().write_emoji(f)
     }
 }
 
@@ -63,6 +63,7 @@ impl fmt::Display for NodeState {
                 NodeState::LeafNode => "LN ",
                 NodeState::FullyExpanded => "FE ",
                 NodeState::Expandable => "E  ",
+                NodeState::Empty => "EM ",
             }
         )
     }
@@ -88,7 +89,7 @@ impl<'a> fmt::Display for DisplayTreeNode<'a> {
             f: &mut fmt::Formatter,
             node: &TreeNode,
             settings: &Settings,
-            parent_n: f32,
+            parent_n: u32,
             indent_level: u8,
         ) -> fmt::Result {
             for _ in 0..indent_level {
@@ -97,8 +98,8 @@ impl<'a> fmt::Display for DisplayTreeNode<'a> {
             match node.action.clone() {
                 Some(a) => writeln!(
                     f,
-                    "{}. {} {} q={} n={} m={} v={} w={} {} {} {}",
-                    node.move_num,
+                    "{}. {} {} q={} n={} m={} v={} w={}",
+                    node.move_num(),
                     a.to_string().pad_to_width(7),
                     node.state,
                     node.q.to_string().pad_to_width(16),
@@ -107,23 +108,17 @@ impl<'a> fmt::Display for DisplayTreeNode<'a> {
                     node.minimax.to_string().pad_to_width(6),
                     node.value.to_string().pad_to_width(6),
                     weight(node, parent_n, settings),
-                    format_max(node.max_score),
-                    format_min(node.min_score),
-                    format_outcome(node.outcome)
                 )?,
                 None => writeln!(
                     f,
-                    "{}. Root {} q={} n={} m={} v={} {} {} {}",
-                    node.move_num,
+                    "{}. Root {} q={} n={} m={} v={}",
+                    node.move_num(),
                     node.state,
                     node.q.to_string().pad_to_width(16),
                     node.n.to_string().pad_to_width(5),
                     // node.score().to_string().pad_to_width(8),
                     node.minimax.to_string().pad_to_width(6),
                     node.value.to_string().pad_to_width(6),
-                    format_max(node.max_score),
-                    format_min(node.min_score),
-                    format_outcome(node.outcome)
                 )?,
             }
             match settings.max_tree_display_depth {
@@ -138,28 +133,10 @@ impl<'a> fmt::Display for DisplayTreeNode<'a> {
                     }
                 }
             }
-            fn format_max(max_score: Option<u16>) -> String {
-                match max_score {
-                    None => String::new(),
-                    Some(m) => format!("max {}", m),
-                }
-            }
-            fn format_min(min_score: Option<u16>) -> String {
-                match min_score {
-                    None => String::new(),
-                    Some(m) => format!("min {}", m),
-                }
-            }
-            fn format_outcome(outcome: Option<Outcome>) -> String {
-                match outcome {
-                    None => "".to_string(),
-                    Some(o) => format!("OUTCOME={}", o),
-                }
-            }
             write!(f, "")
         }
 
-        fmt_subtree(f, &self.node, self.settings, 0., 0)?;
+        fmt_subtree(f, &self.node, self.settings, 0, 0)?;
         Ok(())
     }
 }

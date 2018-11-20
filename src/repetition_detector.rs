@@ -11,6 +11,7 @@ pub struct RepetitionDetector {
 
 // contains the elements of the position that matter for threefold repetition according to the
 // rules
+//TODO do newer Shakmaty versions make this easier?
 #[derive(Eq, Hash, PartialEq, Clone, Debug)]
 pub struct RepetitionPosition {
     board: Board,
@@ -35,18 +36,27 @@ impl RepetitionDetector {
         let mut detector = RepetitionDetector {
             map: deterministic_hash_map(),
         };
-        detector.record_and_check(starting_position);
+        detector.record(starting_position);
         detector
     }
 
-    pub fn record_and_check(&mut self, position: &Chess) -> bool {
+    pub fn clone_and_record(&self, position: &Chess) -> RepetitionDetector {
+        let mut rd = self.clone();
+        rd.record(position);
+        rd
+    }
+
+    pub fn is_drawn(&self, position: &Chess) -> bool {
+        *self.map.get(&RepetitionPosition::new(position)).unwrap() == 3
+    }
+
+    pub fn record(&mut self, position: &Chess) {
         let entry = self
             .map
             .entry(RepetitionPosition::new(position))
             .or_insert(0);
         *entry += 1;
         debug_assert!(*entry < 4);
-        *entry == 3
     }
 }
 

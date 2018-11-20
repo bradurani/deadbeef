@@ -22,7 +22,7 @@ impl TreeStats {
     }
 
     fn merge(child_stats: &Vec<TreeStats>) -> TreeStats {
-        if child_stats.len() == 0 {
+        if child_stats.is_empty() {
             TreeStats {
                 nodes: 1,
                 min_depth: 0,

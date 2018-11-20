@@ -14,11 +14,11 @@ impl SearchStrategy for SearchIterations {
         let mut new_root = state.root;
 
         for _i in 0..self.n_iterations {
-            if new_root.has_outcome() {
+            if new_root.is_decisive() {
                 return new_root;
             }
 
-            new_root = search_threaded(new_root, &state.position, stats, settings);
+            new_root = search_threaded(new_root, stats, settings);
         }
         println!("");
         new_root

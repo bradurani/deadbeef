@@ -42,7 +42,7 @@ impl Engine {
     pub fn make_user_move(&mut self, uci_str: &str) -> Result<Move, String> {
         let action = parse_uci_input(uci_str, &self.position())?;
         self.change_state(|s| s.make_user_move(&action));
-        info_emojified(&self.state.position.board());
+        info_emojified(&self.state.position().board());
         info!("===========================");
         Ok(action)
     }
@@ -56,7 +56,7 @@ impl Engine {
     }
 
     pub fn position(&self) -> Chess {
-        self.state.position.clone()
+        self.state.position()
     }
 
     pub fn set_time_remaining_cs(&mut self, remaining_cs: u64) {
@@ -79,8 +79,7 @@ impl Engine {
 
     pub fn print_subtree(&self, action_uci_strs: Vec<&str>) -> Result<(), String> {
         let mut root = &self.state.root;
-        let mut position = self.state.position.clone();
-        // eprintln!("{:?}", action_uci_strs);
+        let mut position = self.state.position();
         for uci_str in action_uci_strs {
             let action = parse_uci_input(uci_str, &position)?;
             root = root
@@ -95,7 +94,7 @@ impl Engine {
     }
 
     pub fn search(&mut self) {
-        if self.state.has_outcome() {
+        if self.state.is_decisive() {
             return;
         }
         let mut move_run_stats: RunStats = Default::default();
@@ -108,7 +107,7 @@ impl Engine {
 
     fn change_state<F: FnMut(State) -> State>(&mut self, mut f: F) {
         let prev_state = mem::replace(&mut self.state, Default::default());
-        self.previous_position = prev_state.position.clone();
+        self.previous_position = prev_state.position();
         self.state = f(prev_state);
     }
 }

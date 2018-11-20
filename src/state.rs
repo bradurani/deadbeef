@@ -12,45 +12,37 @@ use time_remaining::*;
 #[derive(Default)]
 pub struct State {
     pub root: TreeNode,
-    pub position: Chess,
     pub time_remaining: Option<TimeRemaining>,
     pub opponent_time_remaining: Option<Duration>,
 }
 
 impl State {
-    // TODO starting position needs to be registered with repetition detector
     pub fn from_position(position: Chess) -> State {
         State {
-            position: position.clone(),
-            root: TreeNode::new_root(&position, 0.5),
+            root: TreeNode::new_root(position.clone()),
             ..Default::default()
         }
     }
 
     pub fn search(self, stats: &mut RunStats, settings: &Settings) -> State {
-        let position = self.position.clone();
         let time_remaining = self.time_remaining.clone();
         let opponent_time_remaining = self.opponent_time_remaining.clone();
         State {
             root: search_with_strategy(self, stats, settings),
-            position: position,
             time_remaining: time_remaining,
             opponent_time_remaining: opponent_time_remaining,
         }
     }
 
     pub fn make_best_move(self) -> State {
-        let mut new_position = self.position.clone();
         let opponent_time_remaining = self.opponent_time_remaining.clone();
         let time_remaining = self
             .time_remaining
             .clone()
             .map(|t| t.recalculate_from_now());
         let new_root = self.best_child_node();
-        new_position.make_move(&new_root.action.clone().unwrap());
         State {
             root: new_root,
-            position: new_position,
             opponent_time_remaining: opponent_time_remaining,
             time_remaining: time_remaining,
         }
@@ -61,35 +53,23 @@ impl State {
         self.root
             .children
             .into_iter()
-            .max_by(|c1, c2| {
-                // unexpanded nodes can miss horrible replies and blunder us into mate-in-1
-                if c1.state == NodeState::Expandable && c2.state != NodeState::Expandable {
-                    Ordering::Less
-                } else if c1.state != NodeState::Expandable && c2.state == NodeState::Expandable {
-                    Ordering::Greater
-                } else {
-                    c1.color_relative_minimax()
-                        .cmp(&c2.color_relative_minimax())
-                }
-            })
+            .max_by(|c1, c2| c1.best_child_sort_value().cmp(&c2.best_child_sort_value()))
             .unwrap()
     }
+
     pub fn make_user_move(self, action: &Move) -> State {
-        let mut new_position = self.position.clone();
-        new_position.make_move(action);
-        let prev_move_num = self.root.move_num;
         let time_remaining = self.time_remaining.clone();
         let opponent_time_remaining = self.opponent_time_remaining.clone();
+        let mut position = self.position();
         let new_root = self.find_child_by_action(action);
         State {
             root: new_root.unwrap_or_else(|| {
-                error!("child by action not found");
-                TreeNode::new_root(&new_position, prev_move_num + 0.5)
+                warn!("child by action not found");
+                position.play_safe(action);
+                TreeNode::new_root(position)
             }),
-            position: new_position,
             time_remaining: time_remaining,
             opponent_time_remaining: opponent_time_remaining,
-            ..Default::default()
         }
     }
 
@@ -116,10 +96,6 @@ impl State {
         }
     }
 
-    pub fn has_outcome(&self) -> bool {
-        self.root.has_outcome()
-    }
-
     pub fn is_decisive(&self) -> bool {
         self.root.is_decisive()
     }
@@ -129,22 +105,22 @@ impl State {
     }
 
     pub fn turn(&self) -> Color {
-        self.position.turn()
+        self.root.turn()
     }
 
     pub fn q(&self) -> f32 {
         self.root.q
     }
 
-    pub fn ply(&self) -> f32 {
-        self.position.fullmoves() as f32 / 2.
+    pub fn move_num(&self) -> f32 {
+        self.root.move_num()
     }
 
     pub fn game_over(&self) -> bool {
-        self.position.is_game_over()
+        self.root.is_game_over()
     }
 
-    pub fn score(&self) -> i16 {
-        self.root.score()
+    pub fn position(&self) -> Chess {
+        self.root.position.clone()
     }
 }
