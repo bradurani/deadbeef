@@ -101,19 +101,19 @@ impl TreeNode {
         self.position.board().value() * self.turn().not().coefficient()
     }
 
-    pub fn best_child_sort_value(&self) -> i32 {
+    pub fn best_child_sort_value(&self) -> f32 {
         match self.state {
             // ensure we only choose this if all are Empty, then pick highest board value
-            NodeState::Empty => -5000 + self.color_relative_board_value() as i32,
+            NodeState::Empty => -5000. + self.color_relative_board_value() as f32,
             NodeState::LeafNode => {
                 if self.is_decisive() {
-                    self.color_relative_minimax() as i32
+                    self.color_relative_minimax() as f32
                 } else {
                     assert!(self.is_drawn());
-                    self.n as i32
+                    self.n as f32
                 }
             }
-            _ => self.n as i32,
+            _ => self.n as f32 + self.q,
         }
     }
 

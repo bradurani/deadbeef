@@ -61,7 +61,9 @@ impl State {
                     c1.color_relative_minimax()
                         .cmp(&c2.color_relative_minimax())
                 } else {
-                    c1.best_child_sort_value().cmp(&c2.best_child_sort_value())
+                    c1.best_child_sort_value()
+                        .partial_cmp(&c2.best_child_sort_value())
+                        .unwrap()
                 }
             })
             .expect("no children to choose from")
