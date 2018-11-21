@@ -5,6 +5,7 @@ use stats::*;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::thread::JoinHandle;
+use tree_node::*;
 use uct::*;
 use utils::*;
 

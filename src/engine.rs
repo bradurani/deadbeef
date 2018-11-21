@@ -85,6 +85,10 @@ impl Engine {
         self.state.is_game_over()
     }
 
+    pub fn is_decisive(&self) -> bool {
+        self.state.is_decisive()
+    }
+
     pub fn print_subtree(&self, action_uci_strs: Vec<&str>) -> Result<(), String> {
         let mut root = &self.state.root;
         let mut position = self.state.position();

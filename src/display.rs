@@ -1,7 +1,6 @@
 use emojify::DisplayEmojify;
 use engine::*;
 use log::*;
-use mcts::*;
 use pad::PadStr;
 use separator::Separatable;
 use settings::*;
@@ -10,6 +9,7 @@ use shakmaty::*;
 use state::*;
 use stats::*;
 use std::fmt;
+use tree_node::*;
 use uct::*;
 
 impl fmt::Display for Engine {
@@ -33,7 +33,7 @@ impl fmt::Display for State {
                 None => "".to_string(),
             }
         )?;
-        self.position().board().clone().write_emoji(f);
+        self.position().board().clone().write_emoji(f)?;
         writeln!(f, "{}", fen::fen(&self.position()))
     }
 }

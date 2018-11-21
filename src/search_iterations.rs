@@ -1,9 +1,9 @@
-use mcts::*;
 use search_strategy::*;
 use search_threaded::*;
 use settings::*;
 use state::*;
 use stats::*;
+use tree_node::*;
 
 pub struct SearchIterations {
     pub n_iterations: u32,

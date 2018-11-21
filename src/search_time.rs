@@ -1,10 +1,10 @@
-use mcts::*;
 use search_strategy::*;
 use search_threaded::*;
 use settings::*;
 use state::*;
 use stats::*;
 use std::time::Duration;
+use tree_node::*;
 
 pub struct SearchTime {
     pub ms: Duration,

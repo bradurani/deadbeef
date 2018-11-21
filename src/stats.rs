@@ -1,7 +1,7 @@
-use mcts::*;
 use std::cmp::{max, min};
 use std::i32;
 use std::time::{Duration, Instant};
+use tree_node::*;
 
 #[derive(Debug, Copy, Clone)]
 pub struct TreeStats {

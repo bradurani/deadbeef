@@ -38,6 +38,7 @@ pub mod show_thinking;
 pub mod state;
 pub mod stats;
 pub mod time_remaining;
+pub mod tree_node;
 pub mod uct;
 pub mod utils;
 pub mod xboard;

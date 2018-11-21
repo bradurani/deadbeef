@@ -1,8 +1,8 @@
 use log::*;
-use mcts::*;
 use settings::*;
 use std::cmp::Ordering::*;
 use std::f32;
+use tree_node::*;
 
 // 1) exploration factor: https://www.wolframalpha.com/input/?i=chart+y%3Dsqrt(ln(1000)%2Fx)+x%3D1..1000
 // 2) exploitation factor:

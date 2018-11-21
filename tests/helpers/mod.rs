@@ -1,3 +1,5 @@
+#[allow(dead_code)]
+#[allow(unused_variables)]
 extern crate deadbeef;
 extern crate shakmaty;
 
@@ -87,8 +89,10 @@ pub fn assert_not_contains_move(fen_str: &'static str, uci_strs: Vec<&'static st
 //
 fn run_not_move_test(fen_str: &'static str, uci_strs: Vec<&'static str>, settings: Settings) {
     let mut engine = setup_engine(fen_str, settings);
-    let engine_move = engine.make_engine_move();
-    let expected_moves = expected_moves(engine, uci_strs);
+    let engine_move = engine
+        .make_engine_move()
+        .expect("could not make engine move");
+    let expected_moves = expected_moves(&engine, uci_strs);
 
     if expected_moves.contains(&engine_move) {
         panic!(
@@ -108,8 +112,14 @@ fn run_move_test(
     assert_mate: bool,
 ) {
     let mut engine = setup_engine(fen_str, settings);
-    let engine_move = engine.make_engine_move();
-    let expected_moves = expected_moves(engine, uci_strs);
+    let engine_move = engine
+        .make_engine_move()
+        .expect("could not make engine move");
+    let expected_moves = expected_moves(&engine, uci_strs);
+
+    if assert_mate {
+        assert!(engine.is_decisive());
+    }
 
     if expected_moves.contains(&engine_move) {
         assert!(true);
@@ -129,7 +139,7 @@ fn setup_engine(fen_str: &str, settings: Settings) -> Engine {
     engine
 }
 
-fn expected_moves(engine: Engine, uci_strs: Vec<&'static str>) -> Vec<Move> {
+fn expected_moves(engine: &Engine, uci_strs: Vec<&'static str>) -> Vec<Move> {
     uci_strs
         .iter()
         .map(|u| parse_uci(u, &engine.previous_position))

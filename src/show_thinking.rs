@@ -1,8 +1,8 @@
 use game::*;
-use mcts::*;
 use settings::*;
 use shakmaty::san::*;
 use stats::*;
+use tree_node::*;
 use std::fmt;
 
 pub fn show_thinking(root: &TreeNode, stats: &RunStats, settings: &Settings) {

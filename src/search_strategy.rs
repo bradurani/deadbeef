@@ -1,4 +1,3 @@
-use mcts::*;
 use search_iterations::*;
 use search_ponder::*;
 use search_time::*;
@@ -8,6 +7,7 @@ use stats::*;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use std::time::Duration;
+use tree_node::*;
 
 #[derive(Clone, Debug)]
 pub enum SearchType {
