@@ -43,16 +43,20 @@ impl Engine {
         let action = parse_uci_input(uci_str, &self.position())?;
         self.change_state(|s| s.make_user_move(&action));
         info_emojified(&self.state.position().board());
+        debug_print_tree(&self.state.root, &self.settings);
         info!("===========================");
         Ok(action)
     }
 
-    pub fn make_engine_move(&mut self) -> Move {
+    pub fn make_engine_move(&mut self) -> Result<Move, String> {
+        if self.is_game_over(){
+            return Err("game is over".to_string());
+        }
         self.search();
         self.change_state(|s| s.make_best_move());
         info!("{}", self);
         info!("+++++++++++++++++++++++++++");
-        self.state.last_action()
+        Ok(self.state.last_action())
     }
 
     pub fn position(&self) -> Chess {
@@ -75,6 +79,10 @@ impl Engine {
 
     pub fn set_color(&mut self, color: Color) {
         self.color = Some(color);
+    }
+
+    pub fn is_game_over(&self) -> bool{
+        self.state.is_game_over()
     }
 
     pub fn print_subtree(&self, action_uci_strs: Vec<&str>) -> Result<(), String> {

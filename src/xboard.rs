@@ -23,11 +23,15 @@ impl XBoard {
         loop {
             let mut input = String::new();
             stdin.lock().read_line(&mut input).unwrap();
-            self.run_command(engine, &input.trim_right()[..]);
+            let result = self.run_command(engine, &input.trim_right()[..]);
+            match result {
+                Ok(_) => {}
+                Err(msg) => error!("{}", msg),
+            }
         }
     }
 
-    pub fn run_command(&mut self, engine: &mut Engine, cmd: &str) {
+    pub fn run_command(&mut self, engine: &mut Engine, cmd: &str) -> Result<(), String> {
         warn!("RECEIVED: {}", cmd);
 
         if cmd == "quit" {
@@ -44,51 +48,50 @@ impl XBoard {
         } else if cmd == "new" {
             engine.reset();
         } else if cmd.starts_with("setboard") {
-            match cmd.splitn(2, ' ').collect::<Vec<&str>>().as_slice() {
-                [_, fen] => match engine.set_board(fen) {
-                    Ok(()) => {}
-                    Err(msg) => error!("{}", msg),
-                },
-                _ => error!("invalid setboard {}", cmd),
-            }
+            let fen: &str = cmd
+                .splitn(2, ' ')
+                .collect::<Vec<&str>>()
+                .get(1)
+                .ok_or("no board string".to_string())?;
+            engine.set_board(fen)?;
         } else if cmd == "force" {
             self.force = true;
         } else if cmd == "go" {
             self.force = false;
-            go(engine)
+            go(engine)?;
         } else if cmd.starts_with("ping") {
-            match cmd.splitn(2, ' ').collect::<Vec<&str>>().as_slice() {
-                [_, n] => send(&format!("pong {}", n)),
-                _ => error!("invalid ping {}", cmd),
-            }
+            let n: &str = cmd
+                .splitn(2, ' ')
+                .collect::<Vec<&str>>()
+                .get(1)
+                .ok_or("no ping num".to_string())?;
+            send(&format!("pong {}", n));
         } else if cmd.starts_with("usermove") {
-            match cmd.splitn(2, ' ').collect::<Vec<&str>>().as_slice() {
-                [_, action] => match engine.make_user_move(action) {
-                    Ok(_action) => {
-                        if !engine.state.game_over() {
-                            go(engine);
-                        }
-                    }
-                    Err(msg) => error!("{}", msg),
-                },
-                _ => error!("invalid usermove {}", cmd),
+            let action: &str = cmd
+                .splitn(2, ' ')
+                .collect::<Vec<&str>>()
+                .get(1)
+                .ok_or("no user move".to_string())?;
+            engine.make_user_move(action)?;
+            if !engine.is_game_over() {
+                go(engine)?;
             }
         } else if cmd.starts_with("time") {
-            match cmd.splitn(2, ' ').collect::<Vec<&str>>().as_slice() {
-                [_, time] => match time.parse::<u64>() {
-                    Ok(time_cs) => engine.set_time_remaining_cs(time_cs),
-                    Err(msg) => error!("{}", msg),
-                },
-                _ => error!("invalid time {}", cmd),
-            }
+            let time: &str = cmd
+                .splitn(2, ' ')
+                .collect::<Vec<&str>>()
+                .get(1)
+                .ok_or("missing time".to_string())?;
+            let time_cs = time.parse::<u64>().map_err(|e| e.to_string())?;
+            engine.set_time_remaining_cs(time_cs);
         } else if cmd.starts_with("otim") {
-            match cmd.splitn(2, ' ').collect::<Vec<&str>>().as_slice() {
-                [_, time] => match time.parse::<u64>() {
-                    Ok(time_cs) => engine.set_opponent_time_remaining_cs(time_cs),
-                    Err(msg) => error!("{}", msg),
-                },
-                _ => error!("invalid time {}", cmd),
-            }
+            let time: &str = cmd
+                .splitn(2, ' ')
+                .collect::<Vec<&str>>()
+                .get(1)
+                .ok_or("missing time".to_string())?;
+            let time_cs = time.parse::<u64>().map_err(|e| e.to_string())?;
+            engine.set_opponent_time_remaining_cs(time_cs);
         } else if cmd.starts_with("post") {
             engine.set_show_thinking(true);
         } else if cmd.starts_with("nopost") {
@@ -108,20 +111,19 @@ impl XBoard {
         } else if cmd.starts_with("printtree") {
             let args: Vec<&str> = cmd.split(' ').collect();
             let uci_strs: Vec<&str> = args.into_iter().skip(1).collect();
-            match engine.print_subtree(uci_strs) {
-                Ok(_) => {}
-                Err(msg) => error!("{}", msg),
-            }
+            engine.print_subtree(uci_strs)?;
         } else {
-            error!("Unknown cmd {}", cmd);
-        }
+            return Err("unknown command".to_string());
+        };
+        Ok(())
     }
 }
 
-fn go(engine: &mut Engine) {
-    let best_move = engine.make_engine_move();
+fn go(engine: &mut Engine) -> Result<(), String> {
+    let best_move = engine.make_engine_move()?;
     let uci = Uci::from_move(&engine.previous_position, &best_move);
     send(&format!("move {}", uci.to_string()));
+    Ok(())
 }
 
 fn send(msg: &str) {

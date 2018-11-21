@@ -25,7 +25,7 @@ impl Default for Settings {
             max_threads: 4,
             c: 0.004,
             starting_seed: 1,
-            search_type: SearchType::Time(Duration::from_millis(1000)),
+            search_type: SearchType::Time(Duration::from_millis(5000)),
             playout_depth: 3,
             max_tree_display_depth: parse_max_tree_display_depth(),
             max_tree_display_length: parse_max_tree_display_length(),

@@ -1,6 +1,6 @@
 use eval::*;
 use game::*;
-use shakmaty::{Chess, Move, MoveList, Position, Setup};
+use shakmaty::{Chess, MoveList, Position, Setup};
 use stats::RunStats;
 use std::cmp::max;
 
@@ -49,9 +49,9 @@ pub fn q_search(
     value
 }
 
-fn print_value(child_move: Move, value: Reward, depth: isize) {
-    let spaces = (0..(5 * (20 - (depth + 1))))
-        .map(|_| " ")
-        .collect::<String>();
-    info!("{} {} {}", spaces, child_move, value);
-}
+// fn print_value(child_move: Move, value: Reward, depth: isize) {
+//     let spaces = (0..(5 * (20 - (depth + 1))))
+//         .map(|_| " ")
+//         .collect::<String>();
+//     info!("{} {} {}", spaces, child_move, value);
+// }

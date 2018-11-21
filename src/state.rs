@@ -5,7 +5,6 @@ use search_strategy::*;
 use settings::*;
 use shakmaty::*;
 use stats::*;
-use std::cmp::Ordering;
 use std::time::Duration;
 use time_remaining::*;
 
@@ -43,8 +42,8 @@ impl State {
         let new_root = self.best_child_node();
         State {
             root: new_root,
-            opponent_time_remaining: opponent_time_remaining,
-            time_remaining: time_remaining,
+            opponent_time_remaining,
+            time_remaining,
         }
     }
 
@@ -54,7 +53,7 @@ impl State {
             .children
             .into_iter()
             .max_by(|c1, c2| c1.best_child_sort_value().cmp(&c2.best_child_sort_value()))
-            .unwrap()
+            .expect("no children to choose from")
     }
 
     pub fn make_user_move(self, action: &Move) -> State {
@@ -68,8 +67,8 @@ impl State {
                 position.play_safe(action);
                 TreeNode::new_root(position)
             }),
-            time_remaining: time_remaining,
-            opponent_time_remaining: opponent_time_remaining,
+            time_remaining,
+            opponent_time_remaining,
         }
     }
 
@@ -122,5 +121,9 @@ impl State {
 
     pub fn position(&self) -> Chess {
         self.root.position.clone()
+    }
+
+    pub fn is_game_over(&self) -> bool {
+        self.root.is_game_over()
     }
 }

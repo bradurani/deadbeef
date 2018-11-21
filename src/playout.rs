@@ -2,7 +2,7 @@ use eval::*;
 use game::*;
 use q_search::*;
 use settings::Settings;
-use shakmaty::{Chess, Move, Position, Setup};
+use shakmaty::{Chess, Position, Setup};
 use stats::RunStats;
 use std::cmp::max;
 
@@ -66,9 +66,9 @@ pub fn playout(starting_position: Chess, stats: &mut RunStats, settings: &Settin
     ) * starting_coefficient
 }
 
-fn print_value(child_move: Move, value: Reward, depth: isize) {
-    let spaces = (0..(5 * (20 - (depth + 1))))
-        .map(|_| " ")
-        .collect::<String>();
-    info!("{} {} {}", spaces, child_move, value);
-}
+// fn print_value(child_move: Move, value: Reward, depth: isize) {
+//     let spaces = (0..(5 * (20 - (depth + 1))))
+//         .map(|_| " ")
+//         .collect::<String>();
+//     info!("{} {} {}", spaces, child_move, value);
+// }

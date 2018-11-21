@@ -107,15 +107,24 @@ impl TreeNode {
         self.position.board().value() * self.turn().not().coefficient()
     }
 
-    pub fn best_child_sort_value(&self) -> Reward {
+    pub fn best_child_sort_value(&self) -> i32 {
         match self.state {
-            NodeState::Empty => self.color_relative_board_value(),
-            _ => self.color_relative_minimax(),
+            // ensure we only choose this if all are Empty, then pick highest board value
+            NodeState::Empty => -5000 + self.color_relative_board_value() as i32,
+            NodeState::LeafNode => {
+                if self.is_decisive() {
+                    self.color_relative_minimax() as i32
+                } else {
+                    assert!(self.is_drawn());
+                    self.n as i32
+                }
+            }
+            _ => self.n as i32,
         }
     }
 
     pub fn is_decisive(&self) -> bool {
-        self.minimax == MAX_REWARD || self.minimax == MIN_REWARD
+        self.state == NodeState::LeafNode && self.minimax != 0
     }
 
     pub fn move_num(&self) -> f32 {
@@ -139,14 +148,31 @@ impl TreeNode {
             || self.position.is_insufficient_material()
     }
 
+    pub fn has_winning_child(&self) -> bool {
+        self.children.iter().any(|c| c.state == NodeState::LeafNode)
+            && self.color_relative_minimax() < 0
+    }
+
+    pub fn all_children_leaf_nodes(&self) -> bool {
+        self.children.iter().all(|c| c.state == NodeState::LeafNode)
+    }
+
+    pub fn outcome(&self) -> Option<Outcome> {
+        if self.is_drawn() {
+            return Some(Outcome::Draw);
+        } else {
+            return self.position.outcome();
+        }
+    }
+
     pub fn expand(&mut self, rng: &mut SmallRng, stats: &mut RunStats, settings: &Settings) -> f32 {
         // TODO, we can do better than random. Highest board value or value from transposition
         // table
         let candidate_actions = self.actions_with_no_children();
         let action = choose_random(rng, &candidate_actions);
         let mut child = TreeNode::new_empty_child(action.clone(), self);
-        if child.is_drawn() {
-            child.value = 0;
+        if child.is_game_over() {
+            child.value = child.outcome().expect("no outcome for child").reward();
             child.state = NodeState::LeafNode;
             stats.leaf_nodes += 1;
         } else {
@@ -230,7 +256,7 @@ impl TreeNode {
     }
 
     pub fn set_minimax_based_on_children(&mut self) {
-        if self.state != NodeState::FullyExpanded || self.state != NodeState::LeafNode {
+        if self.state != NodeState::FullyExpanded && self.state != NodeState::LeafNode {
             return;
         }
         let new_minimax = self
@@ -244,8 +270,9 @@ impl TreeNode {
             })
             .expect("no children to choose minimax from");
         self.minimax = new_minimax;
-        if new_minimax == MAX_REWARD || new_minimax == MIN_REWARD {
+        if self.has_winning_child() || self.all_children_leaf_nodes() {
             self.state = NodeState::LeafNode;
+            self.minimax -= self.turn().coefficient();
         }
     }
 

@@ -1,7 +1,5 @@
-use game::*;
 use mcts::*;
 use settings::*;
-use shakmaty::*;
 use show_thinking::*;
 use stats::*;
 use std::sync::{Arc, Mutex};
@@ -37,7 +35,7 @@ pub fn search_threaded(mut root: TreeNode, stats: &mut RunStats, settings: &Sett
                     // don't do work if we're over the thread count. Wastes spawing a thread :(
                     thread_stats.start_timer();
                     let mut thread_child = safe_thread_child.lock().unwrap();
-                    if !thread_child.is_decisive() {
+                    if thread_child.state != NodeState::LeafNode {
                         normalized_value = Some(thread_child.iteration(
                             &mut rng,
                             &mut thread_stats,

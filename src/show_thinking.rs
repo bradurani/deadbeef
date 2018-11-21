@@ -2,7 +2,6 @@ use game::*;
 use mcts::*;
 use settings::*;
 use shakmaty::san::*;
-use shakmaty::{Chess, Position};
 use stats::*;
 use std::fmt;
 
@@ -47,7 +46,9 @@ fn iterate_best_path(root: &TreeNode) -> BestPath {
             })
             .unwrap();
         let action = head.action.clone().unwrap();
-        best_path.path.push(SanPlus::from_move(position.clone(), &action));
+        best_path
+            .path
+            .push(SanPlus::from_move(position.clone(), &action));
         position.make_move(&action);
     }
     best_path
