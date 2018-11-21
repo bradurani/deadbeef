@@ -13,6 +13,7 @@ pub trait Game: Clone {
     fn make_move(&mut self, action: &Move);
     fn play_safe(&mut self, &Move);
     fn move_num(&self) -> f32;
+    fn clone_and_play(&self, action: &Move) -> Chess;
 }
 
 impl Game for Chess {
@@ -47,6 +48,12 @@ impl Game for Chess {
 
     fn move_num(&self) -> f32 {
         self.fullmoves() as f32 / 2.
+    }
+
+    fn clone_and_play(&self, action: &Move) -> Chess {
+        let mut new_position = self.clone();
+        new_position.make_move(action);
+        new_position
     }
 }
 

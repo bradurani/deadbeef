@@ -5,6 +5,7 @@ use mcts::*;
 use pad::PadStr;
 use separator::Separatable;
 use settings::*;
+use shakmaty::fen;
 use shakmaty::*;
 use state::*;
 use stats::*;
@@ -32,7 +33,8 @@ impl fmt::Display for State {
                 None => "".to_string(),
             }
         )?;
-        self.position().board().clone().write_emoji(f)
+        self.position().board().clone().write_emoji(f);
+        writeln!(f, "{}", fen::fen(&self.position()))
     }
 }
 

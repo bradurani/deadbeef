@@ -169,7 +169,16 @@ impl TreeNode {
         // TODO, we can do better than random. Highest board value or value from transposition
         // table
         let candidate_actions = self.actions_with_no_children();
-        let action = choose_random(rng, &candidate_actions);
+        // let action = choose_random(rng, &candidate_actions);
+        let action = candidate_actions
+            .iter()
+            .max_by(|a, b| {
+                let position_a = self.position.clone_and_play(a);
+                let position_b = self.position.clone_and_play(b);
+                position_a.board().value().cmp(&position_b.board().value())
+            })
+            .expect("no children to choose best from");
+
         let mut child = TreeNode::new_empty_child(action.clone(), self);
         if child.is_game_over() {
             child.value = child.outcome().expect("no outcome for child").reward();
