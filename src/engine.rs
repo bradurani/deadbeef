@@ -49,7 +49,7 @@ impl Engine {
     }
 
     pub fn make_engine_move(&mut self) -> Result<Move, String> {
-        if self.is_game_over(){
+        if self.is_game_over() {
             return Err("game is over".to_string());
         }
         self.search();
@@ -81,7 +81,7 @@ impl Engine {
         self.color = Some(color);
     }
 
-    pub fn is_game_over(&self) -> bool{
+    pub fn is_game_over(&self) -> bool {
         self.state.is_game_over()
     }
 

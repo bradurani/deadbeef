@@ -52,7 +52,18 @@ impl State {
         self.root
             .children
             .into_iter()
-            .max_by(|c1, c2| c1.best_child_sort_value().cmp(&c2.best_child_sort_value()))
+            .max_by(|c1, c2| {
+                let c1_value = c1.best_child_sort_value();
+                let c2_value = c2.best_child_sort_value();
+                if c1_value == c2_value {
+                    // if n is equal, fall back to minimax
+                    // occurs in shallow search trees
+                    c1.color_relative_minimax()
+                        .cmp(&c2.color_relative_minimax())
+                } else {
+                    c1.best_child_sort_value().cmp(&c2.best_child_sort_value())
+                }
+            })
             .expect("no children to choose from")
     }
 
