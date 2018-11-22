@@ -6,18 +6,18 @@ use std::cmp::max;
 
 pub fn q_search(
     position: Chess,
-    depth: isize,
+    depth: usize,
     mut alpha: Reward,
     beta: Reward,
     coefficient: Reward,
     stats: &mut RunStats,
 ) -> Reward {
+    stats.record_q_depth(depth);
     if position.is_game_over() {
         return coefficient * position.outcome().unwrap().reward();
     };
     let mut value = coefficient * position.board().value(); // is this a NULL move?
     stats.evals += 1;
-    stats.q_evals += 1;
     if value > alpha {
         alpha = value
     }
@@ -32,7 +32,7 @@ pub fn q_search(
         value = max(
             -q_search(
                 child_position,
-                depth - 1,
+                depth + 1,
                 -beta,
                 -alpha,
                 -coefficient,

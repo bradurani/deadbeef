@@ -44,21 +44,22 @@ impl fmt::Display for RunStats {
         write!(
             f,
             "\n\
-             MCTS:     nodes {}, iterations: {}, leafs: {}, depth: {}\n\
              TIME:     {:?}\n\
-             PLAYOUT:  evals:   {}, {} e/s, depth: {}\n\
-             Q SEARCH: q_evals: {}, {} %q,  depth: {}\n",
+             MCTS:     depth: {}, nodes {}, iterations: {}, leaves: {}\n\
+             PLAYOUT:  depth: {}  leaves:  {}\n\
+             Q SEARCH: depth: {}  {} %q,  \n\
+             EVALS:    {}     {} e/s",
+            self.elapsed(),
+            self.mcts_max_depth,
             self.nodes_created.separated_string(),
             self.iterations.separated_string(),
             self.leaf_nodes.separated_string(),
-            self.mcts_max_depth,
-            self.elapsed(),
+            self.playout_max_depth,
+            self.playout_leaves,
+            self.q_max_depth,
+            self.q_percent(),
             self.evals.separated_string(),
             self.evals_per_second().separated_string(),
-            self.playout_max_depth,
-            self.q_evals.separated_string(),
-            self.q_evals_percent(),
-            self.q_max_depth
         )
     }
 }

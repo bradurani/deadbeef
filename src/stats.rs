@@ -8,13 +8,11 @@ pub struct RunStats {
     pub end_time: Option<Instant>,
     pub leaf_nodes: u64,
     pub evals: u64,
-    pub q_evals: u64,
-    pub mcts_depth: u16,
-    pub mcts_max_depth: u16,
-    pub playout_depth: u16,
-    pub playout_max_depth: u16,
-    pub q_depth: u16,
-    pub q_max_depth: u16,
+    pub playout_leaves: u64,
+    pub mcts_depth: usize,
+    pub mcts_max_depth: usize,
+    pub playout_max_depth: usize,
+    pub q_max_depth: usize,
 }
 
 impl RunStats {
@@ -23,7 +21,7 @@ impl RunStats {
         self.iterations += run_stats.iterations;
         self.leaf_nodes += run_stats.leaf_nodes;
         self.evals += run_stats.evals;
-        self.q_evals += run_stats.q_evals;
+        self.playout_leaves += run_stats.playout_leaves;
         self.mcts_max_depth = self.mcts_max_depth.max(run_stats.mcts_max_depth);
         self.playout_max_depth = self.playout_max_depth.max(run_stats.playout_max_depth);
         self.q_max_depth = self.q_max_depth.max(run_stats.q_max_depth);
@@ -45,8 +43,8 @@ impl RunStats {
         ((self.evals as u128 * 1000000000) / self.elapsed().as_nanos()) as u64
     }
 
-    pub fn q_evals_percent(&self) -> u64 {
-        self.q_evals / self.evals * 100
+    pub fn q_percent(&self) -> u64 {
+        self.evals / self.playout_leaves * 100
     }
 
     pub fn increase_mcts_depth(&mut self) {
@@ -58,25 +56,15 @@ impl RunStats {
         self.mcts_depth -= 1;
     }
 
-    pub fn increase_playout_depth(&mut self) {
-        self.playout_depth += 1;
-        self.playout_max_depth = self.playout_max_depth.max(self.playout_depth);
+    pub fn record_playout_depth(&mut self, depth: usize) {
+        self.playout_max_depth = self.playout_max_depth.max(depth);
     }
 
-    pub fn decrease_playout_depth(&mut self) {
-        self.playout_depth -= 1;
+    pub fn record_q_depth(&mut self, depth: usize) {
+        self.q_max_depth = self.q_max_depth.max(depth);
     }
 
-    pub fn increase_q_depth(&mut self) {
-        self.q_depth += 1;
-        self.q_max_depth = self.q_max_depth.max(self.q_depth);
-    }
-
-    pub fn decrease_q_depth(&mut self) {
-        self.q_depth -= 1;
-    }
-
-    pub fn max_depth(&self) -> u16 {
+    pub fn max_depth(&self) -> usize {
         self.mcts_max_depth + self.playout_max_depth + self.q_max_depth
     }
 }

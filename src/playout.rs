@@ -9,23 +9,20 @@ use std::cmp::max;
 pub fn playout(starting_position: Chess, stats: &mut RunStats, settings: &Settings) -> Reward {
     fn negamax(
         position: Chess,
-        depth: isize,
+        depth: usize,
         mut alpha: Reward,
         beta: Reward,
         coefficient: Reward,
         stats: &mut RunStats,
         settings: &Settings,
     ) -> Reward {
+        stats.record_playout_depth(depth);
         if position.is_game_over() {
             return coefficient * position.outcome().unwrap().reward();
         };
-        if depth <= 0 {
-            if settings.q_search {
-                return q_search(position, depth, alpha, beta, coefficient, stats);
-            } else {
-                stats.evals += 1;
-                return coefficient * position.board().value();
-            }
+        if depth == settings.playout_depth {
+            stats.playout_leaves += 1;
+            return q_search(position, 0, alpha, beta, coefficient, stats);
         }
 
         // TODO try the chess crate here
@@ -36,7 +33,7 @@ pub fn playout(starting_position: Chess, stats: &mut RunStats, settings: &Settin
             value = max(
                 -negamax(
                     child_position,
-                    depth - 1,
+                    depth + 1,
                     -beta,
                     -alpha,
                     -coefficient,
@@ -57,7 +54,7 @@ pub fn playout(starting_position: Chess, stats: &mut RunStats, settings: &Settin
     let starting_coefficient = starting_position.turn().coefficient();
     negamax(
         starting_position,
-        settings.playout_depth as isize,
+        0,
         MIN_REWARD,
         MAX_REWARD,
         starting_coefficient,
