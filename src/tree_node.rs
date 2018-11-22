@@ -9,10 +9,11 @@ use std::ops::Not;
 // TODO do I need all these?
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum NodeState {
-    LeafNode,
-    FullyExpanded,
-    Expandable,
     Empty, // placeholder so we can move something to threads for first move
+    Expandable,
+    FullyExpanded,
+    FullySearched,
+    LeafNode,
 }
 
 impl Default for NodeState {
@@ -117,8 +118,17 @@ impl TreeNode {
         }
     }
 
+    pub fn is_checkmate(&self) -> bool {
+        self.position.is_checkmate()
+    }
+
+    // checkmate discovered for either color
     pub fn is_decisive(&self) -> bool {
-        self.state == NodeState::LeafNode && self.minimax != 0
+        self.color_relative_minimax() > MAX_REWARD - 100
+    }
+
+    pub fn searchable(&self) -> bool {
+        ![NodeState::LeafNode, NodeState::FullySearched].contains(&self.state)
     }
 
     pub fn move_num(&self) -> f32 {
@@ -140,15 +150,6 @@ impl TreeNode {
             || self.repetition_detector.is_drawn(&self.position)
             || self.position.is_stalemate()
             || self.position.is_insufficient_material()
-    }
-
-    pub fn has_winning_child(&self) -> bool {
-        self.children.iter().any(|c| c.state == NodeState::LeafNode)
-            && self.color_relative_minimax() < 0
-    }
-
-    pub fn all_children_leaf_nodes(&self) -> bool {
-        self.children.iter().all(|c| c.state == NodeState::LeafNode)
     }
 
     pub fn outcome(&self) -> Option<Outcome> {

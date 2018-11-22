@@ -16,7 +16,7 @@ pub struct Settings {
     pub log_level: String,
     pub q_search: bool,
     pub show_thinking: bool,
-    pub show_thinking_freq: u64,
+    pub show_thinking_freq: u32,
 }
 
 impl Default for Settings {
@@ -33,7 +33,7 @@ impl Default for Settings {
             log_level: parse_log_level(),
             q_search: true,
             show_thinking: true,
-            show_thinking_freq: 50, // evals
+            show_thinking_freq: 20, // evals
         }
     }
 }
@@ -42,21 +42,21 @@ impl Settings {
     //#[cfg(test)] //need to figure out how to not compile this outside tests
     pub fn test_default() -> Settings {
         Settings {
-            search_type: SearchType::Iterations(2000),
+            search_type: SearchType::Iterations(200),
             ..Default::default()
         }
     }
 
     pub fn test_outcome_default() -> Settings {
         Settings {
-            search_type: SearchType::Iterations(5000000),
+            search_type: SearchType::Iterations(500),
             ..Default::default()
         }
     }
 
     pub fn test_iteration_default() -> Settings {
         Settings {
-            search_type: SearchType::Iterations(1000000),
+            search_type: SearchType::Iterations(200),
             max_threads: 0,
             show_thinking: false,
             ..Default::default()

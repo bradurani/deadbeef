@@ -112,6 +112,10 @@ impl State {
         self.root.is_decisive()
     }
 
+    pub fn is_checkmate(&self) -> bool {
+        self.root.is_checkmate()
+    }
+
     pub fn last_action(&self) -> Move {
         self.root.action.clone().unwrap()
     }
@@ -126,10 +130,6 @@ impl State {
 
     pub fn move_num(&self) -> f32 {
         self.root.move_num()
-    }
-
-    pub fn game_over(&self) -> bool {
-        self.root.is_game_over()
     }
 
     pub fn position(&self) -> Chess {

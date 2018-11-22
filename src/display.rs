@@ -43,15 +43,21 @@ impl fmt::Display for RunStats {
         write!(
             f,
             "\n\
-             MCTS:    nodes {}, iterations: {}, leafs: {}\n\
-             TIME:    elapsed {:?}\n\
-             PLAYOUT: evals: {}, {} e/s\n",
+             MCTS:     nodes {}, iterations: {}, leafs: {}, depth: {}\n\
+             TIME:     {:?}\n\
+             PLAYOUT:  evals:   {}, {} e/s, depth: {}\n\
+             Q SEARCH: q_evals: {}, {} %q,  depth: {}\n",
             self.nodes_created.separated_string(),
             self.iterations.separated_string(),
             self.leaf_nodes.separated_string(),
+            self.mcts_max_depth,
             self.elapsed(),
-            self.evals_per_second(),
-            self.evals
+            self.evals.separated_string(),
+            self.evals_per_second().separated_string(),
+            self.playout_max_depth,
+            self.q_evals.separated_string(),
+            self.q_evals_percent(),
+            self.q_max_depth
         )
     }
 }
@@ -64,6 +70,7 @@ impl fmt::Display for NodeState {
             match self {
                 NodeState::LeafNode => "LN ",
                 NodeState::FullyExpanded => "FE ",
+                NodeState::FullySearched => "FS",
                 NodeState::Expandable => "E  ",
                 NodeState::Empty => "EM ",
             }
@@ -106,7 +113,6 @@ impl<'a> fmt::Display for DisplayTreeNode<'a> {
                     node.state,
                     node.q.to_string().pad_to_width(16),
                     node.n.to_string().pad_to_width(5),
-                    // node.score().to_string().pad_to_width(8),
                     node.minimax.to_string().pad_to_width(6),
                     node.value.to_string().pad_to_width(6),
                     weight(node, parent_n, settings),
@@ -118,7 +124,6 @@ impl<'a> fmt::Display for DisplayTreeNode<'a> {
                     node.state,
                     node.q.to_string().pad_to_width(16),
                     node.n.to_string().pad_to_width(5),
-                    // node.score().to_string().pad_to_width(8),
                     node.minimax.to_string().pad_to_width(6),
                     node.value.to_string().pad_to_width(6),
                 )?,
@@ -140,16 +145,6 @@ impl<'a> fmt::Display for DisplayTreeNode<'a> {
 
         fmt_subtree(f, &self.node, self.settings, 0, 0)?;
         Ok(())
-    }
-}
-
-impl fmt::Display for TreeStats {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(
-            f,
-            "tree: nodes: {}, min_depth: {}, max_depth: {}, ns: {}",
-            self.nodes, self.min_depth, self.max_depth, self.ns
-        )
     }
 }
 

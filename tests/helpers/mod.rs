@@ -20,34 +20,34 @@ pub fn setup() {
     });
 }
 
-pub fn assert_move(fen_str: &'static str, uci_str: &'static str) {
+pub fn assert_move(fen_str: &'static str, uci_str: &'static str) -> RunStats {
     let settings = Settings::test_default();
-    run_move_test(fen_str, vec![uci_str], settings, false);
+    run_move_test(fen_str, vec![uci_str], settings, false)
 }
 
-pub fn assert_contains_move(fen_str: &'static str, uci_strs: Vec<&'static str>) {
+pub fn assert_contains_move(fen_str: &'static str, uci_strs: Vec<&'static str>) -> RunStats {
     let settings = Settings::test_default();
-    run_move_test(fen_str, uci_strs, settings, false);
+    run_move_test(fen_str, uci_strs, settings, false)
 }
 
-pub fn assert_mate_move(fen_str: &'static str, uci_str: &'static str) {
+pub fn assert_mate_move(fen_str: &'static str, uci_str: &'static str) -> RunStats {
     let settings = Settings::test_default();
-    run_move_test(fen_str, vec![uci_str], settings, true);
+    run_move_test(fen_str, vec![uci_str], settings, true)
 }
 
-pub fn assert_contains_mate_move(fen_str: &'static str, uci_strs: Vec<&'static str>) {
+pub fn assert_contains_mate_move(fen_str: &'static str, uci_strs: Vec<&'static str>) -> RunStats {
     let settings = Settings::test_default();
-    run_move_test(fen_str, uci_strs, settings, true);
+    run_move_test(fen_str, uci_strs, settings, true)
 }
 
-pub fn assert_not_move(fen_str: &'static str, uci_str: &'static str) {
+pub fn assert_not_move(fen_str: &'static str, uci_str: &'static str) -> RunStats {
     let settings = Settings::test_default();
-    run_not_move_test(fen_str, vec![uci_str], settings);
+    run_not_move_test(fen_str, vec![uci_str], settings)
 }
 
-pub fn assert_not_contains_move(fen_str: &'static str, uci_strs: Vec<&'static str>) {
+pub fn assert_not_contains_move(fen_str: &'static str, uci_strs: Vec<&'static str>) -> RunStats {
     let settings = Settings::test_default();
-    run_not_move_test(fen_str, uci_strs, settings);
+    run_not_move_test(fen_str, uci_strs, settings)
 }
 //
 // pub fn assert_mate_move(fen_str: &'static str, uci_str: &'static str) {
@@ -87,7 +87,11 @@ pub fn assert_not_contains_move(fen_str: &'static str, uci_strs: Vec<&'static st
 //     assert!(new_root.map_or(false, |o| o.is_draw()));
 // }
 //
-fn run_not_move_test(fen_str: &'static str, uci_strs: Vec<&'static str>, settings: Settings) {
+fn run_not_move_test(
+    fen_str: &'static str,
+    uci_strs: Vec<&'static str>,
+    settings: Settings,
+) -> RunStats {
     let mut engine = setup_engine(fen_str, settings);
     let engine_move = engine
         .make_engine_move()
@@ -103,6 +107,7 @@ fn run_not_move_test(fen_str: &'static str, uci_strs: Vec<&'static str>, setting
     } else {
         assert!(true);
     }
+    engine.game_stats
 }
 
 fn run_move_test(
@@ -110,7 +115,7 @@ fn run_move_test(
     uci_strs: Vec<&'static str>,
     settings: Settings,
     assert_mate: bool,
-) {
+) -> RunStats {
     let mut engine = setup_engine(fen_str, settings);
     let engine_move = engine
         .make_engine_move()
@@ -130,6 +135,7 @@ fn run_move_test(
             move_list_string(expected_moves)
         );
     }
+    engine.game_stats
 }
 
 fn setup_engine(fen_str: &str, settings: Settings) -> Engine {

@@ -2,11 +2,11 @@ use game::*;
 use settings::*;
 use shakmaty::san::*;
 use stats::*;
-use tree_node::*;
 use std::fmt;
+use tree_node::*;
 
-pub fn show_thinking(root: &TreeNode, stats: &RunStats, settings: &Settings) {
-    if settings.show_thinking && (stats.evals / 1000) % settings.show_thinking_freq == 0 {
+pub fn show_thinking(root: &TreeNode, stats: &RunStats, settings: &Settings, n: u32) {
+    if settings.show_thinking && n % settings.show_thinking_freq == 0 {
         let elapsed_cs = stats.elapsed().as_millis() / 10;
         let best_path = iterate_best_path(root);
         let depth = best_path.path.len();

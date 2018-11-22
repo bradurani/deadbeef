@@ -1,6 +1,5 @@
 use mcts::*;
 use settings::*;
-use show_thinking::*;
 use stats::*;
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -12,12 +11,12 @@ use utils::*;
 type SafeTreeNode = Arc<Mutex<TreeNode>>;
 
 pub fn search_threaded(mut root: TreeNode, stats: &mut RunStats, settings: &Settings) -> TreeNode {
-    debug_assert!(root.state != NodeState::LeafNode);
+    assert!(root.searchable());
 
     let n_threads = optimal_threads(root.children.len(), settings.max_threads);
 
     let mut new_root = root.clone_childless();
-    root.generate_missing_children();
+    root.generate_missing_children(stats);
     sort_children_by_weight(&mut root.children, new_root.n, settings);
 
     let thread_result_handles: Vec<JoinHandle<(SafeTreeNode, Option<f32>, RunStats)>> = root
@@ -36,7 +35,7 @@ pub fn search_threaded(mut root: TreeNode, stats: &mut RunStats, settings: &Sett
                     // don't do work if we're over the thread count. Wastes spawing a thread :(
                     thread_stats.start_timer();
                     let mut thread_child = safe_thread_child.lock().unwrap();
-                    if thread_child.state != NodeState::LeafNode {
+                    if thread_child.searchable() {
                         normalized_value = Some(thread_child.iteration(
                             &mut rng,
                             &mut thread_stats,
@@ -49,7 +48,6 @@ pub fn search_threaded(mut root: TreeNode, stats: &mut RunStats, settings: &Sett
             })
         })
         .collect();
-
     let new_children: Vec<TreeNode> = thread_result_handles
         .into_iter()
         .map(|th| th.join().expect("panicked joining threads"))
@@ -66,9 +64,8 @@ pub fn search_threaded(mut root: TreeNode, stats: &mut RunStats, settings: &Sett
                 .expect("unwrapping mutex")
         })
         .collect();
-    new_root.check_fully_expanded();
     new_root.children = new_children;
-    show_thinking(&new_root, &stats, &settings);
+    new_root.update_based_on_children();
     new_root
 }
 

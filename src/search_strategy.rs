@@ -24,10 +24,12 @@ pub fn search_with_strategy(state: State, stats: &mut RunStats, settings: &Setti
     stats.start_timer();
     let new_root = match settings.search_type.clone() {
         SearchType::Iterations(n_iterations) => {
+            info!("searching {} iterations", n_iterations);
             let strategy = SearchIterations { n_iterations };
             strategy.search(state, stats, &settings)
         }
         SearchType::Time(ms) => {
+            info!("searching {} ms", ms.as_millis());
             let strategy = SearchTime { ms: ms };
             strategy.search(state, stats, &settings)
         }

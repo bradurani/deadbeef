@@ -1,6 +1,7 @@
 use search_strategy::*;
 use search_threaded::*;
 use settings::*;
+use show_thinking::*;
 use state::*;
 use stats::*;
 use std::time::Duration;
@@ -14,18 +15,13 @@ impl SearchStrategy for SearchTime {
     fn search(&self, state: State, stats: &mut RunStats, settings: &Settings) -> TreeNode {
         let mut new_root = state.root;
 
-        loop {
-            if new_root.is_decisive() {
+        for n in 0..100000 {
+            if !new_root.searchable() || stats.elapsed() >= self.ms {
                 break;
             }
-
             new_root = search_threaded(new_root, stats, settings);
-
-            if stats.elapsed() >= self.ms {
-                break;
-            }
+            show_thinking(&new_root, &stats, &settings, n);
         }
-        println!("");
         new_root
     }
 }

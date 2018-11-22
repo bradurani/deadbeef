@@ -89,6 +89,14 @@ impl Engine {
         self.state.is_decisive()
     }
 
+    pub fn is_checkmate(&self) -> bool {
+        self.state.is_checkmate()
+    }
+
+    pub fn print_tree(&self) -> Result<(), String> {
+        self.print_subtree(vec![])
+    }
+
     pub fn print_subtree(&self, action_uci_strs: Vec<&str>) -> Result<(), String> {
         let mut root = &self.state.root;
         let mut position = self.state.position();
@@ -106,9 +114,6 @@ impl Engine {
     }
 
     pub fn search(&mut self) {
-        if self.state.is_decisive() {
-            return;
-        }
         let mut move_run_stats: RunStats = Default::default();
         let settings = self.settings.clone();
         self.change_state(|s| s.search(&mut move_run_stats, &settings));

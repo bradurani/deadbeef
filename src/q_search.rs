@@ -17,6 +17,7 @@ pub fn q_search(
     };
     let mut value = coefficient * position.board().value(); // is this a NULL move?
     stats.evals += 1;
+    stats.q_evals += 1;
     if value > alpha {
         alpha = value
     }
