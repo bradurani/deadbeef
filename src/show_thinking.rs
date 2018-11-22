@@ -15,7 +15,7 @@ pub fn show_thinking(root: &TreeNode, stats: &RunStats, settings: &Settings, n: 
         let tablebase_hits = 0;
         println!(
             "{} {} {} {} {} {} {} \t{}",
-            depth,
+            stats.max_depth(),
             root.minimax,
             elapsed_cs,
             stats.evals,

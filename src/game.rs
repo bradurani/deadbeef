@@ -12,7 +12,7 @@ pub trait Game: Clone {
     fn allowed_actions(&self) -> Vec<Move>;
     fn make_move(&mut self, action: &Move);
     fn play_safe(&mut self, &Move);
-    fn move_num(&self) -> f32;
+    fn display_move_num(&self) -> String;
     fn clone_and_play(&self, action: &Move) -> Chess;
 }
 
@@ -46,8 +46,16 @@ impl Game for Chess {
         }
     }
 
-    fn move_num(&self) -> f32 {
-        self.fullmoves() as f32 / 2.
+    fn display_move_num(&self) -> String {
+        format!(
+            "{}{}",
+            if self.turn() == Color::Black {
+                ".."
+            } else {
+                ""
+            },
+            self.fullmoves()
+        )
     }
 
     fn clone_and_play(&self, action: &Move) -> Chess {

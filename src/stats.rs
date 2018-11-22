@@ -76,7 +76,7 @@ impl RunStats {
         self.q_depth -= 1;
     }
 
-    pub fn max_depth(self) -> u16 {
+    pub fn max_depth(&self) -> u16 {
         self.mcts_max_depth + self.playout_max_depth + self.q_max_depth
     }
 }

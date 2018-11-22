@@ -128,8 +128,8 @@ impl State {
         self.root.q
     }
 
-    pub fn move_num(&self) -> f32 {
-        self.root.move_num()
+    pub fn display_move_num(&self) -> String {
+        self.root.display_move_num()
     }
 
     pub fn position(&self) -> Chess {

@@ -131,8 +131,8 @@ impl TreeNode {
         ![NodeState::LeafNode, NodeState::FullySearched].contains(&self.state)
     }
 
-    pub fn move_num(&self) -> f32 {
-        self.position.move_num()
+    pub fn display_move_num(&self) -> String {
+        self.position.display_move_num()
     }
 
     pub fn turn(&self) -> Color {
