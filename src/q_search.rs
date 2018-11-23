@@ -1,4 +1,5 @@
 use eval::*;
+use settings::*;
 use game::*;
 use shakmaty::{Chess, MoveList, Position, Setup};
 use stats::RunStats;
@@ -11,8 +12,9 @@ pub fn q_search(
     beta: Reward,
     coefficient: Reward,
     stats: &mut RunStats,
+    settings: &Settings,
 ) -> Reward {
-    stats.record_q_depth(depth);
+    stats.record_q_depth(settings.playout_depth - depth);
     if position.is_game_over() {
         return coefficient * position.outcome().unwrap().reward();
     };
@@ -32,11 +34,12 @@ pub fn q_search(
         value = max(
             -q_search(
                 child_position,
-                depth + 1,
+                depth - 1,
                 -beta,
                 -alpha,
                 -coefficient,
                 stats,
+                settings,
             ),
             value,
         );

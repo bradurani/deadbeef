@@ -19,9 +19,9 @@ pub fn playout(starting_position: Chess, stats: &mut RunStats, settings: &Settin
         if position.is_game_over() {
             return coefficient * position.outcome().unwrap().reward();
         };
-        if depth == settings.playout_depth {
+        if depth == 0 {
             stats.playout_leaves += 1;
-            return q_search(position, 0, alpha, beta, coefficient, stats);
+            return q_search(position, 0, alpha, beta, coefficient, stats, settings);
         }
 
         // TODO try the chess crate here
@@ -32,7 +32,7 @@ pub fn playout(starting_position: Chess, stats: &mut RunStats, settings: &Settin
             value = max(
                 -negamax(
                     child_position,
-                    depth + 1,
+                    depth - 1,
                     -beta,
                     -alpha,
                     -coefficient,
@@ -53,7 +53,7 @@ pub fn playout(starting_position: Chess, stats: &mut RunStats, settings: &Settin
     let starting_coefficient = starting_position.turn().coefficient();
     negamax(
         starting_position,
-        0,
+        settings.playout_depth,
         MIN_REWARD,
         MAX_REWARD,
         starting_coefficient,
