@@ -67,4 +67,8 @@ impl RunStats {
     pub fn max_depth(&self) -> usize {
         self.mcts_max_depth + self.playout_max_depth + self.q_max_depth
     }
+
+    pub fn comprehensive_max_depth(&self) -> usize {
+        self.mcts_max_depth + self.playout_max_depth
+    }
 }

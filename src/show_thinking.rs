@@ -9,13 +9,12 @@ pub fn show_thinking(root: &TreeNode, stats: &RunStats, settings: &Settings, n: 
     if settings.show_thinking && n % settings.show_thinking_freq == 0 {
         let elapsed_cs = stats.elapsed().as_millis() / 10;
         let best_path = iterate_best_path(root);
-        let depth = best_path.path.len();
         let selective_depth = stats.q_max_depth;
         let speed = stats.evals_per_second();
         let tablebase_hits = 0;
         println!(
             "{} {} {} {} {} {} {} \t{}",
-            stats.max_depth(),
+            stats.comprehensive_max_depth(),
             root.minimax,
             elapsed_cs,
             stats.evals,

@@ -8,6 +8,7 @@ use deadbeef::logger;
 use deadbeef::settings::*;
 use deadbeef::setup::*;
 use deadbeef::stats::*;
+use log::*;
 use shakmaty::*;
 
 use std::sync::Once;
@@ -42,12 +43,12 @@ pub fn assert_contains_mate_move(fen_str: &'static str, uci_strs: Vec<&'static s
 
 pub fn assert_not_move(fen_str: &'static str, uci_str: &'static str) -> RunStats {
     let settings = Settings::test_default();
-    run_not_move_test(fen_str, vec![uci_str], settings)
+    run_not_move_test(fen_str, vec![uci_str], settings, false)
 }
 
 pub fn assert_not_contains_move(fen_str: &'static str, uci_strs: Vec<&'static str>) -> RunStats {
     let settings = Settings::test_default();
-    run_not_move_test(fen_str, uci_strs, settings)
+    run_not_move_test(fen_str, uci_strs, settings, false)
 }
 //
 // pub fn assert_mate_move(fen_str: &'static str, uci_str: &'static str) {
@@ -91,23 +92,9 @@ fn run_not_move_test(
     fen_str: &'static str,
     uci_strs: Vec<&'static str>,
     settings: Settings,
+    assert_mate: bool,
 ) -> RunStats {
-    let mut engine = setup_engine(fen_str, settings);
-    let engine_move = engine
-        .make_engine_move()
-        .expect("could not make engine move");
-    let expected_moves = expected_moves(&engine, uci_strs);
-
-    if expected_moves.contains(&engine_move) {
-        panic!(
-            "{} found in {}",
-            engine_move,
-            move_list_string(expected_moves)
-        );
-    } else {
-        assert!(true);
-    }
-    engine.game_stats
+    run_move_test_and_assert(fen_str, uci_strs, settings, assert_mate, false)
 }
 
 fn run_move_test(
@@ -116,24 +103,34 @@ fn run_move_test(
     settings: Settings,
     assert_mate: bool,
 ) -> RunStats {
+    run_move_test_and_assert(fen_str, uci_strs, settings, assert_mate, true)
+}
+
+fn run_move_test_and_assert(
+    fen_str: &'static str,
+    uci_strs: Vec<&'static str>,
+    settings: Settings,
+    assert_mate: bool,
+    assert_contains_move: bool,
+) -> RunStats {
     let mut engine = setup_engine(fen_str, settings);
     let engine_move = engine
         .make_engine_move()
         .expect("could not make engine move");
     let expected_moves = expected_moves(&engine, uci_strs);
 
-    if assert_mate {
-        assert!(engine.is_decisive());
-    }
-
-    if expected_moves.contains(&engine_move) {
-        assert!(true);
-    } else {
+    let contains_move = expected_moves.contains(&engine_move);
+    if contains_move ^ assert_contains_move {
+        error!("FAIL! played {} in:", engine_move);
+        engine.print_tree().expect("could not print tree");
         panic!(
             "{} not found in {}",
             engine_move,
             move_list_string(expected_moves)
         );
+    }
+    if assert_mate {
+        assert!(engine.is_decisive());
     }
     engine.game_stats
 }

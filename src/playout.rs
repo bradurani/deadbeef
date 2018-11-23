@@ -1,4 +1,3 @@
-use eval::*;
 use game::*;
 use q_search::*;
 use settings::Settings;

@@ -1,4 +1,3 @@
-use eval::*;
 use game::*;
 use repetition_detector::RepetitionDetector;
 use shakmaty::*;

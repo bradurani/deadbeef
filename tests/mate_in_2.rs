@@ -1,4 +1,5 @@
 extern crate deadbeef;
+extern crate log;
 extern crate shakmaty;
 
 use helpers::*;
@@ -10,7 +11,7 @@ fn queen_sacrifice_mate_in_2() {
     assert_mate_move(
         "r2q1r2/pp2np2/1bp4p/3p2pk/1P1N2b1/2PB2B1/P5PP/R2QK2R w KQ - 0 1",
         "d1g4", //-> Kh5xg4 -> bd3e2#
-    )
+    );
 }
 
 #[test]

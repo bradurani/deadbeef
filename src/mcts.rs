@@ -1,4 +1,3 @@
-use eval::*;
 use game::*;
 use playout::*;
 use rand::rngs::SmallRng;
@@ -26,7 +25,7 @@ impl MCTS for TreeNode {
         let normalized_value: f32 = match self.state {
             NodeState::FullyExpanded => {
                 let normalized_value = {
-                    let child = best_child(self, settings);
+                    let child = most_interesting_child(self, settings);
                     stats.increase_mcts_depth();
                     let normalized_value = child.iteration(rng, stats, settings);
                     stats.decrease_mcts_depth();

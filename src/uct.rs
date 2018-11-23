@@ -38,16 +38,19 @@ pub fn sort_children_by_weight(children: &mut Vec<TreeNode>, parent_n: u32, sett
     });
 }
 
-    pub fn best_child<'a>(parent: &'a mut TreeNode, settings: &Settings) -> &'a mut TreeNode {
-        let parent_n = parent.n;
-        parent
-            .children
-            .iter_mut()
-            .filter(|c| c.searchable())
-            .max_by(|a, b| {
-                weight(a, parent_n, settings)
-                    .partial_cmp(&weight(b, parent_n, settings))
-                    .unwrap_or(Equal)
-            })
+pub fn most_interesting_child<'a>(
+    parent: &'a mut TreeNode,
+    settings: &Settings,
+) -> &'a mut TreeNode {
+    let parent_n = parent.n;
+    parent
+        .children
+        .iter_mut()
+        .filter(|c| c.searchable())
+        .max_by(|a, b| {
+            weight(a, parent_n, settings)
+                .partial_cmp(&weight(b, parent_n, settings))
+                .unwrap_or(Equal)
+        })
         .expect("no searchable children")
-    }
+}
