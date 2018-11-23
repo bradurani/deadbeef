@@ -99,7 +99,7 @@ impl TreeNode {
 
     pub fn color_relative_board_value(&self) -> Reward {
         // could save this calc, but don't think it's called much
-        self.position.board().value() * self.turn().not().coefficient()
+        self.position.color_relative_value()
     }
 
     pub fn best_child_sort_value(&self) -> f32 {

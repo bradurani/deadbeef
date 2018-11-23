@@ -1,3 +1,4 @@
+use eval::*;
 use shakmaty::*;
 use std::i16;
 
@@ -14,6 +15,7 @@ pub trait Game: Clone {
     fn play_safe(&mut self, &Move);
     fn display_move_num(&self) -> String;
     fn clone_and_play(&self, action: &Move) -> Chess;
+    fn color_relative_value(&self) -> i16;
 }
 
 impl Game for Chess {
@@ -62,6 +64,10 @@ impl Game for Chess {
         let mut new_position = self.clone();
         new_position.make_move(action);
         new_position
+    }
+
+    fn color_relative_value(&self) -> i16 {
+        self.turn().coefficient() * self.board().value()
     }
 }
 
