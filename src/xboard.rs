@@ -105,9 +105,10 @@ impl XBoard {
             .any(|c| cmd.starts_with(c))
         {
 
-        } else if cmd == "search" {
-            // 0xDEADBEEF extensions. Not part of xboard
-            engine.search();
+        }
+        // 0xDEADBEEF extensions. Not part of xboard
+        else if cmd == "search" {
+            engine.search_with_settings()?;
         } else if cmd.starts_with("printtree") {
             let args: Vec<&str> = cmd.split(' ').collect();
             let uci_strs: Vec<&str> = args.into_iter().skip(1).collect();

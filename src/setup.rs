@@ -1,5 +1,6 @@
 use emojify::*;
 use shakmaty::fen::*;
+use shakmaty::san::*;
 use shakmaty::uci::*;
 use shakmaty::*;
 
@@ -32,4 +33,9 @@ pub fn parse_fen(fen_str: &str) -> Chess {
 pub fn parse_uci(uci_str: &str, position: &Chess) -> Move {
     let uci: Uci = uci_str.parse().expect("invalid uci");
     uci.to_move(position).expect("invalid position")
+}
+
+pub fn parse_san(san_str: &str, position: &Chess) -> Move {
+    let san: San = san_str.parse().expect("invalid san");
+    san.to_move(position).expect("illegal san move")
 }

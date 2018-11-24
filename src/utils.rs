@@ -2,7 +2,9 @@ use rand::rngs::SmallRng;
 #[allow(unused_imports)]
 use rand::{Rng, RngCore, SeedableRng};
 use std::collections::HashMap;
+use std::fs::*;
 use std::hash::{BuildHasherDefault, Hash};
+use std::io::prelude::*;
 use twox_hash::XxHash;
 
 pub fn choose_random<'a, T, R: Rng>(rng: &mut R, vec: &'a Vec<T>) -> &'a T {
@@ -24,6 +26,14 @@ pub fn seeded_rng(rng_seed: u8) -> SmallRng {
 pub fn deterministic_hash_map<K: Hash + Eq, V>() -> HashMap<K, V, BuildHasherDefault<XxHash>> {
     let hash: HashMap<K, V, BuildHasherDefault<XxHash>> = Default::default();
     hash
+}
+
+pub fn file_to_string(filename: &'static str) -> String {
+    let mut file = File::open(filename).expect("could not open file");
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)
+        .expect("could not read file to string");
+    contents
 }
 
 #[cfg(test)]

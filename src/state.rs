@@ -23,35 +23,26 @@ impl State {
         }
     }
 
-    pub fn search(self, stats: &mut RunStats, settings: &Settings) -> State {
+    pub fn search(
+        self,
+        search_type: SearchType,
+        stats: &mut RunStats,
+        settings: &Settings,
+    ) -> State {
         let time_remaining = self.time_remaining.clone();
         let opponent_time_remaining = self.opponent_time_remaining.clone();
         State {
-            root: search_with_strategy(self, stats, settings),
+            root: search_with_search_type(self, search_type, stats, settings),
             time_remaining: time_remaining,
             opponent_time_remaining: opponent_time_remaining,
         }
     }
 
-    pub fn make_best_move(self) -> State {
-        let opponent_time_remaining = self.opponent_time_remaining.clone();
-        let time_remaining = self
-            .time_remaining
-            .clone()
-            .map(|t| t.recalculate_from_now());
-        let new_root = self.best_child_node();
-        State {
-            root: new_root,
-            opponent_time_remaining,
-            time_remaining,
-        }
-    }
-
-    pub fn best_child_node(self) -> TreeNode {
+    pub fn best_move(&self) -> Move {
         // TODO try the equation from the MCTS-Solver paper
         self.root
             .children
-            .into_iter()
+            .iter()
             .max_by(|c1, c2| {
                 let c1_value = c1.best_child_sort_value();
                 let c2_value = c2.best_child_sort_value();
@@ -66,10 +57,11 @@ impl State {
                         .unwrap()
                 }
             })
-            .expect("no children to choose from")
+            .and_then(|c| c.action.clone())
+            .expect("no best child to choose from")
     }
 
-    pub fn make_user_move(self, action: &Move) -> State {
+    pub fn make_move(self, action: &Move) -> State {
         let time_remaining = self.time_remaining.clone();
         let opponent_time_remaining = self.opponent_time_remaining.clone();
         let mut position = self.position();

@@ -1,6 +1,6 @@
 use display::*;
-use emojify::*;
 use game::*;
+use search_strategy::*;
 use settings::*;
 use setup::*;
 use shakmaty::*;
@@ -40,23 +40,30 @@ impl Engine {
     }
 
     pub fn make_user_move(&mut self, uci_str: &str) -> Result<Move, String> {
+        info!("=========  user ==========");
         let action = parse_uci_input(uci_str, &self.position())?;
-        self.change_state(|s| s.make_user_move(&action));
-        info_emojified(&self.state.position().board());
+        self.change_state(|s| s.make_move(&action));
         debug_print_tree(&self.state.root, &self.settings);
-        info!("===========================");
+        info!("{}", self);
+        info!("==========================");
         Ok(action)
     }
 
     pub fn make_engine_move(&mut self) -> Result<Move, String> {
-        if self.is_game_over() {
-            return Err("game is over".to_string());
-        }
-        self.search();
-        self.change_state(|s| s.make_best_move());
+        info!("++++++++++ engine ++++++++++");
+        let search_type = &self.settings.search_type.clone();
+        self.search(search_type)?;
+        let best_move = self.best_move();
+        self.change_state(|s| s.make_move(&best_move));
         info!("{}", self);
         info!("+++++++++++++++++++++++++++");
-        Ok(self.state.last_action())
+        Ok(best_move)
+    }
+
+    pub fn test_search(&mut self, search_type: &SearchType) -> Move {
+        self.search(search_type)
+            .expect("could not perform test search");
+        self.best_move()
     }
 
     pub fn position(&self) -> Chess {
@@ -97,6 +104,10 @@ impl Engine {
         self.print_subtree(vec![])
     }
 
+    pub fn best_move(&self) -> Move {
+        self.state.best_move()
+    }
+
     pub fn print_subtree(&self, action_uci_strs: Vec<&str>) -> Result<(), String> {
         let mut root = &self.state.root;
         let mut position = self.state.position();
@@ -113,13 +124,22 @@ impl Engine {
         Ok(())
     }
 
-    pub fn search(&mut self) {
+    pub fn search_with_settings(&mut self) -> Result<(), String> {
+        let search_type = &self.settings.search_type.clone();
+        self.search(search_type)
+    }
+
+    pub fn search(&mut self, search_type: &SearchType) -> Result<(), String> {
+        if self.is_game_over() {
+            return Err("game is over".to_string());
+        }
         let mut move_run_stats: RunStats = Default::default();
         let settings = self.settings.clone();
-        self.change_state(|s| s.search(&mut move_run_stats, &settings));
+        self.change_state(|s| s.search(search_type.clone(), &mut move_run_stats, &settings));
         debug_print_tree(&self.state.root, &self.settings);
-        println!("{}", move_run_stats);
+        info!("{}", move_run_stats);
         self.game_stats.add(&move_run_stats);
+        Ok(())
     }
 
     fn change_state<F: FnMut(State) -> State>(&mut self, mut f: F) {

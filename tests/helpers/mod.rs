@@ -3,13 +3,16 @@
 extern crate deadbeef;
 extern crate shakmaty;
 
+use self::shakmaty::*;
 use deadbeef::engine::*;
 use deadbeef::logger;
+use deadbeef::search_strategy::*;
 use deadbeef::settings::*;
 use deadbeef::setup::*;
 use deadbeef::stats::*;
+use deadbeef::utils::*;
 use log::*;
-use shakmaty::*;
+use std::time::Duration;
 
 use std::sync::Once;
 
@@ -50,44 +53,39 @@ pub fn assert_not_contains_move(fen_str: &'static str, uci_strs: Vec<&'static st
     let settings = Settings::test_default();
     run_not_move_test(fen_str, uci_strs, settings, false)
 }
-//
-// pub fn assert_mate_move(fen_str: &'static str, uci_str: &'static str) {
-//     let mut test_run_stats: RunStats = Default::default();
-//     let settings = Settings::test_mate_default();
-//     assert_contains_move_with_settings(
-//         fen_str,
-//         vec![uci_str],
-//         &mut test_run_stats,
-//         &settings,
-//         true,
-//     );
-// }
-//
-// pub fn assert_contains_move(fen_str: &'static str, uci_strs: Vec<&'static str>) {
-//     let mut test_run_stats: RunStats = Default::default();
-//     let settings = Settings::test_default();
-//     assert_contains_move_with_settings(fen_str, uci_strs, &mut test_run_stats, &settings, false)
-// }
-//
-// pub fn assert_contains_mate_move(fen_str: &'static str, uci_strs: Vec<&'static str>) {
-//     let mut test_run_stats: RunStats = Default::default();
-//     let settings = Settings::test_mate_default();
-//     assert_contains_move_with_settings(fen_str, uci_strs, &mut test_run_stats, &settings, true)
-// }
-//
-// pub fn assert_draw(fen_str: &'static str, stats: &mut RunStats) {
-//     let settings = Settings::test_mate_default();
-//     let position = parse_fen(fen_str);
-//     println!("halfmove clock: {}", position.halfmoves());
-//     let root = TreeNode::new_root(&position, 100.);
-//
-//     println!("{}", settings);
-//
-//     let new_root = play::find_best_move(root, &position, stats, &settings);
-//
-//     assert!(new_root.map_or(false, |o| o.is_draw()));
-// }
-//
+
+pub fn run_challenge_suite(filename: &'static str, times: &Vec<u64>) -> u16 {
+    let contents = file_to_string(filename);
+    contents.lines().fold(0, |mut score, line| {
+        let tokens: Vec<&str> = line.splitn(2, " bm ").collect();
+        let fen = tokens[0];
+        let more_tokens: Vec<&str> = tokens[1].splitn(2, "; id ").collect();
+        let sans: Vec<&str> = more_tokens[0].split(" ").collect();
+        let mut engine = setup_engine(&fen, Settings::test_default());
+        let expected_actions: Vec<Move> = sans
+            .iter()
+            .map(|s| parse_san(s, &engine.position()))
+            .collect();
+        let id = more_tokens[1];
+        let display_expected: Vec<String> =
+            expected_actions.iter().map(|a| format!("{}", a)).collect();
+        for time in times {
+            let search_type = SearchType::Time(Duration::from_millis(*time));
+            let engine_action = engine.test_search(&search_type);
+            info!(
+                "\n{} expecting {}. Found {}",
+                id,
+                display_expected.join(" "),
+                engine_action
+            );
+            if expected_actions.contains(&engine_action) {
+                score += 1
+            }
+        }
+        score
+    })
+}
+
 fn run_not_move_test(
     fen_str: &'static str,
     uci_strs: Vec<&'static str>,
