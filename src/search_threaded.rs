@@ -11,7 +11,7 @@ use utils::*;
 type SafeTreeNode = Arc<Mutex<TreeNode>>;
 
 pub fn search_threaded(mut root: TreeNode, stats: &mut RunStats, settings: &Settings) -> TreeNode {
-    assert!(root.searchable());
+    assert!(root.is_searchable());
 
     let n_threads = optimal_threads(root.children.len(), settings.max_threads);
 
@@ -35,7 +35,7 @@ pub fn search_threaded(mut root: TreeNode, stats: &mut RunStats, settings: &Sett
                     // don't do work if we're over the thread count. Wastes spawing a thread :(
                     thread_stats.start_timer();
                     let mut thread_child = safe_thread_child.lock().unwrap();
-                    if thread_child.searchable() {
+                    if thread_child.is_searchable() {
                         normalized_value = Some(thread_child.iteration(
                             &mut rng,
                             &mut thread_stats,

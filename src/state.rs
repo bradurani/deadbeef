@@ -44,16 +44,12 @@ impl State {
             .children
             .iter()
             .max_by(|c1, c2| {
-                let c1_value = c1.best_child_sort_value();
-                let c2_value = c2.best_child_sort_value();
-                if c1_value == c2_value {
-                    // if n is equal, fall back to minimax
-                    // occurs in shallow search trees
+                if c1.best_child_sort_use_minimax() || c2.best_child_sort_use_minimax() {
                     c1.color_relative_minimax()
                         .cmp(&c2.color_relative_minimax())
                 } else {
-                    c1.best_child_sort_value()
-                        .partial_cmp(&c2.best_child_sort_value())
+                    c1.best_child_sort_n()
+                        .partial_cmp(&c2.best_child_sort_n())
                         .unwrap()
                 }
             })

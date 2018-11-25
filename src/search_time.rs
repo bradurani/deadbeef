@@ -16,7 +16,7 @@ impl SearchStrategy for SearchTime {
         let mut new_root = state.root;
 
         for n in 0..100000 {
-            if !new_root.searchable() || stats.elapsed() >= self.ms {
+            if !new_root.is_searchable() || stats.elapsed() >= self.ms {
                 break;
             }
             new_root = search_threaded(new_root, stats, settings);

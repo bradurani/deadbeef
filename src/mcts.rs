@@ -117,7 +117,7 @@ impl MCTS for TreeNode {
     fn update_based_on_children(&mut self) {
         if self.state == NodeState::FullyExpanded {
             self.set_minimax_based_on_children();
-            if self.children.iter().all(|c| !c.searchable()) {
+            if self.children.iter().all(|c| !c.is_searchable()) {
                 self.state = NodeState::FullySearched
             }
         }

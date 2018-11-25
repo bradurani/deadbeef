@@ -15,7 +15,7 @@ impl SearchStrategy for SearchIterations {
         let mut new_root = state.root;
 
         for n in 0..self.n_iterations {
-            if !new_root.searchable() {
+            if !new_root.is_searchable() {
                 break;
             }
             new_root = search_threaded(new_root, stats, settings);

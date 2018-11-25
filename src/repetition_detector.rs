@@ -71,13 +71,17 @@ mod test {
     use super::*;
     use game::Game;
     use setup::*;
-    use shakmaty::*;
 
     #[test]
     fn test_increments_count() {
+        let position = &Chess::default();
         let mut rd = RepetitionDetector::default();
-        assert_eq!(false, rd.record_and_check(&Chess::default()));
-        assert_eq!(true, rd.record_and_check(&Chess::default()));
+
+        rd.record(&position);
+        assert_eq!(false, rd.is_drawn(position));
+        // note the repetition detector registers starting position on start
+        rd.record(&position);
+        assert_eq!(true, rd.is_drawn(position));
     }
 
     #[test]
@@ -86,15 +90,16 @@ mod test {
         let mut repetition_detector = RepetitionDetector::new(&position);
         let drawing_position_1 = parse_fen("q4r1k/5p2/8/6Q1/8/8/8/6K1 w - - 4 3");
         let drawing_position_2 = parse_fen("q4r2/5p1k/8/6Q1/8/8/8/6K1 w - - 4 3");
-        repetition_detector.record_and_check(&drawing_position_1);
-        repetition_detector.record_and_check(&drawing_position_1);
-        repetition_detector.record_and_check(&drawing_position_2);
-        repetition_detector.record_and_check(&drawing_position_2);
+        repetition_detector.record(&drawing_position_1);
+        repetition_detector.record(&drawing_position_1);
+        repetition_detector.record(&drawing_position_2);
+        repetition_detector.record(&drawing_position_2);
         let allowed_actions = position.allowed_actions();
         for action in allowed_actions {
             let mut new_position = position.clone();
             new_position.play_safe(&action);
-            assert!(repetition_detector.record_and_check(&new_position))
+            repetition_detector.record(&new_position);
+            assert!(true, repetition_detector.is_drawn(&new_position));
         }
     }
 }

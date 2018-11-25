@@ -101,18 +101,28 @@ impl TreeNode {
         self.position.color_relative_reward()
     }
 
-    pub fn best_child_sort_value(&self) -> f32 {
-        if self.state == NodeState::Empty {
-            // shouldn't except very fast time controls.
-            // ensure we only choose this if all are Empty, then pick highest board value
-            error!("choosing from unexpanded node");
-            return -5000. + self.color_relative_reward() as f32;
+    pub fn best_child_sort_use_minimax(&self) -> bool {
+        // captures fully searched nodes which will have low ns
+        // so we can choose draws if position is losing and wins if position
+        // is winning. Also, ensures that we always choose decisive winning moves
+        // using shortest path
+        self.is_decisive() || !self.is_searchable()
+    }
+
+    pub fn best_child_sort_minimax(&self) -> Reward {
+        match self.state {
+            NodeState::Empty => {
+                // shouldn't except very fast time controls.
+                // ensure we only choose this if all are Empty, then pick highest board value
+                error!("choosing from unexpanded node");
+                -5000 + self.color_relative_reward()
+            }
+            _ => self.color_relative_minimax(),
         }
-        if self.is_decisive() {
-            self.color_relative_minimax() as f32
-        } else {
-            self.n as f32 + self.turn().not().coefficient() as f32 * self.q
-        }
+    }
+
+    pub fn best_child_sort_n(&self) -> f32 {
+        self.n as f32 + self.turn().not().coefficient() as f32 * self.q
     }
 
     pub fn is_checkmate(&self) -> bool {
@@ -124,7 +134,7 @@ impl TreeNode {
         self.color_relative_minimax() > MAX_REWARD - 100
     }
 
-    pub fn searchable(&self) -> bool {
+    pub fn is_searchable(&self) -> bool {
         ![NodeState::LeafNode, NodeState::FullySearched].contains(&self.state)
     }
 

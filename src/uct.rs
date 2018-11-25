@@ -9,7 +9,7 @@ use tree_node::*;
 // 3) value factor: (none)
 
 pub fn weight(child: &TreeNode, parent_n: u32, settings: &Settings) -> f32 {
-    if !child.searchable() {
+    if !child.is_searchable() {
         // for sorting by weight
         return f32::MIN;
     } else if child.state == NodeState::Empty {
@@ -27,7 +27,7 @@ pub fn weight(child: &TreeNode, parent_n: u32, settings: &Settings) -> f32 {
 
 pub fn sort_children_by_weight(children: &mut Vec<TreeNode>, parent_n: u32, settings: &Settings) {
     if cfg!(debug_assertions) {
-        if children.iter().all(|c| !c.searchable()) {
+        if children.iter().all(|c| !c.is_searchable()) {
             panic!("found no best children \n");
         }
     }
@@ -47,11 +47,11 @@ pub fn most_interesting_child<'a>(
     parent
         .children
         .iter_mut()
-        .filter(|c| c.searchable())
+        .filter(|c| c.is_searchable())
         .max_by(|a, b| {
             weight(a, parent_n, settings)
                 .partial_cmp(&weight(b, parent_n, settings))
                 .unwrap_or(Equal)
         })
-        .expect("no searchable children")
+        .expect("no is_searchable children")
 }

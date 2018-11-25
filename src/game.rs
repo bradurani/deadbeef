@@ -101,9 +101,6 @@ pub trait Coefficient {
 
 impl Coefficient for Color {
     fn coefficient(&self) -> i16 {
-        match &self {
-            Color::Black => -1,
-            Color::White => 1,
-        }
+        self.fold(1, -1)
     }
 }

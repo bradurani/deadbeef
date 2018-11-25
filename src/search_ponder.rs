@@ -15,7 +15,7 @@ impl SearchStrategy for SearchPonder {
     fn search(&self, state: State, stats: &mut RunStats, settings: &Settings) -> TreeNode {
         let mut new_root = state.root;
         while self.waiting_for_opponent.load(Ordering::Relaxed) {
-            if !new_root.searchable() {
+            if !new_root.is_searchable() {
                 break;
             }
             new_root = search_threaded(new_root, stats, &settings);
