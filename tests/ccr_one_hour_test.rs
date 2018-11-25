@@ -6,6 +6,7 @@ use helpers::*;
 mod helpers;
 
 #[test]
+#[ignore]
 fn ccr_one_hour() {
     let times = vec![5000, 5000, 5000];
     let score = run_challenge_suite("data/ccr_one_hour_test.epd", &times);

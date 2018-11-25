@@ -1,5 +1,6 @@
-extern crate deadbeef;
+#[macro_use]
 extern crate log;
+extern crate deadbeef;
 extern crate shakmaty;
 
 use deadbeef::stats::*;

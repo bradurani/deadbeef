@@ -1,7 +1,9 @@
+#[macro_use]
+extern crate log;
 extern crate deadbeef;
 extern crate shakmaty;
 
-use deadbeef::game::Game;
+use deadbeef::game::*;
 use helpers::*;
 use shakmaty::fen::*;
 

@@ -1,3 +1,5 @@
+#[macro_use]
+extern crate log;
 extern crate deadbeef;
 extern crate shakmaty;
 
@@ -28,7 +30,7 @@ fn black_saves_its_queen() {
 
 #[test]
 fn capture_bishop_and_save_queen() {
-    assert_move(
+    assert_contains_move(
         "3qkbnr/p1Bppp1p/b1r3p1/8/3PP3/2N2N2/PPP2PPP/R2Q1RK1 b k - 0 9",
         vec!["c6c7", "d8c7"],
     );

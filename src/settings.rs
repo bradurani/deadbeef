@@ -23,7 +23,7 @@ impl Default for Settings {
     fn default() -> Settings {
         Settings {
             max_threads: 4,
-            c: 0.008,
+            c: 0.08,
             starting_seed: 2,
             search_type: SearchType::Time(Duration::from_millis(7000)),
             playout_depth: 2,
@@ -42,7 +42,7 @@ impl Settings {
     //#[cfg(test)] //need to figure out how to not compile this outside tests
     pub fn test_default() -> Settings {
         Settings {
-            // search_type: SearchType::Iterations(200),
+            // search_type: SearchType::Iterations(20),
             search_type: SearchType::Time(Duration::from_millis(7000)),
             show_thinking: false,
             ..Default::default()

@@ -52,7 +52,7 @@ impl Game for Chess {
     fn display_move_num(&self) -> String {
         format!(
             "{}{}",
-            if self.turn() == Color::Black {
+            if self.turn() == Color::White {
                 ".."
             } else {
                 ""

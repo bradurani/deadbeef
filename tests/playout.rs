@@ -1,3 +1,5 @@
+#[macro_use]
+extern crate log;
 extern crate deadbeef;
 extern crate shakmaty;
 
@@ -183,14 +185,14 @@ fn saves_bishop() {
 
 // TEST HELPERS
 
-fn reward_test_with_q(fen_str: &'static str, depth: usize) -> Reward {
+fn reward_test_with_q(fen_str: &'static str, depth: isize) -> Reward {
     playout_test(fen_str, depth, true)
 }
-fn reward_test(fen_str: &'static str, depth: usize) -> Reward {
+fn reward_test(fen_str: &'static str, depth: isize) -> Reward {
     playout_test(fen_str, depth, false)
 }
 
-fn playout_test(fen_str: &'static str, depth: usize, q_search: bool) -> Reward {
+fn playout_test(fen_str: &'static str, depth: isize, q_search: bool) -> Reward {
     setup();
     let position = parse_fen(fen_str);
     let mut stats: RunStats = Default::default();

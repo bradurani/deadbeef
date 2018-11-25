@@ -1,4 +1,5 @@
 extern crate deadbeef;
+extern crate log;
 extern crate shakmaty;
 
 use helpers::*;

@@ -1,8 +1,10 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
-extern crate deadbeef;
+extern crate log;
+// extern crate deadbeef;
 extern crate shakmaty;
 
+use self::log::*;
 use self::shakmaty::*;
 use deadbeef::engine::*;
 use deadbeef::game::*;
@@ -12,7 +14,6 @@ use deadbeef::settings::*;
 use deadbeef::setup::*;
 use deadbeef::stats::*;
 use deadbeef::utils::*;
-use log::*;
 use std::time::Duration;
 
 use std::sync::Once;
