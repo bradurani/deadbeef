@@ -17,7 +17,8 @@ pub fn weight(child: &TreeNode, parent_n: u32, settings: &Settings) -> f32 {
         // ensure they get expanded first so all roots's children get expanded,
         // and if we run out of time, the best nodes are first
         // TODO order these, mate, check etc
-        return child.color_relative_board_value() as f32 + 5000.;
+        //TODO change to color relative reward
+        return child.color_relative_reward() as f32 + 5000.;
     }
     let weight = (child.color_relative_q() as f32 / child.n as f32)
         + settings.c * ((parent_n as f32).ln() / child.n as f32).sqrt();
@@ -27,7 +28,7 @@ pub fn weight(child: &TreeNode, parent_n: u32, settings: &Settings) -> f32 {
 pub fn sort_children_by_weight(children: &mut Vec<TreeNode>, parent_n: u32, settings: &Settings) {
     if cfg!(debug_assertions) {
         if children.iter().all(|c| !c.searchable()) {
-            error!("found no best children \n");
+            panic!("found no best children \n");
         }
     }
 

@@ -1,6 +1,7 @@
 use eval::*;
 use shakmaty::*;
 use std::i16;
+use std::ops::Not;
 
 pub const MAX_HALFMOVES: u32 = 101;
 pub const STARTING_POSITION: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
@@ -15,7 +16,7 @@ pub trait Game: Clone {
     fn play_safe(&mut self, &Move);
     fn display_move_num(&self) -> String;
     fn clone_and_play(&self, action: &Move) -> Chess;
-    fn color_relative_value(&self) -> i16;
+    fn color_relative_reward(&self) -> i16;
 }
 
 impl Game for Chess {
@@ -66,13 +67,18 @@ impl Game for Chess {
         new_position
     }
 
-    fn color_relative_value(&self) -> i16 {
-        self.turn().coefficient() * self.board().value()
+    fn color_relative_reward(&self) -> i16 {
+        self.turn().not().coefficient() * self.reward()
     }
 }
 
-pub trait HasReward {
-    fn reward(&self) -> Reward;
+impl HasReward for Chess {
+    fn reward(&self) -> i16 {
+        match self.outcome() {
+            Some(o) => o.reward(),
+            None => self.board().reward(),
+        }
+    }
 }
 
 impl HasReward for Outcome {

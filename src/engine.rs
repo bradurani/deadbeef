@@ -108,6 +108,10 @@ impl Engine {
         self.state.best_move()
     }
 
+    pub fn minimax(&self) -> Reward {
+        self.state.minimax()
+    }
+
     pub fn print_subtree(&self, action_uci_strs: Vec<&str>) -> Result<(), String> {
         let mut root = &self.state.root;
         let mut position = self.state.position();

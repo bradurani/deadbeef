@@ -40,11 +40,13 @@ impl RunStats {
     }
 
     pub fn evals_per_second(&self) -> u64 {
-        ((self.evals as u128 * 1000000000) / self.elapsed().as_nanos()) as u64
+        (self.evals as u128 * 1000000000)
+            .checked_div(self.elapsed().as_nanos())
+            .unwrap_or(0) as u64
     }
 
     pub fn q_percent(&self) -> u64 {
-        self.evals / self.playout_leaves * 100
+        self.evals.checked_div(self.playout_leaves).unwrap_or(0) * 100
     }
 
     pub fn increase_mcts_depth(&mut self) {

@@ -9,10 +9,10 @@ mod helpers;
 
 #[test]
 #[ignore]
-fn queen_sacrifice_mate_in_7_white() {
+fn mate_in_9_plys_white() {
     assert_mate_move(
         //  Edward Lasker–Sir George Thomas (London 1912)
-        "rn3rk1/pbppq1pp/1p2pb2/4N2Q/3PN3/3B4/PPP2PPP/R3K2R w KQ - 6 11",
-        "h5h7",
+        "rn3r2/pbppq1p1/1p2pN1k/4N3/3P4/3B4/PPP2PPP/R3K2R w KQ - 1 13",
+        "e5g4",
     );
 }

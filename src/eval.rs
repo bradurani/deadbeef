@@ -74,12 +74,12 @@ const KING_VALUES: [i16; 64] = [
     17,  30,  -3, -14,   6,  -1,  40,  18,
 ];
 
-pub trait Value {
-    fn value(&self) -> i16;
+pub trait HasReward {
+    fn reward(&self) -> i16;
 }
 
-impl Value for Role {
-    fn value(&self) -> i16 {
+impl HasReward for Role {
+    fn reward(&self) -> i16 {
         match self {
             Role::Pawn => 100,
             Role::Knight => 280,
@@ -91,23 +91,23 @@ impl Value for Role {
     }
 }
 
-impl Value for Piece {
-    fn value(&self) -> i16 {
+impl HasReward for Piece {
+    fn reward(&self) -> i16 {
         match self.color {
-            Color::White => self.role.value(),
-            Color::Black => self.role.value() * -1,
+            Color::White => self.role.reward(),
+            Color::Black => self.role.reward() * -1,
         }
     }
 }
 
-impl Value for Board {
-    fn value(&self) -> i16 {
-        fn positional_value(square: Square, piece: &Piece) -> i16 {
+impl HasReward for Board {
+    fn reward(&self) -> i16 {
+        fn positional_reward(square: Square, piece: &Piece) -> i16 {
             let color_square = match piece.color {
                 Color::White => square.flip_vertical(),
                 Color::Black => square,
             };
-            let raw_value = match piece.role {
+            let raw_reward = match piece.role {
                 Role::Pawn => PAWN_VALUES[index(color_square)],
                 Role::Knight => KNIGHT_VALUES[index(color_square)],
                 Role::Bishop => BISHOP_VALUES[index(color_square)],
@@ -115,14 +115,16 @@ impl Value for Board {
                 Role::Rook => ROOK_VALUES[index(color_square)],
                 Role::King => KING_VALUES[index(color_square)],
             };
-            piece.color.coefficient() as i16 * raw_value
+            piece.color.coefficient() as i16 * raw_reward
         }
         fn index(square: Square) -> usize {
             square as usize
         }
-        self.pieces().into_iter().fold(0, |value, (square, piece)| {
-            value + piece.value() + positional_value(square, &piece)
-        })
+        self.pieces()
+            .into_iter()
+            .fold(0, |reward, (square, piece)| {
+                reward + piece.reward() + positional_reward(square, &piece)
+            })
     }
 }
 
@@ -134,36 +136,36 @@ mod test {
     #[test]
     fn test_pawns() {
         let position = parse_fen("7k/4P3/8/8/8/8/8/7K w - - 0 1");
-        assert_eq!(202, position.board().value());
+        assert_eq!(202, position.board().reward());
     }
 
     #[test]
     fn just_kings() {
         let position = parse_fen("7k/8/8/8/8/8/8/7K w - - 0 1");
-        assert_eq!(0, position.board().value());
+        assert_eq!(0, position.board().reward());
     }
 
     #[test]
     fn just_kings_white_advantage() {
         let position = parse_fen("7k/8/8/8/8/8/8/6K1 w - - 0 1");
-        assert_eq!(22, position.board().value());
+        assert_eq!(22, position.board().reward());
     }
 
     #[test]
     fn test_starting_pos() {
         let position = Chess::default();
-        assert_eq!(0, position.board().value());
+        assert_eq!(0, position.board().reward());
     }
 
     #[test]
     fn test_black_up_a_queen() {
         let position = parse_fen("rn1qkbnr/ppp1pppp/8/3p4/3Pb3/8/PPP1PPPP/RNB1KBNR w KQkq - 0 1");
-        assert_eq!(-929 + 13 - 41, position.board().value()); //queen value + queen pos + bishop pos diff
+        assert_eq!(-929 + 13 - 41, position.board().reward()); //queen reward + queen pos + bishop pos diff
     }
 
     #[test]
     fn test_max_black_advantage() {
         let position = parse_fen("rr1q1q1q/nnk4q/bb5q/7q/8/6K1/2q5/1q1q4 w - - 0 1");
-        assert_eq!(-10260, position.board().value());
+        assert_eq!(-10260, position.board().reward());
     }
 }

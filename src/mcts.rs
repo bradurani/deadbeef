@@ -1,3 +1,4 @@
+use eval::*;
 use game::*;
 use playout::*;
 use rand::rngs::SmallRng;
@@ -13,6 +14,7 @@ pub trait MCTS {
     fn expand(&self, candidate_actions: &Vec<Move>) -> TreeNode;
     fn actions_with_no_children(&self) -> Vec<Move>;
     fn update_based_on_children(&mut self);
+    fn update_root_based_on_children(&mut self);
     fn normalized_value(&self) -> f32;
     fn set_minimax_based_on_children(&mut self);
     fn generate_missing_children(&mut self, stats: &mut RunStats);
@@ -82,9 +84,7 @@ impl MCTS for TreeNode {
             .max_by(|a, b| {
                 let position_a = self.position.clone_and_play(a);
                 let position_b = self.position.clone_and_play(b);
-                position_a
-                    .color_relative_value()
-                    .cmp(&position_b.color_relative_value())
+                position_a.color_relative_reward().cmp(&position_b.reward())
             })
             .expect("no children to expand");
 
@@ -103,6 +103,15 @@ impl MCTS for TreeNode {
             .into_iter()
             .filter(|a| !child_actions.contains(a))
             .collect()
+    }
+
+    fn update_root_based_on_children(&mut self) {
+        if self.children.iter().all(|c| c.state != NodeState::Empty) {
+            // ensures we can now set it to FullySearched if all children are leaves
+            // and allow us to set minimax
+            self.state = NodeState::FullyExpanded;
+        }
+        self.update_based_on_children();
     }
 
     fn update_based_on_children(&mut self) {

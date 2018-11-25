@@ -96,24 +96,22 @@ impl TreeNode {
         self.q * self.turn().not().coefficient() as f32
     }
 
-    pub fn color_relative_board_value(&self) -> Reward {
+    pub fn color_relative_reward(&self) -> Reward {
         // could save this calc, but don't think it's called much
-        self.position.color_relative_value()
+        self.position.color_relative_reward()
     }
 
     pub fn best_child_sort_value(&self) -> f32 {
-        match self.state {
+        if self.state == NodeState::Empty {
+            // shouldn't except very fast time controls.
             // ensure we only choose this if all are Empty, then pick highest board value
-            NodeState::Empty => -5000. + self.color_relative_board_value() as f32,
-            NodeState::LeafNode => {
-                if self.is_decisive() {
-                    self.color_relative_minimax() as f32
-                } else {
-                    assert!(self.is_drawn());
-                    self.n as f32
-                }
-            }
-            _ => self.n as f32 + self.q,
+            error!("choosing from unexpanded node");
+            return -5000. + self.color_relative_reward() as f32;
+        }
+        if self.is_decisive() {
+            self.color_relative_minimax() as f32
+        } else {
+            self.n as f32 + self.q
         }
     }
 

@@ -1,24 +1,26 @@
 use eval::*;
-use settings::*;
 use game::*;
+use settings::*;
 use shakmaty::{Chess, MoveList, Position, Setup};
 use stats::RunStats;
 use std::cmp::max;
 
 pub fn q_search(
     position: Chess,
-    depth: usize,
+    depth: isize,
     mut alpha: Reward,
     beta: Reward,
     coefficient: Reward,
     stats: &mut RunStats,
     settings: &Settings,
 ) -> Reward {
-    stats.record_q_depth(settings.playout_depth - depth);
+    stats.record_q_depth(depth.abs() as usize);
     if position.is_game_over() {
         return coefficient * position.outcome().unwrap().reward();
     };
-    let mut value = coefficient * position.board().value(); // is this a NULL move?
+    // TODO calling to Board.reward here because not sure if calling position.reward() adds
+    // calculations to determine if we have an outcome. Check that
+    let mut value = coefficient * position.board().reward(); // is this a NULL move?
     stats.evals += 1;
     if value > alpha {
         alpha = value

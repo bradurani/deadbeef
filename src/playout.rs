@@ -1,3 +1,4 @@
+use eval::*;
 use game::*;
 use q_search::*;
 use settings::Settings;
@@ -8,14 +9,14 @@ use std::cmp::max;
 pub fn playout(starting_position: Chess, stats: &mut RunStats, settings: &Settings) -> Reward {
     fn negamax(
         position: Chess,
-        depth: usize,
+        depth: isize,
         mut alpha: Reward,
         beta: Reward,
         coefficient: Reward,
         stats: &mut RunStats,
         settings: &Settings,
     ) -> Reward {
-        stats.record_playout_depth(depth);
+        stats.record_playout_depth((settings.playout_depth - depth) as usize);
         if position.is_game_over() {
             return coefficient * position.outcome().unwrap().reward();
         };

@@ -65,7 +65,7 @@ pub fn search_threaded(mut root: TreeNode, stats: &mut RunStats, settings: &Sett
         })
         .collect();
     new_root.children = new_children;
-    new_root.update_based_on_children();
+    new_root.update_root_based_on_children();
     new_root
 }
 

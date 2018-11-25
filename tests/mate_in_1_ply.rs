@@ -26,7 +26,7 @@ fn queen_capture_mate_black_in_1() {
 }
 
 #[test]
-fn knight_mate_white_in_1() {
+fn smothered_mate_white_in_1() {
     let stats = assert_mate_move("6rk/6pp/7N/8/3K4/8/8/8 w - - 0 1", "h6f7");
     // assert!(stats.max_depth() == 1);
 }

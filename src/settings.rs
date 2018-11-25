@@ -8,7 +8,7 @@ pub struct Settings {
     pub c: f32,
     pub starting_seed: u8,
     pub search_type: SearchType,
-    pub playout_depth: usize,
+    pub playout_depth: isize,
     // TODO move out
     pub max_tree_display_depth: Option<u8>,
     pub max_tree_display_length: Option<u8>,
@@ -43,7 +43,8 @@ impl Settings {
     pub fn test_default() -> Settings {
         Settings {
             // search_type: SearchType::Iterations(200),
-            search_type: SearchType::Time(Duration::from_millis(7000)),
+            search_type: SearchType::Iterations(10),//SearchType::Time(Duration::from_millis(7000)),
+            show_thinking: false,
             ..Default::default()
         }
     }
@@ -73,7 +74,7 @@ impl Settings {
         }
     }
 
-    pub fn playout_test(depth: usize, q_search: bool) -> Settings {
+    pub fn playout_test(depth: isize, q_search: bool) -> Settings {
         Settings {
             playout_depth: depth,
             q_search: q_search,

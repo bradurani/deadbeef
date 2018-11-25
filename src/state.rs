@@ -131,4 +131,8 @@ impl State {
     pub fn is_game_over(&self) -> bool {
         self.root.is_game_over()
     }
+
+    pub fn minimax(&self) -> Reward {
+        self.root.minimax
+    }
 }
