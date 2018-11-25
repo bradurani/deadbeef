@@ -111,7 +111,7 @@ impl TreeNode {
         if self.is_decisive() {
             self.color_relative_minimax() as f32
         } else {
-            self.n as f32 + self.q
+            self.n as f32 + self.turn().not().coefficient() as f32 * self.q
         }
     }
 

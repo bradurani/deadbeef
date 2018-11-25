@@ -55,5 +55,5 @@ fn black_captures_in_2_to_prevent_draw() {
 
 #[test]
 fn black_move_pawn_to_prevent_draw() {
-    assert_move("8/4p2r/8/8/2k5/8/8/1K6 b - - 100 150", "e7e5");
+    assert_move("8/4p2r/8/8/2k5/8/8/1K6 b - - 99 150", "e7e5");
 }
