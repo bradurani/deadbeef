@@ -7,9 +7,25 @@ use helpers::*;
 
 mod helpers;
 
+// defunct test because we handle leaf node roots by not allowing searching in engine.rs
+// #[test]
+// fn draw_50_move_rule_0_ply() {
+//     assert_draw("7k/8/8/4p3/4P3/8/8/K7 w - - 100 150");
+// }
+
 #[test]
 fn draw_50_move_rule_1_ply() {
-    assert_draw("7k/8/8/4p3/4P3/8/8/K7 w - - 100 150");
+    assert_draw("7k/8/8/4p3/4P3/8/8/K7 w - - 99 150");
+}
+
+#[test]
+fn draw_50_move_rule_2_ply() {
+    assert_draw("7k/8/8/4p3/4P3/8/8/K7 w - - 98 150");
+}
+
+#[test]
+fn draw_50_move_rule_3_ply() {
+    assert_draw("7k/8/8/4p3/4P3/8/8/K7 w - - 98 150");
 }
 
 #[test]

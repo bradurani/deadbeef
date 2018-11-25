@@ -3,7 +3,7 @@ use shakmaty::*;
 use std::i16;
 use std::ops::Not;
 
-pub const MAX_HALFMOVES: u32 = 101;
+pub const MAX_HALFMOVES: u32 = 100;
 pub const STARTING_POSITION: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 pub type Reward = i16;

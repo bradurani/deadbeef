@@ -43,7 +43,7 @@ impl Settings {
     pub fn test_default() -> Settings {
         Settings {
             // search_type: SearchType::Iterations(200),
-            search_type: SearchType::Iterations(10),//SearchType::Time(Duration::from_millis(7000)),
+            search_type: SearchType::Time(Duration::from_millis(7000)),
             show_thinking: false,
             ..Default::default()
         }
