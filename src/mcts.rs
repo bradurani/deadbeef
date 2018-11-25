@@ -84,7 +84,9 @@ impl MCTS for TreeNode {
             .max_by(|a, b| {
                 let position_a = self.position.clone_and_play(a);
                 let position_b = self.position.clone_and_play(b);
-                position_a.color_relative_reward().cmp(&position_b.reward())
+                position_a
+                    .color_relative_reward()
+                    .cmp(&position_b.color_relative_reward())
             })
             .expect("no children to expand");
 

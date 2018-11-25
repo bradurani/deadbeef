@@ -130,8 +130,9 @@ fn run_move_test_and_assert(
         error!("FAIL! played {} in:", engine_move);
         engine.print_tree().expect("could not print tree");
         panic!(
-            "{} not found in {}",
+            "{} {} found in {}",
             engine_move,
+            if assert_contains_move { "not" } else { "" },
             move_list_string(expected_moves)
         );
     }

@@ -6,6 +6,21 @@ extern crate shakmaty;
 use helpers::*;
 
 mod helpers;
+#[test]
+fn do_not_blunder_knight() {
+    assert_not_move(
+        "rnbqkbnr/ppp1pppp/8/8/3Pp3/8/PPP2PPP/RNBQKBNR w KQkq - 0 3",
+        "g1f3",
+    );
+}
+
+#[test]
+fn do_not_blunder_bishop() {
+    assert_not_move(
+        "rnbqkbnr/pppp1ppp/4p3/8/3P4/8/PPP1PPPP/RNBQKBNR w KQkq - 0 2",
+        "c1h6",
+    );
+}
 
 #[test]
 fn do_not_sacrifice_knight() {
