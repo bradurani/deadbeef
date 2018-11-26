@@ -106,3 +106,19 @@ fn does_not_hang_queen() {
         "f1e2",
     );
 }
+
+#[test]
+fn backrow_rook_to_c1() {
+    assert_contains_move(
+        "4r1k1/Q1p2p1p/p2pr3/1p6/5B2/6P1/PPP2Pbq/1K3RR1 w - - 8 25",
+        vec!["f1c1", "f1d1"],
+    );
+}
+
+#[test]
+fn does_not_sacrifice_knight_on_c7() {
+    assert_not_contains_move(
+        "r2k1b1r/ppp2ppp/1qn1b3/1N1nB3/1P6/P2B4/2P1NPPP/R2Q1RK1 w - - 1 16",
+        vec!["b5c7", "e5c7"],
+    );
+}

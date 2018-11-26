@@ -23,9 +23,9 @@ impl Default for Settings {
     fn default() -> Settings {
         Settings {
             max_threads: 4,
-            c: 0.08,
+            c: 0.175,
             starting_seed: 2,
-            search_type: SearchType::Time(Duration::from_millis(5000)),
+            search_type: SearchType::Time(Duration::from_millis(8000)),
             playout_depth: 2,
             max_tree_display_depth: parse_max_tree_display_depth(),
             max_tree_display_length: parse_max_tree_display_length(),
