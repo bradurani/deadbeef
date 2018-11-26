@@ -106,7 +106,8 @@ impl TreeNode {
         // so we can choose draws if position is losing and wins if position
         // is winning. Also, ensures that we always choose decisive winning moves
         // using shortest path
-        self.is_decisive() || !self.is_searchable()
+        // self.is_decisive() || !self.is_searchable()
+        true
     }
 
     pub fn best_child_sort_minimax(&self) -> Reward {
@@ -115,7 +116,7 @@ impl TreeNode {
                 // shouldn't except very fast time controls.
                 // ensure we only choose this if all are Empty, then pick highest board value
                 error!("choosing from unexpanded node");
-                -5000 + self.color_relative_reward()
+                self.turn().not().coefficient() * -5000 + self.color_relative_reward()
             }
             _ => self.color_relative_minimax(),
         }

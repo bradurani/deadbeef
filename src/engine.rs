@@ -146,6 +146,11 @@ impl Engine {
         Ok(())
     }
 
+    pub fn record_test_repetitions(&mut self, repetitions: Vec<&'static str>) {
+        let repetition_positions: Vec<Chess> = repetitions.iter().map(|r| parse_fen(r)).collect();
+        self.state.record_test_repetitions(repetition_positions);
+    }
+
     fn change_state<F: FnMut(State) -> State>(&mut self, mut f: F) {
         let prev_state = mem::replace(&mut self.state, Default::default());
         self.previous_position = prev_state.position();

@@ -45,8 +45,8 @@ impl State {
             .iter()
             .max_by(|c1, c2| {
                 if c1.best_child_sort_use_minimax() || c2.best_child_sort_use_minimax() {
-                    c1.color_relative_minimax()
-                        .cmp(&c2.color_relative_minimax())
+                    c1.best_child_sort_minimax()
+                        .cmp(&c2.best_child_sort_minimax())
                 } else {
                     c1.best_child_sort_n()
                         .partial_cmp(&c2.best_child_sort_n())
@@ -130,5 +130,11 @@ impl State {
 
     pub fn minimax(&self) -> Reward {
         self.root.minimax
+    }
+
+    pub fn record_test_repetitions(&mut self, repetition_positions: Vec<Chess>) {
+        for r in repetition_positions {
+            self.root.repetition_detector.record(&r)
+        }
     }
 }

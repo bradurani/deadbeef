@@ -42,7 +42,7 @@ fn do_not_sacrifice_knight_2() {
 fn takes_knight_preventing_mate_in_1() {
     assert_contains_move(
         "r3r1k1/bppq1ppp/p2pbn2/4p3/1PPnP3/P1N2PP1/3BN2P/R2QKB1R w KQ - 0 14",
-        vec!["e2d4", "e2c1"],
+        vec!["e2d4", "e2c1", "e2g1"],
     );
 }
 
@@ -67,5 +67,42 @@ fn do_not_sacrifice_bishop_on_c7() {
     assert_not_move(
         "2rqkbnr/1pp1pppp/p1n5/1N3b2/3PpB2/8/PPP2PPP/R2QKBNR w KQk - 0 7",
         "f4c7",
+    );
+}
+
+#[test]
+fn makes_winning_queen_capture() {
+    assert_move("8/2k5/8/5q2/8/5Q2/8/5K2 w - - 0 1", "f3f5");
+}
+
+#[test]
+fn makes_winning_pawn_capture() {
+    assert_move("8/4k3/8/8/8/8/2KR1p2/8 w - - 0 1", "d2f2");
+}
+
+#[test]
+fn black_does_not_blunder_queen() {
+    assert_move("5k1q/5Npp/3PK3/8/8/8/8/8 b - - 0 1", "h8g8");
+}
+
+#[test]
+// #[ignore] //this one is tough
+fn black_saves_its_queen() {
+    assert_move("3kq1b1/3p1p2/8/8/8/8/4R3/3QK3 b - - 0 1", "e8f8");
+}
+
+#[test]
+fn capture_bishop_and_save_queen() {
+    assert_contains_move(
+        "3qkbnr/p1Bppp1p/b1r3p1/8/3PP3/2N2N2/PPP2PPP/R2Q1RK1 b k - 0 9",
+        vec!["c6c7", "d8c7"],
+    );
+}
+
+#[test]
+fn does_not_hang_queen() {
+    assert_not_move(
+        "1r2r1k1/2pb2p1/p1n1p2p/5p2/Q2P4/1q1BPN1P/1P3PP1/2RR1K2 w - - 6 24",
+        "f1e2",
     );
 }

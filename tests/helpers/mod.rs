@@ -28,38 +28,47 @@ pub fn setup() {
 
 pub fn assert_move(fen_str: &'static str, uci_str: &'static str) -> RunStats {
     let settings = Settings::test_default();
-    run_move_test(fen_str, vec![uci_str], &settings, false)
+    run_move_test(fen_str, vec![uci_str], vec![], &settings, false)
 }
 
 pub fn assert_contains_move(fen_str: &'static str, uci_strs: Vec<&'static str>) -> RunStats {
     let settings = Settings::test_default();
-    run_move_test(fen_str, uci_strs, &settings, false)
+    run_move_test(fen_str, uci_strs, vec![], &settings, false)
 }
 
 pub fn assert_mate_move(fen_str: &'static str, uci_str: &'static str) -> RunStats {
     let settings = Settings::test_default();
-    run_move_test(fen_str, vec![uci_str], &settings, true)
+    run_move_test(fen_str, vec![uci_str], vec![], &settings, true)
 }
 
 pub fn assert_contains_mate_move(fen_str: &'static str, uci_strs: Vec<&'static str>) -> RunStats {
     let settings = Settings::test_default();
-    run_move_test(fen_str, uci_strs, &settings, true)
+    run_move_test(fen_str, uci_strs, vec![], &settings, true)
 }
 
 pub fn assert_not_move(fen_str: &'static str, uci_str: &'static str) -> RunStats {
     let settings = Settings::test_default();
-    run_not_move_test(fen_str, vec![uci_str], &settings, false)
+    run_not_move_test(fen_str, vec![uci_str], vec![], &settings, false)
 }
 
 pub fn assert_not_contains_move(fen_str: &'static str, uci_strs: Vec<&'static str>) -> RunStats {
     let settings = Settings::test_default();
-    run_not_move_test(fen_str, uci_strs, &settings, false)
+    run_not_move_test(fen_str, uci_strs, vec![], &settings, false)
 }
 
 pub fn assert_draw(fen_str: &'static str) -> RunStats {
     let (minimax, stats) = run_minimax_test(fen_str, &Settings::test_default());
     assert_eq!(minimax, 0);
     stats
+}
+
+pub fn assert_not_move_with_repetitions(
+    fen_str: &'static str,
+    uci_str: &'static str,
+    repetitions: Vec<&'static str>,
+) -> RunStats {
+    let settings = Settings::test_default();
+    run_not_move_test(fen_str, vec![uci_str], repetitions, &settings, false)
 }
 
 pub fn run_challenge_suite(filename: &'static str, times: &Vec<u64>) -> u16 {
@@ -97,29 +106,33 @@ pub fn run_challenge_suite(filename: &'static str, times: &Vec<u64>) -> u16 {
 fn run_not_move_test(
     fen_str: &'static str,
     uci_strs: Vec<&'static str>,
+    repetitions: Vec<&'static str>,
     settings: &Settings,
     assert_mate: bool,
 ) -> RunStats {
-    run_move_test_and_assert(fen_str, uci_strs, settings, assert_mate, false)
+    run_move_test_and_assert(fen_str, uci_strs, repetitions, settings, assert_mate, false)
 }
 
 fn run_move_test(
     fen_str: &'static str,
     uci_strs: Vec<&'static str>,
+    repetitions: Vec<&'static str>,
     settings: &Settings,
     assert_mate: bool,
 ) -> RunStats {
-    run_move_test_and_assert(fen_str, uci_strs, settings, assert_mate, true)
+    run_move_test_and_assert(fen_str, uci_strs, vec![], settings, assert_mate, true)
 }
 
 fn run_move_test_and_assert(
     fen_str: &'static str,
     uci_strs: Vec<&'static str>,
+    repetitions: Vec<&'static str>,
     settings: &Settings,
     assert_mate: bool,
     assert_contains_move: bool,
 ) -> RunStats {
     let mut engine = setup_engine(fen_str, settings);
+    engine.record_test_repetitions(repetitions);
     let engine_move = engine
         .make_engine_move()
         .expect("could not make engine move");
