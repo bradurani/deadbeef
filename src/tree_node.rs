@@ -5,7 +5,6 @@ use std::f32;
 use std::i16;
 use std::ops::Not;
 
-// TODO do I need all these?
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum NodeState {
     Empty, // placeholder so we can move something to threads for first move
@@ -21,18 +20,17 @@ impl Default for NodeState {
     }
 }
 
-// TODO do I need all these?
 #[derive(Debug)]
 pub struct TreeNode {
     pub action: Option<Move>, // how did we get here
     pub value: Reward,
     pub minimax: Reward,
-    pub state: NodeState, // is this a leaf node? fully expanded?
+    pub state: NodeState,
     pub position: Chess,
     pub repetition_detector: RepetitionDetector,
-    pub n: u32,                  //new qs computed during this search
-    pub q: f32,                  //new qs computed during this search
-    pub children: Vec<TreeNode>, // next steps we investigated
+    pub n: u32,
+    pub q: f32,
+    pub children: Vec<TreeNode>,
 }
 
 impl Default for TreeNode {

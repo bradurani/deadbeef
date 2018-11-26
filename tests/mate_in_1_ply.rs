@@ -41,7 +41,7 @@ fn discovered_checkmate_white_in_1() {
 }
 
 #[test]
-fn en_passent_mate_in_1() {
+fn en_passant_mate_in_1() {
     let stats = assert_mate_move(
         "r3k2r/pbppqpb1/1pn3p1/7p/1N2pPn1/1PP4N/PB1P2PP/2QRKR2 b kq f3 0 1",
         "e4f3",

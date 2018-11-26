@@ -15,6 +15,7 @@ extern crate separator;
 extern crate shakmaty;
 extern crate twox_hash;
 pub mod args;
+pub mod hash;
 pub mod display;
 pub mod emojify;
 pub mod engine;
