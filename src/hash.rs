@@ -2,6 +2,7 @@ use rand::rngs::SmallRng;
 use rand::Rng;
 use settings::*;
 use shakmaty::*;
+use std::fmt;
 use utils::*;
 
 pub const PAWN: u8 = 0;
@@ -11,14 +12,24 @@ pub const ROOK: u8 = 3 << 1;
 pub const QUEEN: u8 = 4 << 1;
 pub const KING: u8 = 5 << 1;
 
+pub const BK_CASTLE: u8 = 1;
+pub const WK_CASTLE: u8 = BK_CASTLE << WHITE;
+pub const BQ_CASTLE: u8 = 1 << 2;
+pub const WQ_CASTLE: u8 = BQ_CASTLE << WHITE;
+
 // bit masks for generating index
 pub const PIECE: u8 = 0b1110;
 pub const COLOR: u8 = 1;
 
-static mut piece_keys: [u64; 64 * 6 * 2] = [0; 64 * 6 * 2];
-static mut castle_keys: [u64; 16] = [0; 16];
-static mut ep_keys: [u64; 8] = [0; 8];
-static mut color_key: u64 = 0;
+pub const WHITE: u8 = COLOR;
+pub const BLACK: u8 = 0;
+
+static mut PIECE_KEYS: [u64; 64 * 6 * 2] = [0; 64 * 6 * 2];
+static mut CASTLE_KEYS: [u64; 16] = [0; 16];
+static mut EP_KEYS: [u64; 8] = [0; 8];
+static mut COLOR_KEY: u64 = 0;
+
+pub type CastlingRightsArray = [[Option<Square>; 2]; 2]; // used by shakmaty::Castles
 
 fn set_random(arr: &mut [u64], rng: &mut SmallRng) {
     for elem in arr.iter_mut() {
@@ -27,12 +38,11 @@ fn set_random(arr: &mut [u64], rng: &mut SmallRng) {
 }
 
 pub unsafe fn init(settings: Settings) {
-    let seed: &[usize] = &[0];
     let mut rng = seeded_rng(settings.starting_seed);
-    set_random(&mut piece_keys, &mut rng);
-    set_random(&mut castle_keys, &mut rng);
-    set_random(&mut ep_keys, &mut rng);
-    color_key = rng.gen();
+    set_random(&mut PIECE_KEYS, &mut rng);
+    set_random(&mut CASTLE_KEYS, &mut rng);
+    set_random(&mut EP_KEYS, &mut rng);
+    COLOR_KEY = rng.gen();
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Default)]
@@ -49,6 +59,7 @@ impl Hash {
         for (square, piece) in position.board().pieces() {
             hash.set_piece(square as usize, piece_rep(piece));
         }
+        hash.set_castling(position.castles());
         hash.set_ep(position.ep_square());
         if position.turn() == Color::White {
             hash.flip_color();
@@ -56,45 +67,42 @@ impl Hash {
         hash
     }
 
-    // pub fn init(sqs: &Squares, castling: u8, en_passant: u64, color: u8) -> Self {
-    //     let mut hash = Hash { val: 0 };
-    //
-    //     for (i, &sq) in sqs.iter().enumerate() {
-    //         hash.set_piece(i, sq);
-    //     }
-    //
-    //     hash.set_castling(castling);
-    //     hash.set_ep(en_passant);
-    //     if color == WHITE {
-    //         hash.flip_color()
-    //     }
-    //     hash
-    // }
-
     pub fn set_piece(&mut self, pos: usize, sq: u8) {
         let index = pos + ((sq & PIECE) >> 1) as usize * 64 + (sq & COLOR) as usize * 384;
-        self.val ^= unsafe { piece_keys[index] };
+        self.val ^= unsafe { PIECE_KEYS[index] };
     }
 
-    pub fn set_castling(&mut self, castling: Bitboard) {
+    pub fn set_castling(&mut self, castling: &Castles) {
+        let mut castle_key: u8 = 0;
+        if castling.has(Color::Black, CastlingSide::KingSide) {
+            castle_key |= BK_CASTLE
+        }
+        if castling.has(Color::Black, CastlingSide::QueenSide) {
+            castle_key |= BQ_CASTLE
+        }
+        if castling.has(Color::White, CastlingSide::KingSide) {
+            castle_key |= WK_CASTLE
+        }
+        if castling.has(Color::White, CastlingSide::QueenSide) {
+            castle_key |= WQ_CASTLE
+        }
         unsafe {
-            let castle_key: usize = ::std::mem::transmute(castling);
-            self.val ^= castle_keys[castle_key];
-        }; // TODO with this work on 32 but systems?
+            self.val ^= CASTLE_KEYS[castle_key as usize];
+        }; // TODO will this work on 32 but systems?
     }
 
     pub fn set_ep(&mut self, en_passant: Option<Square>) {
         match en_passant {
             Some(square) => {
                 let file = lsb(square as u64) % 8;
-                self.val ^= unsafe { ep_keys[file as usize] };
+                self.val ^= unsafe { EP_KEYS[file as usize] };
             }
             _ => {}
         }
     }
 
     pub fn flip_color(&mut self) {
-        self.val ^= unsafe { color_key };
+        self.val ^= unsafe { COLOR_KEY };
     }
 
     pub fn sub(&self) -> u16 {
@@ -124,13 +132,19 @@ pub fn lsb(val: u64) -> u32 {
     val.trailing_zeros()
 }
 
+impl fmt::Display for Hash {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(f, "{}", self.val)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use setup::*;
     use shakmaty::fen::*;
     use std::collections::HashMap;
-    use std::panic::catch_unwind;
+    use std::collections::HashSet;
 
     #[test]
     fn hashes_position() {
@@ -152,16 +166,51 @@ mod tests {
     }
 
     #[test]
-    fn castling_rights_kingside_white() {
+    fn castling_rights_all_combinations() {
         unsafe { init(Default::default()) };
-        let with_rights =
-            parse_fen("rnbqk1nr/1ppp1ppp/p3p3/6b1/5P2/P1N1P3/1PPP2PP/R1BQKBNR w KQkq -");
-        let without_rights =
-            parse_fen("rnbqk1nr/1ppp1ppp/p3p3/6b1/5P2/P1N1P3/1PPP2PP/R1BQKBNR w - -");
-        assert_ne!(
-            Hash::generate(&with_rights).val,
-            Hash::generate(&without_rights).val
-        );
+        let mut seen: HashSet<u64> = HashSet::new();
+        let variations = [
+            "r3k2r/1ppp1pp1/8/8/8/8/1PPP1PP1/R3K2R w KQkq -",
+            "r3k2r/1ppp1pp1/8/8/8/8/1PPP1PP1/R3K2R w KQk -",
+            "r3k2r/1ppp1pp1/8/8/8/8/1PPP1PP1/R3K2R w KQq -",
+            "r3k2r/1ppp1pp1/8/8/8/8/1PPP1PP1/R3K2R w Kkq -",
+            "r3k2r/1ppp1pp1/8/8/8/8/1PPP1PP1/R3K2R w Qkq -",
+            "r3k2r/1ppp1pp1/8/8/8/8/1PPP1PP1/R3K2R w KQ -",
+            "r3k2r/1ppp1pp1/8/8/8/8/1PPP1PP1/R3K2R w kq -",
+            "r3k2r/1ppp1pp1/8/8/8/8/1PPP1PP1/R3K2R w Kk -",
+            "r3k2r/1ppp1pp1/8/8/8/8/1PPP1PP1/R3K2R w Qq -",
+            "r3k2r/1ppp1pp1/8/8/8/8/1PPP1PP1/R3K2R w Kq -",
+            "r3k2r/1ppp1pp1/8/8/8/8/1PPP1PP1/R3K2R w Qk -",
+            "r3k2r/1ppp1pp1/8/8/8/8/1PPP1PP1/R3K2R w K -",
+            "r3k2r/1ppp1pp1/8/8/8/8/1PPP1PP1/R3K2R w Q -",
+            "r3k2r/1ppp1pp1/8/8/8/8/1PPP1PP1/R3K2R w k -",
+            "r3k2r/1ppp1pp1/8/8/8/8/1PPP1PP1/R3K2R w q -",
+            "r3k2r/1ppp1pp1/8/8/8/8/1PPP1PP1/R3K2R w - -",
+            "r3k2r/1ppp1pp1/8/8/8/8/1PPP1PP1/R3K2R b KQkq -",
+            "r3k2r/1ppp1pp1/8/8/8/8/1PPP1PP1/R3K2R b KQk -",
+            "r3k2r/1ppp1pp1/8/8/8/8/1PPP1PP1/R3K2R b KQq -",
+            "r3k2r/1ppp1pp1/8/8/8/8/1PPP1PP1/R3K2R b Kkq -",
+            "r3k2r/1ppp1pp1/8/8/8/8/1PPP1PP1/R3K2R b Qkq -",
+            "r3k2r/1ppp1pp1/8/8/8/8/1PPP1PP1/R3K2R b KQ -",
+            "r3k2r/1ppp1pp1/8/8/8/8/1PPP1PP1/R3K2R b kq -",
+            "r3k2r/1ppp1pp1/8/8/8/8/1PPP1PP1/R3K2R b Kk -",
+            "r3k2r/1ppp1pp1/8/8/8/8/1PPP1PP1/R3K2R b Qq -",
+            "r3k2r/1ppp1pp1/8/8/8/8/1PPP1PP1/R3K2R b Kq -",
+            "r3k2r/1ppp1pp1/8/8/8/8/1PPP1PP1/R3K2R b Qk -",
+            "r3k2r/1ppp1pp1/8/8/8/8/1PPP1PP1/R3K2R b K -",
+            "r3k2r/1ppp1pp1/8/8/8/8/1PPP1PP1/R3K2R b Q -",
+            "r3k2r/1ppp1pp1/8/8/8/8/1PPP1PP1/R3K2R b k -",
+            "r3k2r/1ppp1pp1/8/8/8/8/1PPP1PP1/R3K2R b q -",
+            "r3k2r/1ppp1pp1/8/8/8/8/1PPP1PP1/R3K2R b - -",
+        ];
+        for v in &variations {
+            let position = parse_fen(v);
+            let hash = Hash::generate(&position);
+            if seen.contains(&hash.val) {
+                panic!("already seen {} for {:?}", hash, position);
+            }
+            seen.insert(hash.val);
+        }
     }
 
     #[test]
@@ -213,7 +262,7 @@ mod tests {
                                 }
                                 seen.insert(hash, position);
                             }
-                            Err(msg) => {}
+                            Err(_) => {}
                         };
                     }
                 }
