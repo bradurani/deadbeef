@@ -15,14 +15,16 @@ extern crate separator;
 extern crate shakmaty;
 extern crate twox_hash;
 pub mod args;
-pub mod hash;
 pub mod display;
 pub mod emojify;
 pub mod engine;
 pub mod eval;
 pub mod game;
+pub mod random_move; // TODO this is only for tests
+pub mod hash;
 pub mod logger;
 pub mod mcts;
+pub mod node;
 pub mod pgn;
 pub mod play;
 pub mod playout;

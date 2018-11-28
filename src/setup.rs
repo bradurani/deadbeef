@@ -1,4 +1,3 @@
-use emojify::*;
 use shakmaty::fen::*;
 use shakmaty::san::*;
 use shakmaty::uci::*;
@@ -26,7 +25,7 @@ pub fn parse_fen(fen_str: &str) -> Chess {
     info!("parsing position:\n{}", fen_str);
     let setup: Fen = fen_str.parse().expect("invalid fen");
     let position: Chess = setup.position().expect("invalid position");
-    info_emojified(&position.board());
+    // info!("{}", &position);
     position
 }
 

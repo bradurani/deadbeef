@@ -1,4 +1,3 @@
-use log::*;
 use settings::*;
 use std::cmp::Ordering::*;
 use std::f32;

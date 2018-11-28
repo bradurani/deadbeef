@@ -3,6 +3,7 @@ use rand::Rng;
 use settings::*;
 use shakmaty::*;
 use std::fmt;
+use std::sync::Once;
 use utils::*;
 
 pub const PAWN: u8 = 0;
@@ -31,21 +32,25 @@ static mut COLOR_KEY: u64 = 0;
 
 pub type CastlingRightsArray = [[Option<Square>; 2]; 2]; // used by shakmaty::Castles
 
+static INIT: Once = Once::new();
+
 fn set_random(arr: &mut [u64], rng: &mut SmallRng) {
     for elem in arr.iter_mut() {
         *elem = rng.gen();
     }
 }
 
-pub unsafe fn init(settings: Settings) {
-    let mut rng = seeded_rng(settings.starting_seed);
-    set_random(&mut PIECE_KEYS, &mut rng);
-    set_random(&mut CASTLE_KEYS, &mut rng);
-    set_random(&mut EP_KEYS, &mut rng);
-    COLOR_KEY = rng.gen();
+pub unsafe fn init_hash_keys(settings: Settings) {
+    INIT.call_once(|| {
+        let mut rng = seeded_rng(settings.starting_seed);
+        set_random(&mut PIECE_KEYS, &mut rng);
+        set_random(&mut CASTLE_KEYS, &mut rng);
+        set_random(&mut EP_KEYS, &mut rng);
+        COLOR_KEY = rng.gen();
+    });
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Default)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Default, Debug)]
 pub struct Hash {
     pub val: u64,
 }
@@ -57,7 +62,7 @@ impl Hash {
         let mut hash: Hash = Default::default();
 
         for (square, piece) in position.board().pieces() {
-            hash.set_piece(square as usize, piece_rep(piece));
+            hash.set_piece(square, piece);
         }
         hash.set_castling(position.castles());
         hash.set_ep(position.ep_square());
@@ -67,8 +72,11 @@ impl Hash {
         hash
     }
 
-    pub fn set_piece(&mut self, pos: usize, sq: u8) {
-        let index = pos + ((sq & PIECE) >> 1) as usize * 64 + (sq & COLOR) as usize * 384;
+    pub fn set_piece(&mut self, sq: Square, piece: Piece) {
+        let piece_rep = piece_rep(piece);
+        let index = sq as usize
+            + ((piece_rep & PIECE) >> 1) as usize * 64
+            + (piece_rep & COLOR) as usize * 384;
         self.val ^= unsafe { PIECE_KEYS[index] };
     }
 
@@ -148,7 +156,7 @@ mod tests {
 
     #[test]
     fn hashes_position() {
-        unsafe { init(Default::default()) };
+        unsafe { init_hash_keys(Settings::test_default()) };
         let position: Chess = Default::default();
         let hash = Hash::generate(&position);
         assert!(hash.val != 0);
@@ -156,7 +164,7 @@ mod tests {
 
     #[test]
     fn differs_with_en_passant() {
-        unsafe { init(Default::default()) };
+        unsafe { init_hash_keys(Settings::test_default()) };
         let with_ep = parse_fen("r3k2r/pbppqpb1/1pn3p1/7p/1N2pPn1/1PP4N/PB1P2PP/2QRKR2 b kq f3");
         let without_ep = parse_fen("r3k2r/pbppqpb1/1pn3p1/7p/1N2pPn1/1PP4N/PB1P2PP/2QRKR2 b kq -");
         assert_ne!(
@@ -166,8 +174,35 @@ mod tests {
     }
 
     #[test]
+    fn set_piece_is_reversible() {
+        unsafe { init_hash_keys(Settings::test_default()) };
+        let position = parse_fen("4k3/8/8/8/3P4/8/8/4K3 w - -");
+        let hash = Hash::generate(&position);
+        let mut new_hash = hash.clone();
+        new_hash.set_piece(
+            Square::D4,
+            Piece {
+                color: Color::White,
+                role: Role::Pawn,
+            },
+        );
+        assert_eq!(
+            new_hash,
+            Hash::generate(&parse_fen("4k3/8/8/8/8/8/8/4K3 w - -"))
+        );
+        new_hash.set_piece(
+            Square::D4,
+            Piece {
+                color: Color::White,
+                role: Role::Pawn,
+            },
+        );
+        assert_eq!(hash, new_hash);
+    }
+
+    #[test]
     fn castling_rights_all_combinations() {
-        unsafe { init(Default::default()) };
+        unsafe { init_hash_keys(Settings::test_default()) };
         let mut seen: HashSet<u64> = HashSet::new();
         let variations = [
             "r3k2r/1ppp1pp1/8/8/8/8/1PPP1PP1/R3K2R w KQkq -",
@@ -215,7 +250,7 @@ mod tests {
 
     #[test]
     fn uniquely_hashes_for_every_2_king_and_1_rook_position() {
-        unsafe { init(Default::default()) };
+        unsafe { init_hash_keys(Settings::test_default()) };
         let mut seen: HashMap<u64, Chess> = HashMap::new();
         for color in &[Color::White, Color::Black] {
             for white_king in 0i8..63 {

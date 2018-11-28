@@ -1,6 +1,7 @@
 use emojify::DisplayEmojify;
 use engine::*;
 use log::*;
+use node::*;
 use pad::PadStr;
 use separator::Separatable;
 use settings::*;
@@ -34,8 +35,16 @@ impl fmt::Display for State {
                 None => "".to_string(),
             }
         )?;
-        self.position().board().clone().write_emoji(f)?;
-        writeln!(f, "{}", fen::fen(&self.position()))
+        // writeln!(f, "{}", self.position())
+        Ok(())
+    }
+}
+
+impl fmt::Display for Node {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(f);
+        self.position.board().write_emoji(f)?;
+        writeln!(f, "{}", fen::fen(&self.position))
     }
 }
 
