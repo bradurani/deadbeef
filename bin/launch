@@ -2,9 +2,12 @@
 
 set -euo pipefail
 
-LOG_FILE=/Users/bradurani/src/deadbeef/log/out.log
-ERROR_LOG_FILE=/Users/bradurani/src/deadbeef/log/error.log
-IN_LOG_FILE=/Users/bradurani/src/deadbeef/log/in.log
+LOG_DIR=~/src/deadbeef/log
+mkdir -p $LOG_DIR
+
+LOG_FILE=$LOG_DIR/out.log
+ERROR_LOG_FILE=$LOG_DIR/error.log
+IN_LOG_FILE=$LOG_DIR/in.log
 
 touch $LOG_FILE
 touch $ERROR_LOG_FILE
@@ -16,4 +19,4 @@ export MAX_TREE_DISPLAY_DEPTH=${MAX_TREE_DISPLAY_DEPTH:-2}
 export MAX_TREE_DISPLAY_LENGTH=${MAX_TREE_DISPLAY_LENGTH:-200}
 
 
-tee $IN_LOG_FILE | /Users/bradurani/.cargo/bin/cargo run --release 2>$ERROR_LOG_FILE | tee $LOG_FILE
+tee $IN_LOG_FILE | cargo run --release 2>$ERROR_LOG_FILE | tee $LOG_FILE
